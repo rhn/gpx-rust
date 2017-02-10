@@ -7,7 +7,6 @@ use self::xml_::name::OwnedName;
 use xml::ElemStart;
 #[allow(unused_imports)]
 use xml::{ ElementParser, ElementParse };
-use xsd;
 
 
 pub trait ParserMessage
@@ -50,12 +49,55 @@ pub fn parse_chars<T: std::io::Read, F, R, E: ParserMessage>
     }
 }
 
-pub fn parse_time<T: std::io::Read,
-                  Error: ParserMessage + From<chrono::format::ParseError>>
-        (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<xsd::Time, Error> {
-    parse_chars(parser, elem_start,
-                |chars| xsd::Time::parse_from_rfc3339(chars).map_err(Error::from))
+macro_rules! make_fn {
+    ( fn, $parser:expr, $reader:expr, $elem_start:expr ) => {
+        $parser($reader, $elem_start);
+    };
+    ( ElementParse, $parser:ty, $reader:expr, $elem_start:expr ) => {
+        <$parser>::new($reader).parse($elem_start);
+    };
+}
+
+macro_rules! make_tag {
+    ( $T:ty, $self_:expr, $elem_start:expr, { $field:ident = Some, $ptype:tt, $parser:tt } ) => {
+        $self_.$field = Some(try!(make_fn!($ptype, $parser, $self_.reader, $elem_start)));
+    };
+    ( $T:ty, $self_:expr, $elem_start:expr, { $field:ident = Vec, $ptype:tt, $parser:tt } ) => {
+        $self_.$field.push(try!(make_fn!($ptype, $parser<$T>, $self_.reader, $elem_start)));
+    };
+}
+
+
+macro_rules! _ParserImplBody {
+    (
+        attrs: { $( $attr:pat => $attrdata:tt ),* },
+        tags: { $( $tag:pat => $tagdata:tt, )* }
+    ) => {
+        ParserStart!( $( $attr => $attrdata ),* );
+
+        fn parse_element(&mut self, elem_start: ElemStart)
+                -> Result<(), Self::Error> {
+            match &elem_start.name.local_name as &str {
+                $( $tag => {
+                    make_tag!(T, self, elem_start, $tagdata);
+                }),*
+                _ => {
+                    try!(ElementParser::new(self.reader).parse(elem_start));
+                }
+            };
+            Ok(())
+        }
+        
+        fn get_name(&self) -> &OwnedName {
+            match &self.elem_name {
+                &Some(ref i) => i,
+                &None => panic!("Name was not set while parsing"),
+            }
+        }
+        fn next(&mut self) -> Result<XmlEvent, xml::Error> {
+            self.reader.next().map_err(xml::Error::Xml)
+        }
+    }
 }
 
 macro_rules! Parser {
@@ -79,31 +121,7 @@ macro_rules! Parser {
                           elem_name: None,
                           $( $i : <$t>::empty(), )* }
             }
-
-            ParserStart!();
-
-            fn parse_element(&mut self, elem_start: ElemStart)
-                    -> Result<(), Self::Error> {
-                match &elem_start.name.local_name as &str {
-                    $( $tag => {
-                        make_tag!(T, self, elem_start, $tagdata);
-                    }),*
-                    _ => {
-                        try!(ElementParser::new(self.reader).parse(elem_start));
-                    }
-                };
-                Ok(())
-            }
-            
-            fn get_name(&self) -> &OwnedName {
-                match &self.elem_name {
-                    &Some(ref i) => i,
-                    &None => panic!("Name was not set while parsing"),
-                }
-            }
-            fn next(&mut self) -> Result<XmlEvent, xml::Error> {
-                self.reader.next().map_err(xml::Error::Xml)
-            }
+            _ParserImplBody!( attrs: {}, tags: { $( $tag => $tagdata, )* } );
         }
     }
 }

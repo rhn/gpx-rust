@@ -10,7 +10,9 @@ use self::_xml::name::OwnedName;
 use xml;
 use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use parsers::*;
+use xsd;
 use xsd::*;
+
 
 trait EmptyInit {
     fn empty() -> Self;
@@ -65,12 +67,14 @@ impl From<std::string::ParseError> for Error {
 
 #[macro_export]
 macro_rules! ParserStart {
-    ( $( $a:pat => $b:expr ),* ) => {
+    ( $( $name:pat => { $field:ident, $func:ident } ),* ) => {
         fn parse_start(&mut self, elem_start: ElemStart)
                 -> Result<(), Self::Error> {
             for attr in elem_start.attributes {
                 match &(attr.name.local_name) as &str {
-                    $( $a => $b ),*
+                    $( $name => {
+                        self.$field = $func(attr.value);
+                    } ),*
                     _ => {
                         return Err(Self::Error::from_unexp_attr(elem_start.name, attr.name));
                     }
@@ -79,24 +83,6 @@ macro_rules! ParserStart {
             self.elem_name = Some(elem_start.name);
             Ok(())
         }
-    };
-}
-
-macro_rules! make_fn {
-    ( fn, $parser:expr, $reader:expr, $elem_start:expr ) => {
-        $parser($reader, $elem_start);
-    };
-    ( ElementParse, $parser:ty, $reader:expr, $elem_start:expr ) => {
-        <$parser>::new($reader).parse($elem_start);
-    };
-}
-
-macro_rules! make_tag {
-    ( $T:ty, $self_:expr, $elem_start:expr, { $field:ident = Some, $ptype:tt, $parser:tt } ) => {
-        $self_.$field = Some(try!(make_fn!($ptype, $parser, $self_.reader, $elem_start)));
-    };
-    ( $T:ty, $self_:expr, $elem_start:expr, { $field:ident = Vec, $ptype:tt, $parser:tt } ) => {
-        $self_.$field.push(try!(make_fn!($ptype, $parser<$T>, $self_.reader, $elem_start)));
     };
 }
 
@@ -193,6 +179,53 @@ pub struct Waypoint {
     name: Option<String>,
 }
 
+struct WptParser<'a, T: 'a + Read> {
+    reader: &'a mut EventReader<T>,
+    elem_name: Option<OwnedName>,
+    lat: Option<XmlDecimal>,
+    lon: Option<XmlDecimal>,
+    time: Option<Time>,
+    fix: Option<Fix>,
+    ele: Option<XmlDecimal>,
+    sat: Option<u16>,
+    name: Option<String>,
+}
+
+impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
+    fn new(reader: &'a mut EventReader<T>) -> Self {
+        WptParser { reader: reader,
+                    elem_name: None,
+                    name: None,
+                    lat: None, lon: None, ele: None,
+                    time: None,
+                    fix: None, sat: None }
+    }
+    _ParserImplBody!(
+        attrs: { "lat" => { lat, Some },
+                 "lon" => { lon, Some }
+        },
+        tags: {
+            "time" => { time = Some, fn, parse_time },
+            "fix" => { fix = Some, fn, parse_fix },
+            "name" => { name = Some, fn, parse_string },
+        }
+    );
+}
+
+impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
+    type Element = Waypoint;
+    type Error = Error;
+    fn build(self) -> Result<Self::Element, Self::Error> {
+        Ok(Waypoint { location: LosslessPoint { latitude: self.lat.unwrap(),
+                                                longitude: self.lon.unwrap(),
+                                                elevation: self.ele },
+                      time: self.time,
+                      fix: self.fix,
+                      satellites: self.sat,
+                      name: self.name })
+    }
+}
+
 #[derive(XmlDebug)]
 struct LosslessPoint {
     latitude: XmlDecimal,
@@ -209,6 +242,20 @@ enum Fix {
     _3D,
     DGPS,
     PPS
+}
+
+impl FromStr for Fix {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "none" => Fix::None,
+            "2d" => Fix::_2D,
+            "3d" => Fix::_3D,
+            "dgps" => Fix::DGPS,
+            "pps" => Fix::PPS,
+            _ => { return Err(Error::Str("Unknown fix kind")); }
+        })
+    }
 }
 
 macro_attr! {
@@ -274,7 +321,7 @@ impl ParserMessage for Error {
         Error::Xml(e)
     }
 }
-
+/*
 struct WptParser<'a, T: 'a + Read> {
     reader: &'a mut EventReader<T>,
     elem_name: Option<OwnedName>,
@@ -285,8 +332,9 @@ struct WptParser<'a, T: 'a + Read> {
     ele: Option<XmlDecimal>,
     sat: Option<u16>,
     name: Option<String>,
-}
+}*/
 
+/*
 impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
     type Element = Waypoint;
     type Error = Error;
@@ -299,8 +347,9 @@ impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
                       satellites: self.sat,
                       name: self.name })
     }
-}
+}*/
 
+/*
 impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
     fn new(reader: &'a mut EventReader<T>) -> Self {
         WptParser { reader: reader,
@@ -357,6 +406,11 @@ impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
     fn next(&mut self) -> Result<XmlEvent, self::xml::Error> {
         self.reader.next().map_err(self::xml::Error::Xml)
     }
+}*/
+
+fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
+        -> Result<Fix, Error> {
+    parse_chars(parser, elem_start, Fix::from_str)
 }
 
 fn parse_decimal<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
@@ -364,6 +418,13 @@ fn parse_decimal<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start:
     parse_chars(parser,
                 elem_start,
                 |chars| XmlDecimal::from_str(chars).map_err(Error::ParseValue))
+}
+
+pub fn parse_time<T: std::io::Read>
+        (mut parser: &mut EventReader<T>, elem_start: ElemStart)
+        -> Result<xsd::Time, Error> {
+    parse_chars(parser, elem_start,
+                |chars| xsd::Time::parse_from_rfc3339(chars).map_err(Error::from))
 }
 
 pub fn parse_string<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
@@ -514,7 +575,7 @@ impl<'a, T: Read> ElementParse<'a, T> for MetadataParser<'a, T> {
             -> Result<(), Self::Error> {
         match &elem_start.name.local_name as &str {
             "time" => {
-                self.time = Some(try!(parse_time::<T, Self::Error>(self.reader, elem_start)));
+                self.time = Some(try!(parse_time(self.reader, elem_start)));
             }
             "name" => {
                 self.name = Some(try!(parse_string(self.reader, elem_start)));
