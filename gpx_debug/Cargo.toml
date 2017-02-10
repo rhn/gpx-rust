@@ -1,0 +1,12 @@
+[package]
+name = "gpx_debug"
+version = "0.1.0"
+authors = ["rhn"]
+
+[dependencies]
+quote = "^0.3.8"
+syn = { version = "^0.11", features = ["aster", "visit"] }
+
+
+[lib]
+proc-macro = true
