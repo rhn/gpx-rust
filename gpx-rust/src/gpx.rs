@@ -4,6 +4,7 @@ extern crate chrono;
 use std;
 use std::io;
 use std::io::Read;
+use std::error::Error as Error_;
 use std::str::FromStr;
 use self::_xml::reader::{ EventReader, XmlEvent };
 use self::_xml::name::OwnedName;
@@ -35,6 +36,7 @@ pub enum Error {
     Xml(_xml::reader::Error),
     ParseValue(std::string::ParseError), // use "bad tag" instead
     BadAttribute(OwnedName, OwnedName),
+    MalformedData(String),
 }
 
 impl From<chrono::ParseError> for Error {
@@ -207,6 +209,8 @@ impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
         tags: {
             "time" => { time = Some, fn, parse_time },
             "fix" => { fix = Some, fn, parse_fix },
+            "ele" => { ele = Some, fn, parse_decimal },
+            "sat" => { sat = Some, fn, parse_u16 },
             "name" => { name = Some, fn, parse_string },
         }
     );
@@ -322,19 +326,6 @@ impl ParserMessage for Error {
     }
 }
 /*
-struct WptParser<'a, T: 'a + Read> {
-    reader: &'a mut EventReader<T>,
-    elem_name: Option<OwnedName>,
-    lat: Option<XmlDecimal>,
-    lon: Option<XmlDecimal>,
-    time: Option<Time>,
-    fix: Option<Fix>,
-    ele: Option<XmlDecimal>,
-    sat: Option<u16>,
-    name: Option<String>,
-}*/
-
-/*
 impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
     type Element = Waypoint;
     type Error = Error;
@@ -411,6 +402,15 @@ impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
 fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
         -> Result<Fix, Error> {
     parse_chars(parser, elem_start, Fix::from_str)
+}
+
+fn parse_u16<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
+        -> Result<u16, Error> {
+    parse_chars(parser, elem_start,
+                |chars| u16::from_str(chars).map_err(
+                    |e| Error::MalformedData(String::from(e.description()))
+                )
+    )
 }
 
 fn parse_decimal<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
