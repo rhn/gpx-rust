@@ -1,0 +1,2 @@
+[workspace]
+members = ["gpx-rust", "gpx_debug"]
