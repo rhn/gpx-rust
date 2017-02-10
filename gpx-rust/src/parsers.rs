@@ -4,7 +4,9 @@ extern crate chrono;
 use std;
 use self::xml_::reader::{ EventReader, XmlEvent };
 use self::xml_::name::OwnedName;
-use xml::{ ElemStart, ElementParser, ElementParse, ElementBuild };
+use xml::ElemStart;
+#[allow(unused_imports)]
+use xml::{ ElementParser, ElementParse };
 use xsd;
 
 
