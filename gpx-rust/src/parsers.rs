@@ -15,16 +15,20 @@ pub trait ParserMessage
     fn from_xml_error(xml_::reader::Error) -> Self;
 }
 
- 
-pub fn parse_chars<T: std::io::Read, F, R, E: ParserMessage>
+pub trait CharNodeError
+    where Self: From<&'static str> + From<xml_::reader::Error> {
+}
+
+pub fn parse_chars<T: std::io::Read, F, Res, E: CharNodeError, EInner>
     (mut parser: &mut EventReader<T>, elem_start: ElemStart, decode: F)
-    -> Result<R, E>
-        where F: Fn(&str) -> Result<R, E> {
+    -> Result<Res, E>
+        where F: Fn(&str) -> Result<Res, EInner>,
+              E: From<EInner> {
     let mut ret = None;
     loop {
         match parser.next() {
             Ok(XmlEvent::Characters(data)) => {
-                ret = Some(try!(decode(&data)));
+                ret = Some(try!(decode(&data).map_err(E::from)));
             }
             Ok(XmlEvent::EndElement { name }) => {
                 if name == elem_start.name {
@@ -43,7 +47,7 @@ pub fn parse_chars<T: std::io::Read, F, R, E: ParserMessage>
                 return Err(E::from("Unexpected event"));
             }
             Err(error) => {
-                return Err(E::from_xml_error(error));
+                return Err(E::from(error));
             }
         }
     }
