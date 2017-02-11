@@ -175,7 +175,7 @@ macro_attr! {
                 "time" => { time = Some, fn, parse_time },
                 "keywords" => { keywords = Some, fn, parse_string },
                 "bounds" => { bounds = Some, ElementParse, ElementParser },
-                "extensions" => { extensions = Some, ElementParse, ElementParser },}
+                "extensions" => { extensions = Some, ElementParse, ElementParser }}
     }))]
     pub struct Metadata {
         name: Option<String>,
@@ -292,7 +292,7 @@ macro_attr! {
             attrs: {},
             tags: {
                 "name" => { name = Some, fn, parse_string },
-                "trkseg" => { segments = Vec, ElementParse, TrkSegParser },
+                "trkseg" => { segments = Vec, ElementParse, TrkSegParser }
             }
         }
     ), XmlDebug)]

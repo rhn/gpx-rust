@@ -162,7 +162,7 @@ macro_rules! Parser {
     (
         ( $parser:ident {
             attrs: { $( $attr:pat => $attrdata:tt ),* },
-            tags: { $( $tag:pat => $tagdata:tt, )* }
+            tags: { $( $tag:pat => $tagdata:tt ),* $(,)* }
         })
         $(pub)* struct $name:ident {
             $( $i:ident : $k:tt <$t:ty>, )*
