@@ -295,7 +295,7 @@ macro_attr! {
                 "trkseg" => { segments = Vec, ElementParse, TrkSegParser }
             }
         }
-    ), XmlDebug)]
+    ), ElementBuild!(TrkParser, Error), XmlDebug)]
     pub struct Track {
         name: Option<String>,
         cmt: Option<String>,
@@ -306,22 +306,6 @@ macro_attr! {
         type_: Option<String>,
         extensions: Option<XmlElement>,
         segments: Vec<TrackSegment>,
-    }
-}
-
-impl<'a, T: Read> ElementBuild for TrkParser<'a, T> {
-    type Element = Track;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(Track { name: self.name,
-                   cmt: self.cmt,
-                   desc: self.desc,
-                   src: self.src,
-                   link: self.link,
-                   number: self.number,
-                   type_: self.type_,
-                   extensions: self.extensions,
-                   segments: self.segments })
     }
 }
 
