@@ -176,7 +176,7 @@ macro_attr! {
                 "keywords" => { keywords = Some, fn, parse_string },
                 "bounds" => { bounds = Some, ElementParse, ElementParser },
                 "extensions" => { extensions = Some, ElementParse, ElementParser }}
-    }))]
+    }), ElementBuild!(MetadataParser, Error))]
     pub struct Metadata {
         name: Option<String>,
         desc: Option<String>,
@@ -386,22 +386,6 @@ pub fn parse_string<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_sta
     parse_chars(parser,
                 elem_start,
                 |chars| String::from_str(chars).map_err(Error::ParseValue))
-}
-
-impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
-    type Element = Metadata;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(Metadata { name: self.name,
-                      desc: self.desc,
-                      author: self.author,
-                      copyright: self.copyright,
-                      links: self.links,
-                      time: self.time,
-                      keywords: self.keywords,
-                      bounds: self.bounds,
-                      extensions: self.extensions })
-    }
 }
 
 pub struct GpxParser<T: Read> {

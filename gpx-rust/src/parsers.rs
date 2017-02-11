@@ -214,6 +214,23 @@ macro_rules! ParserExp {
     }
 }
 
+macro_rules! ElementBuild {
+    (
+        ($parsername:ident, $error:ident)
+        $(pub)* struct $name:ident {
+            $( $i:ident : $t:ty, )*
+        }
+    ) => {
+        impl<'a, T: Read> ElementBuild for $parsername<'a, T> {
+            type Element = $name;
+            type Error = $error;
+            fn build(self) -> Result<Self::Element, Self::Error> {
+                Ok($name { $( $i: self.$i ),* })
+            }
+        }
+    }
+}
+
 macro_rules! One( ( $t:ty ) => { $t } );
 macro_rules! Option( ( $t:ty ) => { Option<$t> } );
 macro_rules! Vec( ( $t:ty ) => { Vec<$t> } );
