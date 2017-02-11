@@ -7,5 +7,5 @@ extern crate gpx_debug;
 pub mod parsers;
 
 pub mod xml;
-pub mod gpx;
 pub mod xsd;
+pub mod gpx;
