@@ -5,13 +5,13 @@ use std::io::BufReader;
 use std::fs::File;
 use clap::{App, Arg};
 use gpx_rust::xml::ParseXml;
-use gpx_rust::gpx::{ Gpx, GpxParser, Error };
+use gpx_rust::gpx::{ Gpx, Parser, Error };
 
 
 fn parse(filename: &str) -> Result<Gpx, Error> {
     let f = try!(File::open(filename).map_err(Error::Io));
     let f = BufReader::new(f);
-    GpxParser::new(f).parse()
+    Parser::new(f).parse()
 }
  
 fn main() {

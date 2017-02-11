@@ -384,7 +384,6 @@ impl<'a, T: Read> ElementBuild for TrkSegParser<'a, T> {
     }
 }
 
-
 fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
         -> Result<Fix, Error> {
     parse_chars(parser, elem_start, Fix::from_str)
@@ -420,16 +419,16 @@ pub fn parse_string<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_sta
                 |chars| String::from_str(chars).map_err(Error::ParseValue))
 }
 
-pub struct GpxParser<T: Read> {
+pub struct Parser<T: Read> {
     reader: EventReader<T>,
     gpx: Option<Gpx>,
 }
 
-impl<T: Read> ParseXml<T> for GpxParser<T> {
+impl<T: Read> ParseXml<T> for Parser<T> {
     type Document = Gpx;
     type Error = Error;
     fn new(source: T) -> Self {
-        GpxParser { reader: EventReader::new(source),
+        Parser { reader: EventReader::new(source),
                     gpx: None }
     }
     fn next(&mut self) -> Result<XmlEvent, self::xml::Error> {
