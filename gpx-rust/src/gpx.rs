@@ -165,17 +165,29 @@ pub enum GpxVersion {
     V1_1,
 }
 
-#[derive(XmlDebug)]
-pub struct Metadata {
-    name: Option<String>,
-    desc: Option<String>,
-    author: Option<XmlElement>,
-    copyright: Option<XmlElement>,
-    link: Vec<Link>,
-    time: Option<Time>,
-    keywords: Option<String>,
-    bounds: Option<XmlElement>,
-    extensions: Option<XmlElement>,
+macro_attr! {
+    #[derive(XmlDebug,
+    Parser!(MetadataParser {
+        attrs: {},
+        tags: { "author" => { author = Some, ElementParse, ElementParser },
+                "copyright" => { copyright = Some, ElementParse, ElementParser },
+                "link" => { links = Vec, ElementParse, ElementParser },
+                "time" => { time = Some, fn, parse_time },
+                "keywords" => { keywords = Some, fn, parse_string },
+                "bounds" => { bounds = Some, ElementParse, ElementParser },
+                "extensions" => { extensions = Some, ElementParse, ElementParser },}
+    }))]
+    pub struct Metadata {
+        name: Option<String>,
+        desc: Option<String>,
+        author: Option<XmlElement>,
+        copyright: Option<XmlElement>,
+        links: Vec<Link>,
+        time: Option<Time>,
+        keywords: Option<String>,
+        bounds: Option<XmlElement>,
+        extensions: Option<XmlElement>,
+    }
 }
 
 type Link = XmlElement;
@@ -376,23 +388,6 @@ pub fn parse_string<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_sta
                 |chars| String::from_str(chars).map_err(Error::ParseValue))
 }
 
-struct MetadataParser<'a, T: 'a + Read> {
-    reader: &'a mut EventReader<T>,
-    elem_name: Option<OwnedName>,
-    name: Option<String>,
-    desc: Option<String>,
-    author: Option<XmlElement>,
-    copyright: Option<XmlElement>,
-    link: Vec<XmlElement>,
-    time: Option<Time>,
-    keywords: Option<String>,
-    bounds: Option<XmlElement>,
-    extensions: Option<XmlElement>,  
-}
-/*
-macro_rules! ElementParseImpl {
-    ( $( $s: ident ), $( $element: ident ), $( $error: ident), $(
-}*/
 impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
     type Element = Metadata;
     type Error = Error;
@@ -401,58 +396,13 @@ impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
                       desc: self.desc,
                       author: self.author,
                       copyright: self.copyright,
-                      link: self.link,
+                      links: self.links,
                       time: self.time,
                       keywords: self.keywords,
                       bounds: self.bounds,
                       extensions: self.extensions })
     }
 }
-
-impl<'a, T: Read> ElementParse<'a, T> for MetadataParser<'a, T> {
-    fn new(reader: &'a mut EventReader<T>) -> Self {
-        MetadataParser { reader: reader,
-                         elem_name: None,
-                         name: None,
-                         desc: None,
-                         author: None,
-                         copyright: None,
-                         link: Vec::new(),
-                         time: None,
-                         keywords: None,
-                         bounds: None,
-                         extensions: None }
-    }
-
-    ParserStart!();
-
-    fn parse_element(&mut self, elem_start: ElemStart)
-            -> Result<(), Self::Error> {
-        match &elem_start.name.local_name as &str {
-            "time" => {
-                self.time = Some(try!(parse_time(self.reader, elem_start)));
-            }
-            "name" => {
-                self.name = Some(try!(parse_string(self.reader, elem_start)));
-            }
-            _ => {
-                try!(ElementParser::new(self.reader).parse(elem_start));
-            }
-        }
-        Ok(())
-    }
-
-    fn get_name(&self) -> &OwnedName {
-        match &self.elem_name {
-            &Some(ref i) => i,
-            &None => unreachable!(),
-        }
-    }
-    fn next(&mut self) -> Result<XmlEvent, self::xml::Error> {
-        self.reader.next().map_err(self::xml::Error::Xml)
-    }
-}
-
 
 pub struct GpxParser<T: Read> {
     reader: EventReader<T>,
