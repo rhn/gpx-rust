@@ -68,27 +68,6 @@ impl From<std::string::ParseError> for Error {
 }
 
 #[macro_export]
-macro_rules! ParserStart {
-    ( $( $name:pat => { $field:ident, $func:ident } ),* ) => {
-        fn parse_start(&mut self, elem_start: ElemStart)
-                -> Result<(), Self::Error> {
-            for attr in elem_start.attributes {
-                match &(attr.name.local_name) as &str {
-                    $( $name => {
-                        self.$field = $func(attr.value);
-                    } ),*
-                    _ => {
-                        return Err(Self::Error::from_unexp_attr(elem_start.name, attr.name));
-                    }
-                }
-            }
-            self.elem_name = Some(elem_start.name);
-            Ok(())
-        }
-    };
-}
-
-#[macro_export]
 macro_rules! ElemParser {
     ( struct $name:ident {
         $( $i:ident : $t:ty, )*
@@ -141,13 +120,42 @@ macro_rules! ElemParser {
     }
 }
 
-#[derive(Debug)]
-pub struct Gpx {
-    version: GpxVersion,
-    creator: String,
-    metadata: Option<Metadata>,
-    waypoints: Vec<Waypoint>,
-    tracks: Vec<Track>,
+macro_attr! {
+    #[derive(Debug, ParserExp!(GpxElemParser {
+        attrs: { "version" => { version, parse_gpx_version },
+                 "creator" => { creator, Ok<String, Error> }},
+        tags: { "metadata" => { metadata = Some, ElementParse, MetadataParser },
+                "wpt" => { waypoints = Vec, ElementParse, WptParser },
+                "trk" => { tracks = Vec, ElementParse, TrkParser }
+            }
+    }))]
+    pub struct Gpx {
+        version: One!(GpxVersion),
+        creator: One!(String),
+        metadata: Option!(Metadata),
+        waypoints: Vec!(Waypoint),
+        tracks: Vec!(Track),
+    }
+}
+
+fn parse_gpx_version(value: String) -> Result<GpxVersion, Error> {
+    match &value as &str {
+        "1.0" => Ok(GpxVersion::V1_0),
+        "1.1" => Ok(GpxVersion::V1_1),
+        _ => Err(Error::Str("Unknown GPX version"))
+    }
+}
+
+impl<'a, T: Read> ElementBuild for GpxElemParser<'a, T> {
+    type Element = Gpx;
+    type Error = Error;
+    fn build(self) -> Result<Self::Element, Self::Error> {
+        Ok(Gpx { version: self.version.expect("Version uninitialized"),
+                 creator: self.creator.expect("Creator uninitialized"),
+                 metadata: self.metadata,
+                 waypoints: self.waypoints,
+                 tracks: self.tracks })
+    }
 }
 
 #[derive(Debug)]
@@ -203,8 +211,8 @@ impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
                     fix: None, sat: None }
     }
     _ParserImplBody!(
-        attrs: { "lat" => { lat, Some },
-                 "lon" => { lon, Some }
+        attrs: { "lat" => { lat, parse_dec },
+                 "lon" => { lon, parse_dec }
         },
         tags: {
             "time" => { time = Some, fn, parse_time },
@@ -214,6 +222,10 @@ impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
             "name" => { name = Some, fn, parse_string },
         }
     );
+}
+
+fn parse_dec(value: String) -> Result<XmlDecimal, Error> {
+    Ok(value)
 }
 
 impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
@@ -265,8 +277,11 @@ impl FromStr for Fix {
 macro_attr! {
     #[derive(Parser!(
         TrkParser {
-            "name" => { name = Some, fn, parse_string },
-            "trkseg" => { segments = Vec, ElementParse, TrkSegParser },
+            attrs: {},
+            tags: {
+                "name" => { name = Some, fn, parse_string },
+                "trkseg" => { segments = Vec, ElementParse, TrkSegParser },
+            }
         }
     ), XmlDebug)]
     pub struct Track {
@@ -360,93 +375,6 @@ pub fn parse_string<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_sta
                 elem_start,
                 |chars| String::from_str(chars).map_err(Error::ParseValue))
 }
-
-
-struct GpxElemParser<'a, T: 'a + Read> {
-    reader: &'a mut EventReader<T>,
-    name: Option<OwnedName>,
-    metadata: Option<Metadata>,
-    waypoints: Vec<Waypoint>,
-    tracks: Vec<Track>,
-    version: Option<GpxVersion>,
-    creator: Option<String>,
-}
-
-impl<'a, T: Read> ElementBuild for GpxElemParser<'a, T> {
-    type Element = Gpx;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(Gpx { version: self.version.expect("Version uninitialized"),
-                 creator: self.creator.expect("Creator uninitialized"),
-                 metadata: self.metadata,
-                 waypoints: self.waypoints,
-                 tracks: self.tracks })
-    }
-}
-
-impl<'a, T: Read> ElementParse<'a, T> for GpxElemParser<'a, T> {
-    fn new(reader: &'a mut EventReader<T>) -> GpxElemParser<'a, T> {
-        GpxElemParser { reader: reader,
-                        name: None,
-                        metadata: None,
-                        tracks: Vec::new(),
-                        waypoints: Vec::new(),
-                        version: None,
-                        creator: None }
-    }
-    fn parse_start(&mut self, elem_start: ElemStart) -> Result<(), Self::Error> {
-        for attr in elem_start.attributes {
-            match &(attr.name.local_name) as &str {
-                "version" => {
-                    self.version = Some(match &(attr.value) as &str {
-                        "1.0" => GpxVersion::V1_0,
-                        "1.1" => GpxVersion::V1_1,
-                        _ => { return Err(Error::Str("Unknown GPX version")); }
-                    });
-                },
-                "creator" => {
-                    self.creator = Some(attr.value);
-                },
-                _ => {}
-            }
-        }
-        self.name = Some(elem_start.name);
-        Ok(())
-    }
-    fn next(&mut self) -> Result<XmlEvent, self::xml::Error> {
-        self.reader.next().map_err(self::xml::Error::Xml)
-    }
-    fn get_name(&self) -> &OwnedName {
-        match &self.name {
-            &Some(ref i) => i,
-            &None => unreachable!(),
-        }
-    }
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), Error> {
-        match &(elem_start.name.local_name) as &str {
-            "metadata" => {
-                self.metadata = Some(
-                    try!(MetadataParser::new(self.reader).parse(elem_start))
-                );
-            }
-            "wpt" => {
-                self.waypoints.push(
-                    try!(WptParser::new(self.reader).parse(elem_start))
-                );
-            }
-            "trk" => {
-                self.tracks.push(
-                    try!(TrkParser::new(self.reader).parse(elem_start))
-                );
-            }
-            _ => {
-                try!(ElementParser::new(self.reader).parse(elem_start));
-            }
-        }
-        Ok(())
-    }
-}
-
 
 struct MetadataParser<'a, T: 'a + Read> {
     reader: &'a mut EventReader<T>,

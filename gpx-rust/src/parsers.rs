@@ -49,8 +49,39 @@ pub fn parse_chars<T: std::io::Read, F, R, E: ParserMessage>
     }
 }
 
+macro_rules! _parser_attr {
+    ( $self_:ident, $value:ident, { $field:ident, $func:expr } ) => {
+        $self_.$field = Some(try!($func($value)));
+    };
+    ( $self_:ident, $value:ident, { $field:ident, $func:path } ) => {
+        $self_.$field = Some(try!($func($value)));
+    };
+}
+
+#[macro_export]
+macro_rules! ParserStart {
+    ( $( $name:pat => $attr:tt ),* ) => {
+        fn parse_start(&mut self, elem_start: ElemStart)
+                -> Result<(), Self::Error> {
+            for attr in elem_start.attributes {
+                match &(attr.name.local_name) as &str {
+                    $( $name => {
+                        let v = attr.value;
+                        _parser_attr! { self, v, $attr }
+                    } ),*
+                    _ => {
+                        return Err(Self::Error::from_unexp_attr(elem_start.name, attr.name));
+                    }
+                }
+            }
+            self.elem_name = Some(elem_start.name);
+            Ok(())
+        }
+    };
+}
+
 macro_rules! make_fn {
-    ( fn, $parser:expr, $reader:expr, $elem_start:expr ) => {
+    ( fn, $parser:tt<$T:ty>, $reader:expr, $elem_start:expr ) => {
         $parser($reader, $elem_start);
     };
     ( ElementParse, $parser:ty, $reader:expr, $elem_start:expr ) => {
@@ -60,13 +91,12 @@ macro_rules! make_fn {
 
 macro_rules! make_tag {
     ( $T:ty, $self_:expr, $elem_start:expr, { $field:ident = Some, $ptype:tt, $parser:tt } ) => {
-        $self_.$field = Some(try!(make_fn!($ptype, $parser, $self_.reader, $elem_start)));
+        $self_.$field = Some(try!(make_fn!($ptype, $parser<$T>, $self_.reader, $elem_start)));
     };
     ( $T:ty, $self_:expr, $elem_start:expr, { $field:ident = Vec, $ptype:tt, $parser:tt } ) => {
         $self_.$field.push(try!(make_fn!($ptype, $parser<$T>, $self_.reader, $elem_start)));
     };
 }
-
 
 macro_rules! _ParserImplBody {
     (
@@ -100,28 +130,90 @@ macro_rules! _ParserImplBody {
     }
 }
 
+macro_rules! _elem_field {
+    ( One <$t:ty> ) => { $t };
+    ( $k:ident <$t:ty> ) => { $k <$t> };
+}
+
+macro_rules! Elem {
+    ((),
+        then $cb:tt,
+        $(#[$($attrs:tt)*])*
+        $(pub)* struct $name:ident {
+            $( $i:ident : $k:tt <$t:ty>, )*
+        }
+    ) => {
+        macro_attr_callback! {
+            $cb,
+            $(#[$($attrs)*])*
+            pub struct $name {
+                $( $i : _elem_field!( $k <$t> ), )*
+            }
+        }
+    };
+}
+
+macro_rules! _parser_field {
+    ( One <$t:ty> ) => { Option<$t> };
+    ( $k:ident <$t:ty> ) => { $k <$t> };
+}
+
 macro_rules! Parser {
     (
-        ($parser:ident {
-            $( $tag:pat => $tagdata:tt, )*
+        ( $parser:ident {
+            attrs: { $( $attr:pat => $attrdata:tt ),* },
+            tags: { $( $tag:pat => $tagdata:tt, )* }
         })
         $(pub)* struct $name:ident {
-            $( $i:ident : $t:ty, )*
+            $( $i:ident : $k:tt <$t:ty>, )*
         }
     ) => {
         struct $parser<'a, T: 'a + Read> {
             reader: &'a mut EventReader<T>,
             elem_name: Option<OwnedName>,
-            $( $i: $t, )*
+            $( $i : _parser_field!{ $k <$t> }, )*
         }
 
         impl<'a, T: Read> ElementParse<'a, T> for $parser<'a, T> {
             fn new(reader: &'a mut EventReader<T>) -> Self {
                 $parser { reader: reader,
                           elem_name: None,
-                          $( $i : <$t>::empty(), )* }
+                          $( $i : <_parser_field!{ $k <$t> }>::empty(), )* }
             }
-            _ParserImplBody!( attrs: {}, tags: { $( $tag => $tagdata, )* } );
+            _ParserImplBody!( attrs: { $( $attr => $attrdata, )* },
+                              tags: { $( $tag => $tagdata, )* } );
         }
     }
 }
+
+macro_rules! ParserExp {
+    (
+        ( $parser:ident {
+            attrs: { $( $attr:pat => $attrdata:tt ),* },
+            tags: { $( $tag:pat => $tagdata:tt ),* }
+        })
+        $(pub)* struct $name:ident {
+            $( $i:ident : $k:tt ! ($t:ty), )*
+        }
+    ) => {
+        struct $parser<'a, T: 'a + Read> {
+            reader: &'a mut EventReader<T>,
+            elem_name: Option<OwnedName>,
+            $( $i : _parser_field!{ $k <$t> }, )*
+        }
+
+        impl<'a, T: Read> ElementParse<'a, T> for $parser<'a, T> {
+            fn new(reader: &'a mut EventReader<T>) -> Self {
+                $parser { reader: reader,
+                          elem_name: None,
+                          $( $i : <_parser_field!{ $k <$t> }>::empty(), )* }
+            }
+            _ParserImplBody!( attrs: { $( $attr => $attrdata ),* },
+                              tags: { $( $tag => $tagdata, )* } );
+        }
+    }
+}
+
+macro_rules! One( ( $t:ty ) => { $t } );
+macro_rules! Option( ( $t:ty ) => { Option<$t> } );
+macro_rules! Vec( ( $t:ty ) => { Vec<$t> } );
