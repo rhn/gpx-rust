@@ -36,15 +36,18 @@ impl Gpx {
                                                   encoding: None,
                                                   standalone: None });
             let elemname = Name::local("gpx");
-            let gpxver = GpxVersion::V1_1;
-            let ver = gpxver.to_attribute();
-            let attrs = vec![Attribute { name: Name::local("version"),
-                                         value: ver },
+            ctx.suspend(
+                XmlEvent::StartElement {
+                    name: elemname.clone(),
+                    attributes: Cow::Owned(
+                        vec![Attribute { name: Name::local("version"),
+                                         value: GpxVersion::V1_1.to_attribute() },
                              Attribute { name: Name::local("creator"),
-                                         value: &self.creator },];
-            ctx.suspend(XmlEvent::StartElement { name: elemname.clone(),
-                                                 attributes: Cow::Owned(attrs),
-                                                 namespace: Cow::Owned(Namespace::empty()) });
+                                         value: &self.creator }]
+                    ),
+                    namespace: Cow::Owned(Namespace::empty())
+                }
+            );
             ctx.suspend(XmlEvent::EndElement { name: Some(elemname) });
         })
     }
