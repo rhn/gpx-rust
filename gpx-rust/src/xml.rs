@@ -248,3 +248,29 @@ impl<T: Read> ParseXml<T> for XmlParser<T> {
     }
 }
 
+
+pub enum WspMode {
+    None,
+    IndentLevel(u16),
+}
+
+impl WspMode {
+    pub fn next(self) -> WspMode {
+        match self {
+            WspMode::None => WspMode::None,
+            WspMode::IndentLevel(i) => WspMode::IndentLevel(i + 1),
+        }
+    }
+    pub fn prev(self) -> WspMode {
+        match self {
+            WspMode::None => WspMode::None,
+            WspMode::IndentLevel(i) => 
+                if i <= 0 { panic!("Indent level cannot be lower than 0") }
+                else { WspMode::IndentLevel(i + 1) }
+        }
+    }
+}
+
+pub trait Serialize {
+    fn serialize<Stream: io::Write>(&self, out: Stream, whitespace: WspMode) -> io::Result<usize>; 
+}

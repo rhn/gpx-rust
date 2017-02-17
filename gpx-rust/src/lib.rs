@@ -9,3 +9,4 @@ pub mod parsers;
 pub mod xml;
 pub mod xsd;
 pub mod gpx;
+mod generator;
