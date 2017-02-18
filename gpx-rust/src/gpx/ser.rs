@@ -3,33 +3,18 @@
 extern crate fringe;
 extern crate xml as _xml;
 
-use std::io;
 use std::borrow::Cow;
 use self::_xml::common::XmlVersion;
 use self::_xml::name::Name;
 use self::_xml::namespace::Namespace;
 use self::_xml::attribute::Attribute;
-use self::_xml::writer;
-use self::_xml::writer::{ EmitterConfig, XmlEvent };
+use self::_xml::writer::XmlEvent;
 use generator::{ Generator, make_gen };
-use gpx::{ Gpx, GpxVersion };
+use gpx::{ Gpx, GpxVersion, Metadata };
+use ser::Serialize;
 
 
-impl Gpx {
-    pub fn serialize<W: io::Write>(&self, sink: W) -> Result<(), io::Error> {
-        let mut xw = EmitterConfig::new()
-            .line_separator("\n")
-            .perform_indent(true)
-            .create_writer(sink);
-        for ev in self.events() {
-            match xw.write(ev) {
-                Err(writer::Error::Io(e)) => { return Err(e) },
-                Err(e) => panic!(format!("Programming error: {:?}", e)),
-                _ => ()
-            }
-        }
-        Ok(())
-    }
+impl Serialize for Gpx {
     fn events<'a>(&'a self) -> Generator<XmlEvent<'a>> {
         make_gen(move |ctx| {
             ctx.suspend(XmlEvent::StartDocument { version: XmlVersion::Version11,
@@ -48,6 +33,83 @@ impl Gpx {
                     namespace: Cow::Owned(Namespace::empty())
                 }
             );
+            
+            if let Some(ref meta) = self.metadata {
+                for ev in meta.events() {
+                    ctx.suspend(ev);
+                }
+            }
+            ctx.suspend(XmlEvent::EndElement { name: Some(elemname) });
+        })
+    }
+}
+
+
+impl GpxVersion {
+    fn to_attribute(&self) -> &'static str {
+        match self {
+            &GpxVersion::V1_0 => "1.0",//String::from("1.0"),
+            &GpxVersion::V1_1 => "1.1",//String::from("1.1")
+        }
+    }
+}
+
+impl Serialize for Metadata {
+    fn events<'a>(&'a self) -> Generator<XmlEvent<'a>> {
+        make_gen(move |ctx| {
+            let elemname = Name::local("metadata");
+            ctx.suspend(XmlEvent::StartElement {
+                name: elemname.clone(),
+                attributes: Cow::Owned(vec![]),
+                namespace: Cow::Owned(Namespace::empty()),
+            });
+            /*
+            if let Some(ref item) = self.name {
+                for ev in item.events() {
+                    ctx.suspend(ev);
+                }
+            }
+            if let Some(ref item) = self.desc {
+                for ev in item.events() {
+                    ctx.suspend(ev);
+                }
+            }
+            if let Some(ref item) = self.author {
+                for ev in item.events() {
+                    ctx.suspend(ev);
+                }
+            }
+            if let Some(ref item) = self.copyright {
+                for ev in item.events() {
+                    ctx.suspend(ev);
+                }
+            }
+            for item in self.links {
+                for ev in item.events() {
+                    ctx.suspend(ev);
+                }
+            }*/
+            if let Some(ref item) = self.time {
+                for ev in item.events() {
+                    ctx.suspend(ev);
+                }
+            }/*
+            if let Some(ref item) = self.keywords {
+                for ev in item.events() {
+                    ctx.suspend(ev);
+                }
+            }
+            if let Some(ref item) = self.bounds {
+                for ev in item.events() {
+                    ctx.suspend(ev);
+                }
+            }
+            if let Some(ref item) = self.extensions {
+                for ev in item.events() {
+                    ctx.suspend(ev);
+                }
+            }
+            */
             ctx.suspend(XmlEvent::EndElement { name: Some(elemname) });
         })
     }

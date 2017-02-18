@@ -12,6 +12,7 @@ clap = "2"
 gpx_debug = { path = "../gpx_debug" }
 #context = "^1.0" # use fringe or native yield when available
 #crossbeam = "^0.2"
+quote = "^0.3.8"
 
 [dependencies.fringe]
 version = "^1.2.1"

@@ -3,16 +3,22 @@ extern crate chrono;
 
 use std;
 use std::io;
-use std::io::Read;
+use std::io::{ Read, Write };
 use std::error::Error as Error_;
 use std::str::FromStr;
 use self::_xml::reader::{ EventReader, XmlEvent };
+use self::_xml::writer;
 use self::_xml::name::OwnedName;
 use xml;
-use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild, Serialize, WspMode };
+use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild, WspMode };
+use std::borrow::Cow;
+use self::_xml::name::Name;
+use self::_xml::namespace::Namespace;
+use generator::{ Generator, make_gen };
 use parsers::*;
 use xsd;
 use xsd::*;
+use ser::Serialize;
 
 mod ser;
 
@@ -215,27 +221,19 @@ pub enum GpxVersion {
     V1_1,
 }
 
-impl GpxVersion {
-    fn to_attribute(&self) -> &'static str {
-        match self {
-            &GpxVersion::V1_0 => "1.0",//String::from("1.0"),
-            &GpxVersion::V1_1 => "1.1",//String::from("1.1")
-        }
-    }
-}
-
 macro_attr! {
     #[derive(XmlDebug,
-    Parser!(MetadataParser {
-        attrs: {},
-        tags: { "author" => { author = Some, ElementParse, ElementParser },
-                "copyright" => { copyright = Some, ElementParse, ElementParser },
-                "link" => { links = Vec, ElementParse, ElementParser },
-                "time" => { time = Some, fn, parse_time },
-                "keywords" => { keywords = Some, fn, parse_string },
-                "bounds" => { bounds = Some, ElementParse, ElementParser },
-                "extensions" => { extensions = Some, ElementParse, ElementParser }}
-    }), ElementBuild!(MetadataParser, Error))]
+        Parser!(MetadataParser {
+            attrs: {},
+            tags: { "author" => { author = Some, ElementParse, ElementParser },
+                    "copyright" => { copyright = Some, ElementParse, ElementParser },
+                    "link" => { links = Vec, ElementParse, ElementParser },
+                    "time" => { time = Some, fn, parse_time },
+                    "keywords" => { keywords = Some, fn, parse_string },
+                    "bounds" => { bounds = Some, ElementParse, ElementParser },
+                    "extensions" => { extensions = Some, ElementParse, ElementParser }}
+        }),
+        ElementBuild!(MetadataParser, Error))]
     pub struct Metadata {
         name: Option<String>,
         desc: Option<String>,

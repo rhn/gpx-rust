@@ -270,7 +270,3 @@ impl WspMode {
         }
     }
 }
-
-pub trait Serialize {
-    fn serialize<Stream: io::Write>(&self, out: Stream, whitespace: WspMode) -> io::Result<usize>; 
-}
