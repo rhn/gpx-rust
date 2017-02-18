@@ -65,39 +65,28 @@ impl Serialize for Metadata {
         }
         if let Some(ref item) = self.desc {
             try!(item.serialize_with(sink, "desc"));
-        }/*
+        }
         if let Some(ref item) = self.author {
-            for ev in item.events() {
-                ctx.suspend(ev);
-            }
-        }*/
+            try!(item.serialize_with(sink, "author"));
+        }
         if let Some(ref item) = self.copyright {
             try!(item.serialize_with(sink, "copyright"));
-        }/*
-        for item in self.links {
-            for ev in item.events() {
-                ctx.suspend(ev);
-            }
-        }*/
+        }
+        for item in &self.links {
+            try!(item.serialize_with(sink, "link"));
+        }
         if let Some(ref item) = self.time {
             try!(item.serialize_with(sink, "time"));
-        }/*
+        }
         if let Some(ref item) = self.keywords {
-            for ev in item.events() {
-                ctx.suspend(ev);
-            }
+            try!(item.serialize_with(sink, "keywords"));
         }
         if let Some(ref item) = self.bounds {
-            for ev in item.events() {
-                ctx.suspend(ev);
-            }
+            try!(item.serialize_with(sink, "bounds"));
         }
         if let Some(ref item) = self.extensions {
-            for ev in item.events() {
-                ctx.suspend(ev);
-            }
+            try!(item.serialize_with(sink, "extensions"));
         }
-        */
         sink.write(XmlEvent::EndElement { name: Some(elemname) })
     }
 }
