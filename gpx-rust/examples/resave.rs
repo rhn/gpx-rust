@@ -24,7 +24,7 @@ fn parse(filename: &str) -> Result<Gpx, Error> {
 fn save(filename: &str, data: Gpx) -> Result<(), ResaveError> {
     let f = try!(File::create(filename).map_err(ResaveError::Io));
     let f = BufWriter::new(f);
-    data.serialize(f).map_err(ResaveError::Io)//, WspMode::IndentLevel(0)).map_err(ResaveError::Io));
+    data.serialize(f, "").map_err(ResaveError::Io)//, WspMode::IndentLevel(0)).map_err(ResaveError::Io));
 }
 
 fn main() {

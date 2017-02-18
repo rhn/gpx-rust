@@ -29,11 +29,11 @@ pub fn parse_int<T: std::io::Read, Error: CharNodeError + From<std::num::ParseIn
 }
 
 impl Serialize for Time {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>) -> writer::Result<()> {
-        let elemname = Name::local("time");
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
+        let elemname = Name::local(name);
         try!(sink.write(XmlEvent::StartElement {
                 name: elemname.clone(),
-                attributes: Cow::Owned(vec![]),
+                attributes: Cow::Owned(Vec::new()),
                 namespace: Cow::Owned(Namespace::empty()),
         }));
         try!(sink.write(XmlEvent::Characters(&self.to_rfc3339())));

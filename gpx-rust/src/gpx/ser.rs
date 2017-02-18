@@ -16,7 +16,7 @@ use ser::Serialize;
 
 
 impl Serialize for Gpx {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>) -> writer::Result<()> {
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
         try!(sink.write(XmlEvent::StartDocument { version: XmlVersion::Version11,
                                                   encoding: None,
                                                   standalone: None }));
@@ -35,7 +35,7 @@ impl Serialize for Gpx {
         ));
             
         if let Some(ref meta) = self.metadata {
-            try!(meta.serialize_with(sink));
+            try!(meta.serialize_with(sink, "metadata"));
         }
         sink.write(XmlEvent::EndElement { name: Some(elemname) })
     }
@@ -52,41 +52,35 @@ impl GpxVersion {
 }
 
 impl Serialize for Metadata {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>) -> writer::Result<()> {
-        let elemname = Name::local("metadata");
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
+        let elemname = Name::local(name);
         try!(sink.write(XmlEvent::StartElement {
             name: elemname.clone(),
             attributes: Cow::Owned(vec![]),
             namespace: Cow::Owned(Namespace::empty()),
         }));
-        /*
+        
         if let Some(ref item) = self.name {
-            for ev in item.events() {
-                ctx.suspend(ev);
-            }
+            try!(item.serialize_with(sink, "name"));
         }
         if let Some(ref item) = self.desc {
-            for ev in item.events() {
-                ctx.suspend(ev);
-            }
-        }
+            try!(item.serialize_with(sink, "desc"));
+        }/*
         if let Some(ref item) = self.author {
             for ev in item.events() {
                 ctx.suspend(ev);
             }
-        }
+        }*/
         if let Some(ref item) = self.copyright {
-            for ev in item.events() {
-                ctx.suspend(ev);
-            }
-        }
+            try!(item.serialize_with(sink, "copyright"));
+        }/*
         for item in self.links {
             for ev in item.events() {
                 ctx.suspend(ev);
             }
         }*/
         if let Some(ref item) = self.time {
-            try!(item.serialize_with(sink));
+            try!(item.serialize_with(sink, "time"));
         }/*
         if let Some(ref item) = self.keywords {
             for ev in item.events() {
