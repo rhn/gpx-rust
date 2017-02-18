@@ -32,7 +32,6 @@ enum XsdElementMaxOccurs {
 
 struct StructInfo<'a> {
     name: String,
-    tag_name: String,
     type_: &'a XsdType<'a>,
 }
 
@@ -44,58 +43,56 @@ macro_rules! XsdElementSingle (
     }
 );
 
-fn make_ser_impl(cls_name: &str, elem_name: &str, data: &XsdType) -> String {
+fn make_ser_impl(cls_name: &str, data: &XsdType) -> String {
     let cls_name = quote::Ident::new(cls_name);
     let events = data.sequence.iter().map(|elem| {
+        let elem_name = elem.name.clone();
         match elem.max_occurs {
             XsdElementMaxOccurs::Some(1) => {
                 let name = quote::Ident::new(elem.name.clone());
                 quote!(
                     if let Some(ref item) = self.#name {
-                        for ev in item.events() {
-                            ctx.suspend(ev);
-                        }
+                        try!(item.serialize_with(sink, #elem_name));
                     }
                 )
             }
             _ => {
                 let name = quote::Ident::new(format!("{}s", elem.name));
                 quote!(
-                    for item in self.#name {
-                        for ev in item.events() {
-                            ctx.suspend(ev);
-                        }
+                    for item in &self.#name {
+                        try!(item.serialize_with(sink, #elem_name));
                     }
                 )
             }
         }
     });
-    let gen_body = quote!(
-        let elemname = Name::local(#elem_name);
-        ctx.suspend(
-            XmlEvent::StartElement {
-                name: elemname.clone(),
-                attributes: Cow::Owned(vec![]),
-                namespace: Cow::Owned(Namespace::empty())
-            }
-        );
-        #( #events )*
-        
-        ctx.suspend(XmlEvent::EndElement { name: Some(elemname) });
+    let fun_body = quote!(
+        fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
+            let elemname = Name::local(name);
+            try!(sink.write(
+                XmlEvent::StartElement {
+                    name: elemname.clone(),
+                    attributes: Cow::Owned(vec![]),
+                    namespace: Cow::Owned(Namespace::empty())
+                }
+            ));
+            
+            #( #events )*
+            
+            sink.write(XmlEvent::EndElement { name: Some(elemname) });
+        }
     );
     quote!(
         extern crate xml as _xml;
 
+        use std::borrow::cow;
         use self::_xml::name::Name;
-        use self::_xml::writer::XmlEvent;
+        use self::_xml::name::Namespace;
+        use self::_xml::writer::{ XmlEvent, EventWriter };
         use gpx_rust::ser::Serialize;
 
         impl Serialize for #cls_name {
-            fn events<'a>(&'a self) -> Generator<XmlEvent<'a>> {
-                make_gen(move |ctx| {
-                    #gen_body
-                })
-            }
+            #fun_body
         }
     ).to_string()
 }
@@ -105,7 +102,7 @@ fn save(filename: &str, structs: Vec<StructInfo>) -> Result<(), io::Error> {
     let mut f = BufWriter::new(f);
     for item in structs {
         try!(f.write(
-            make_ser_impl(&item.name, &item.tag_name, item.type_).as_bytes()
+            make_ser_impl(&item.name, item.type_).as_bytes()
         ));
     }
     //try!(f.write("sss".as_bytes()));
@@ -136,11 +133,11 @@ fn main() {
                 XsdElementSingle!("bounds", "boundsType"),
                 XsdElementSingle!("extensions", "extensionsType"),
             ]
-        }
+        },
     ];
     
     let structs = vec![
-        StructInfo { name: "Metadata".into(), tag_name: "metadata".into(), type_: &types[0] }
+        StructInfo { name: "Metadata".into(), type_: &types[0] }
     ];
     
     save(matches.value_of("destination").unwrap(), structs).expect("Failed to save");
