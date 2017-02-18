@@ -2,15 +2,15 @@ extern crate chrono;
 extern crate xml as _xml;
 extern crate std;
 
+use std::io;
 use std::str::FromStr;
 use std::borrow::Cow;
 use self::chrono::{ DateTime, FixedOffset };
 use self::_xml::name::Name;
 use self::_xml::namespace::Namespace;
-use self::_xml::attribute::Attribute;
-use self::_xml::writer::XmlEvent;
+use self::_xml::writer;
+use self::_xml::writer::{ EventWriter, XmlEvent };
 
-use generator::{ Generator, make_gen };
 use parsers::{ parse_chars, CharNodeError };
 use xml::ElemStart;
 use ser::Serialize;
@@ -29,17 +29,14 @@ pub fn parse_int<T: std::io::Read, Error: CharNodeError + From<std::num::ParseIn
 }
 
 impl Serialize for Time {
-    fn events<'a>(&'a self) -> Generator<XmlEvent<'a>> {
-        let value = self.to_rfc3339();
-        make_gen(move |ctx| {
-            let elemname = Name::local("time");
-            ctx.suspend(XmlEvent::StartElement {
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>) -> writer::Result<()> {
+        let elemname = Name::local("time");
+        try!(sink.write(XmlEvent::StartElement {
                 name: elemname.clone(),
                 attributes: Cow::Owned(vec![]),
                 namespace: Cow::Owned(Namespace::empty()),
-            });
-            ctx.suspend(XmlEvent::Characters(&value));
-            ctx.suspend(XmlEvent::EndElement { name: Some(elemname) });
-        })
+        }));
+        try!(sink.write(XmlEvent::Characters(&self.to_rfc3339())));
+        sink.write(XmlEvent::EndElement { name: Some(elemname) })
     }
 }

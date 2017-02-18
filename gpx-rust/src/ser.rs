@@ -1,9 +1,11 @@
 extern crate xml as _xml;
 
 use std::io;
+use std::borrow::Cow;
 use self::_xml::writer;
-use self::_xml::writer::{ EmitterConfig, XmlEvent };
-use generator::Generator;
+use self::_xml::writer::{ EmitterConfig, EventWriter, XmlEvent };
+
+use xml;
 
 
 pub trait Serialize {
@@ -12,14 +14,29 @@ pub trait Serialize {
             .line_separator("\n")
             .perform_indent(true)
             .create_writer(sink);
-        for ev in self.events() {
-            match xw.write(ev) {
-                Err(writer::Error::Io(e)) => { return Err(e) },
-                Err(e) => panic!(format!("Programming error: {:?}", e)),
-                _ => ()
-            }
+        
+        match self.serialize_with(&mut xw) {
+            Err(writer::Error::Io(e)) => { Err(e) },
+            Err(e) => panic!(format!("Bug: {:?}", e)),
+            _ => Ok(())
         }
-        Ok(())
     }
-    fn events<'a>(&'a self) -> Generator<XmlEvent<'a>>;
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>) -> writer::Result<()>;
+}
+
+impl Serialize for xml::XmlElement {
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>) -> writer::Result<()> {
+        try!(sink.write(
+            XmlEvent::StartElement { name: self.name.borrow(),
+                                     attributes: Cow::Borrowed(self.attributes.as_slice().map(|a| { a.borrow() })),
+                                     namespace: self.namespace }
+        ));
+        for node in &self.nodes {
+            try!(match &node {
+                xml::XmlNode::Text(s) => sink.write(XmlEvent::Characters(s)),
+                xml::XmlNode::Element(e) => e.serialize_with(sink),
+            })
+        }
+        sink.write(XmlEvent::EndElement { name: Some(self.name.borrow()) })
+    }
 }

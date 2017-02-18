@@ -3,22 +3,16 @@ extern crate chrono;
 
 use std;
 use std::io;
-use std::io::{ Read, Write };
+use std::io::{ Read };
 use std::error::Error as Error_;
 use std::str::FromStr;
 use self::_xml::reader::{ EventReader, XmlEvent };
-use self::_xml::writer;
 use self::_xml::name::OwnedName;
 use xml;
-use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild, WspMode };
-use std::borrow::Cow;
-use self::_xml::name::Name;
-use self::_xml::namespace::Namespace;
-use generator::{ Generator, make_gen };
+use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use parsers::*;
 use xsd;
 use xsd::*;
-use ser::Serialize;
 
 mod ser;
 
