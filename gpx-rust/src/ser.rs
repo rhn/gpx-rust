@@ -28,13 +28,18 @@ impl Serialize for xml::XmlElement {
     fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>) -> writer::Result<()> {
         try!(sink.write(
             XmlEvent::StartElement { name: self.name.borrow(),
-                                     attributes: Cow::Borrowed(self.attributes.as_slice().map(|a| { a.borrow() })),
-                                     namespace: self.namespace }
+                                     attributes: Cow::Borrowed(
+                                        self.attributes
+                                            .iter()
+                                            .map(|a| { a.borrow() })
+                                            .collect::<Vec<_>>()
+                                            .as_slice()),
+                                     namespace: Cow::Borrowed(&self.namespace) }
         ));
         for node in &self.nodes {
-            try!(match &node {
-                xml::XmlNode::Text(s) => sink.write(XmlEvent::Characters(s)),
-                xml::XmlNode::Element(e) => e.serialize_with(sink),
+            try!(match node {
+                &xml::XmlNode::Text(ref s) => sink.write(XmlEvent::Characters(s)),
+                &xml::XmlNode::Element(ref e) => e.serialize_with(sink),
             })
         }
         sink.write(XmlEvent::EndElement { name: Some(self.name.borrow()) })
