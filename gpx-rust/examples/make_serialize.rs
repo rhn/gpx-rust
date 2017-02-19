@@ -3,8 +3,9 @@ extern crate quote;
 extern crate clap;
 
 use std::io;
-use std::io::{ Write, BufReader, BufWriter };
+use std::io::{ Write, BufWriter };
 use std::fs::File;
+use std::collections::HashMap;
 use clap::{ App, Arg };
 
 
@@ -29,10 +30,12 @@ enum XsdElementMaxOccurs {
     Unbounded,
 }
 
+type TagMap<'a> = HashMap<&'a str, &'a str>;
 
 struct StructInfo<'a> {
     name: String,
     type_: &'a XsdType<'a>,
+    tags: TagMap<'a>,
 }
 
 macro_rules! XsdElementSingle (
@@ -43,13 +46,43 @@ macro_rules! XsdElementSingle (
     }
 );
 
-fn make_ser_impl(cls_name: &str, data: &XsdType) -> String {
+macro_rules! map(
+    { $($key:expr => $value:expr),* } => {
+        {
+            let mut m = ::std::collections::HashMap::new();
+            $(
+                m.insert($key, $value);
+            )*
+            m
+        }
+     };
+);
+
+fn make_header() -> &'static str {
+    "extern crate xml as _xml;
+
+use std::borrow::cow;
+use self::_xml::name::Name;
+use self::_xml::name::Namespace;
+use self::_xml::writer::{ XmlEvent, EventWriter };
+use gpx_rust::ser::Serialize;"
+}
+
+fn make_ser_impl(cls_name: &str, tags: &TagMap, data: &XsdType) -> String {
     let cls_name = quote::Ident::new(cls_name);
     let events = data.sequence.iter().map(|elem| {
         let elem_name = elem.name.clone();
+        let get_attr_name = |f: &Fn(&str) -> String| {
+            quote::Ident::new(match tags.get(elem_name.as_str()) {
+                Some(i) => { 
+                    String::from(i.clone())
+                },
+                None => f(elem_name.as_str())
+            })
+        };
         match elem.max_occurs {
             XsdElementMaxOccurs::Some(1) => {
-                let name = quote::Ident::new(elem.name.clone());
+                let name = get_attr_name(&|n| { String::from(n) });
                 quote!(
                     if let Some(ref item) = self.#name {
                         try!(item.serialize_with(sink, #elem_name));
@@ -57,7 +90,7 @@ fn make_ser_impl(cls_name: &str, data: &XsdType) -> String {
                 )
             }
             _ => {
-                let name = quote::Ident::new(format!("{}s", elem.name));
+                let name = get_attr_name(&|n| { format!("{}s", n) });
                 quote!(
                     for item in &self.#name {
                         try!(item.serialize_with(sink, #elem_name));
@@ -79,18 +112,10 @@ fn make_ser_impl(cls_name: &str, data: &XsdType) -> String {
             
             #( #events )*
             
-            sink.write(XmlEvent::EndElement { name: Some(elemname) });
+            sink.write(XmlEvent::EndElement { name: Some(elemname) })
         }
     );
     quote!(
-        extern crate xml as _xml;
-
-        use std::borrow::cow;
-        use self::_xml::name::Name;
-        use self::_xml::name::Namespace;
-        use self::_xml::writer::{ XmlEvent, EventWriter };
-        use gpx_rust::ser::Serialize;
-
         impl Serialize for #cls_name {
             #fun_body
         }
@@ -100,9 +125,12 @@ fn make_ser_impl(cls_name: &str, data: &XsdType) -> String {
 fn save(filename: &str, structs: Vec<StructInfo>) -> Result<(), io::Error> {
     let f = try!(File::create(filename));
     let mut f = BufWriter::new(f);
+    
+    try!(f.write(make_header().as_bytes()));
+    
     for item in structs {
         try!(f.write(
-            make_ser_impl(&item.name, item.type_).as_bytes()
+            make_ser_impl(&item.name, &item.tags, item.type_).as_bytes()
         ));
     }
     //try!(f.write("sss".as_bytes()));
@@ -134,10 +162,35 @@ fn main() {
                 XsdElementSingle!("extensions", "extensionsType"),
             ]
         },
+        XsdType {
+            sequence: vec![
+                XsdElementSingle!("name", "xsd:string"),
+                XsdElementSingle!("cmt", "xsd:string"),
+                XsdElementSingle!("desc", "xsd:string"),
+                XsdElementSingle!("src", "xsd:string"),
+                XsdElement { name: String::from("link"),
+                             type_: XsdElementType::Name(String::from("linkType")),
+                             max_occurs: XsdElementMaxOccurs::Unbounded },
+                XsdElementSingle!("number", "xsd:nonNegativeInteger"),
+                XsdElementSingle!("type", "xsd:string"),
+                XsdElementSingle!("extensions", "extensionType"),
+                XsdElement { name: String::from("trkseg"),
+                             type_: XsdElementType::Name(String::from("trksegType")),
+                             max_occurs: XsdElementMaxOccurs::Unbounded },
+            ]
+        },
     ];
     
     let structs = vec![
-        StructInfo { name: "Metadata".into(), type_: &types[0] }
+        StructInfo { name: "Metadata".into(), type_: &types[0], tags: map! { } },
+        StructInfo { name: "Track".into(), type_: &types[1],
+                     tags: map! {
+                          "cmt" => "comment",
+                          "desc" => "description",
+                          "src" => "source",
+                          "link" => "links",
+                          "type" => "type_",
+                          "trkseg" => "segments"} }
     ];
     
     save(matches.value_of("destination").unwrap(), structs).expect("Failed to save");

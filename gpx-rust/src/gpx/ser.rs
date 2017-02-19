@@ -11,7 +11,7 @@ use self::_xml::namespace::Namespace;
 use self::_xml::attribute::Attribute;
 use self::_xml::writer;
 use self::_xml::writer::{ XmlEvent, EventWriter };
-use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix };
+use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix, Track };
 use ser::{ Serialize, SerializeAttr, SerializeCharElem };
 
 
@@ -33,12 +33,16 @@ impl Serialize for Gpx {
                 namespace: Cow::Owned(Namespace::empty())
             }
         ));
-        for item in &self.waypoints {
-            try!(item.serialize_with(sink, "waypoint"));
-        }
         if let Some(ref meta) = self.metadata {
             try!(meta.serialize_with(sink, "metadata"));
         }
+        for item in &self.waypoints {
+            try!(item.serialize_with(sink, "wpt"));
+        }
+        for item in &self.tracks {
+            try!(item.serialize_with(sink, "trk"));
+        }
+        
         sink.write(XmlEvent::EndElement { name: Some(elemname) })
     }
 }
@@ -134,5 +138,48 @@ impl SerializeCharElem for Fix {
             &Fix::DGPS => "dgps",
             &Fix::PPS => "pps"
         }.into()
+    }
+}
+
+impl Serialize for Track {
+    fn serialize_with<W: io::Write>(&self,
+                                    sink: &mut EventWriter<W>,
+                                    name: &str)
+                                    -> writer::Result<()> {
+        let elemname = Name::local(name);
+        try!(sink.write(XmlEvent::StartElement {
+            name: elemname.clone(),
+            attributes: Cow::Owned(vec![]),
+            namespace: Cow::Owned(Namespace::empty()),
+        }));
+        if let Some(ref item) = self.name {
+            try!(item.serialize_with(sink, "name"));
+        }
+        if let Some(ref item) = self.comment {
+            try!(item.serialize_with(sink, "cmt"));
+        }
+        if let Some(ref item) = self.description {
+            try!(item.serialize_with(sink, "desc"));
+        }
+        if let Some(ref item) = self.source {
+            try!(item.serialize_with(sink, "src"));
+        }
+        for item in &self.links {
+            try!(item.serialize_with(sink, "link"));
+        }
+        /*
+        if let Some(ref item) = self.number {
+            try!(item.serialize_with(sink, "number"));
+        }
+        if let Some(ref item) = self.type_ {
+            try!(item.serialize_with(sink, "type"));
+        }
+        if let Some(ref item) = self.extensions {
+            try!(item.serialize_with(sink, "extensions"));
+        }
+        for item in &self.segments {
+            try!(item.serialize_with(sink, "trkseg"));
+        }*/
+        sink.write(XmlEvent::EndElement { name: Some(elemname) })
     }
 }
