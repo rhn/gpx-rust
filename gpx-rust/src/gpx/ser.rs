@@ -11,8 +11,8 @@ use self::_xml::namespace::Namespace;
 use self::_xml::attribute::Attribute;
 use self::_xml::writer;
 use self::_xml::writer::{ XmlEvent, EventWriter };
-use gpx::{ Gpx, GpxVersion, Metadata };
-use ser::Serialize;
+use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix };
+use ser::{ Serialize, SerializeAttr, SerializeCharElem };
 
 
 impl Serialize for Gpx {
@@ -33,7 +33,9 @@ impl Serialize for Gpx {
                 namespace: Cow::Owned(Namespace::empty())
             }
         ));
-            
+        for item in &self.waypoints {
+            try!(item.serialize_with(sink, "waypoint"));
+        }
         if let Some(ref meta) = self.metadata {
             try!(meta.serialize_with(sink, "metadata"));
         }
@@ -88,5 +90,49 @@ impl Serialize for Metadata {
             try!(item.serialize_with(sink, "extensions"));
         }
         sink.write(XmlEvent::EndElement { name: Some(elemname) })
+    }
+}
+
+
+impl Serialize for Waypoint {
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
+        let elemname = Name::local(name);
+        try!(sink.write(XmlEvent::StartElement {
+            name: elemname.clone(),
+            attributes: Cow::Owned(
+                    vec![Attribute { name: Name::local("lat"),
+                                     value: self.location.latitude.to_attribute() },
+                         Attribute { name: Name::local("lon"),
+                                     value: self.location.longitude.to_attribute() }]),
+            namespace: Cow::Owned(Namespace::empty()),
+        }));
+        if let Some(ref item) = self.location.elevation {
+            try!(item.serialize_with(sink, "ele"));
+        }
+        if let Some(ref item) = self.time {
+            try!(item.serialize_with(sink, "time"));
+        }
+        if let Some(ref item) = self.fix {
+            try!(item.serialize_with(sink, "fix"));
+        }
+        if let Some(ref item) = self.satellites {
+            try!(item.serialize_with(sink, "satellites"));
+        }
+        if let Some(ref item) = self.name {
+            try!(item.serialize_with(sink, "name"));
+        }
+        sink.write(XmlEvent::EndElement { name: Some(elemname) })
+    }
+}
+
+impl SerializeCharElem for Fix {
+    fn to_characters(&self) -> String {
+        match self {
+            &Fix::None => "none",
+            &Fix::_2D => "2d",
+            &Fix::_3D => "3d",
+            &Fix::DGPS => "dgps",
+            &Fix::PPS => "pps"
+        }.into()
     }
 }

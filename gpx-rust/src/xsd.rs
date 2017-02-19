@@ -13,7 +13,7 @@ use self::_xml::writer::{ EventWriter, XmlEvent };
 
 use parsers::{ parse_chars, CharNodeError };
 use xml::ElemStart;
-use ser::Serialize;
+use ser::{ Serialize, SerializeCharElem };
 
 
 pub type Time = DateTime<FixedOffset>;
@@ -28,15 +28,6 @@ pub fn parse_int<T: std::io::Read, Error: CharNodeError + From<std::num::ParseIn
     )
 }
 
-impl Serialize for Time {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
-        let elemname = Name::local(name);
-        try!(sink.write(XmlEvent::StartElement {
-                name: elemname.clone(),
-                attributes: Cow::Owned(Vec::new()),
-                namespace: Cow::Owned(Namespace::empty()),
-        }));
-        try!(sink.write(XmlEvent::Characters(&self.to_rfc3339())));
-        sink.write(XmlEvent::EndElement { name: Some(elemname) })
-    }
+impl SerializeCharElem for Time {
+    fn to_characters(&self) -> String { self.to_rfc3339() }
 }
