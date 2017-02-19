@@ -11,7 +11,7 @@ use self::_xml::namespace::Namespace;
 use self::_xml::attribute::Attribute;
 use self::_xml::writer;
 use self::_xml::writer::{ XmlEvent, EventWriter };
-use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix, Track };
+use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix, Track, TrackSegment };
 use ser::{ Serialize, SerializeAttr, SerializeCharElem };
 
 
@@ -120,7 +120,7 @@ impl Serialize for Waypoint {
             try!(item.serialize_with(sink, "fix"));
         }
         if let Some(ref item) = self.satellites {
-            try!(item.serialize_with(sink, "satellites"));
+            try!(item.serialize_with(sink, "sat"));
         }
         if let Some(ref item) = self.name {
             try!(item.serialize_with(sink, "name"));
@@ -167,7 +167,6 @@ impl Serialize for Track {
         for item in &self.links {
             try!(item.serialize_with(sink, "link"));
         }
-        /*
         if let Some(ref item) = self.number {
             try!(item.serialize_with(sink, "number"));
         }
@@ -179,7 +178,25 @@ impl Serialize for Track {
         }
         for item in &self.segments {
             try!(item.serialize_with(sink, "trkseg"));
-        }*/
+        }
+        sink.write(XmlEvent::EndElement { name: Some(elemname) })
+    }
+}
+
+impl Serialize for TrackSegment {
+    fn serialize_with<W: io::Write>(&self,
+                                    sink: &mut EventWriter<W>,
+                                    name: &str)
+                                    -> writer::Result<()> {
+        let elemname = Name::local(name);
+        try!(sink.write(XmlEvent::StartElement {
+            name: elemname.clone(),
+            attributes: Cow::Owned(vec![]),
+            namespace: Cow::Owned(Namespace::empty()),
+        }));
+        for item in &self.waypoints {
+            try!(item.serialize_with(sink, "trkpt"));
+        }
         sink.write(XmlEvent::EndElement { name: Some(elemname) })
     }
 }

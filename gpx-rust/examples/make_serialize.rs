@@ -47,7 +47,7 @@ macro_rules! XsdElementSingle (
 );
 
 macro_rules! map(
-    { $($key:expr => $value:expr),* } => {
+    { $($key:expr => $value:expr),* $(,)* } => {
         {
             let mut m = ::std::collections::HashMap::new();
             $(
@@ -142,8 +142,8 @@ fn main() {
                       .arg(Arg::with_name("destination")
                               .required(true))
                       .get_matches();
-    let types = vec![
-        XsdType {
+    let types = map![
+        "metadataType" => XsdType {
             sequence: vec![
                 XsdElement { name: String::from("name"),
                              type_: XsdElementType::Name(String::from("xsd:string")),
@@ -162,7 +162,7 @@ fn main() {
                 XsdElementSingle!("extensions", "extensionsType"),
             ]
         },
-        XsdType {
+        "trkType" => XsdType {
             sequence: vec![
                 XsdElementSingle!("name", "xsd:string"),
                 XsdElementSingle!("cmt", "xsd:string"),
@@ -179,18 +179,27 @@ fn main() {
                              max_occurs: XsdElementMaxOccurs::Unbounded },
             ]
         },
+        "trksegType" => XsdType {
+            sequence: vec![
+                XsdElement { name: "trkpt".into(),
+                             type_: XsdElementType::Name("wptType".into()),
+                             max_occurs: XsdElementMaxOccurs::Unbounded },
+            ]
+        },
     ];
     
     let structs = vec![
-        StructInfo { name: "Metadata".into(), type_: &types[0], tags: map! { } },
-        StructInfo { name: "Track".into(), type_: &types[1],
+        StructInfo { name: "Metadata".into(), type_: types.get("metadataType").unwrap(), tags: map! { } },
+        StructInfo { name: "Track".into(), type_: types.get("trkType").unwrap(),
                      tags: map! {
                           "cmt" => "comment",
                           "desc" => "description",
                           "src" => "source",
                           "link" => "links",
                           "type" => "type_",
-                          "trkseg" => "segments"} }
+                          "trkseg" => "segments"} },
+        StructInfo { name: "TrackSegment".into(), type_: types.get("trksegType").unwrap(),
+                     tags: map! { "trkpt" => "waypoints" } },
     ];
     
     save(matches.value_of("destination").unwrap(), structs).expect("Failed to save");
