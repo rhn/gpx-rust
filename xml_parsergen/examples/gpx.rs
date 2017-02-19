@@ -19,7 +19,6 @@ struct XsdElement<'a> {
     max_occurs: XsdElementMaxOccurs,
 }
 
-
 enum XsdElementType<'a> {
     Name(String),
     Type_(&'a XsdType<'a>)

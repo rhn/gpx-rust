@@ -1,6 +1,5 @@
 //! Serialization impls for GPX types
 
-extern crate fringe;
 extern crate xml as _xml;
 
 use std::io;

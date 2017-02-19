@@ -1,2 +1,2 @@
 [workspace]
-members = ["gpx-rust", "gpx_debug"]
+members = ["gpx-rust", "gpx_debug", "xml_parsergen"]
