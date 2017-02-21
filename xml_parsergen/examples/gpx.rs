@@ -1,33 +1,15 @@
 #[macro_use]
 extern crate quote;
 extern crate clap;
+extern crate xml_parsergen;
 
 use std::io;
 use std::io::{ Write, BufWriter };
 use std::fs::File;
 use std::collections::HashMap;
 use clap::{ App, Arg };
+use xml_parsergen::xsd::*;
 
-
-struct XsdType<'a> {
-    sequence: Vec<XsdElement<'a>>,
-}
-
-struct XsdElement<'a> {
-    name: String,
-    type_: XsdElementType<'a>,
-    max_occurs: XsdElementMaxOccurs,
-}
-
-enum XsdElementType<'a> {
-    Name(String),
-    Type_(&'a XsdType<'a>)
-}
-
-enum XsdElementMaxOccurs {
-    Some(u64),
-    Unbounded,
-}
 
 type TagMap<'a> = HashMap<&'a str, &'a str>;
 
@@ -132,7 +114,6 @@ fn save(filename: &str, structs: Vec<StructInfo>) -> Result<(), io::Error> {
             make_ser_impl(&item.name, &item.tags, item.type_).as_bytes()
         ));
     }
-    //try!(f.write("sss".as_bytes()));
     Ok(())
 }
 

@@ -6,3 +6,4 @@ authors = ["rhn"]
 [dependencies]
 quote = "^0.3.8"
 clap = "2"
+rustfmt = { version = "^0.7.1", default_features = false }
