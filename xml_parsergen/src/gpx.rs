@@ -82,11 +82,15 @@ impl ParserGen for Generator {
     fn header() -> &'static str {
         "extern crate xml as _xml;
 
-use std::borrow::cow;
+use std::borrow::Cow;
+use self::_xml::writer;
 use self::_xml::name::Name;
-use self::_xml::name::Namespace;
+use self::_xml::namespace::Namespace;
 use self::_xml::writer::{ XmlEvent, EventWriter };
-use gpx_rust::ser::Serialize;"
+
+use ser::Serialize;
+use gpx::*;
+"
     }
 
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &XsdType) -> String {

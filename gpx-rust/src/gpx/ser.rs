@@ -56,47 +56,6 @@ impl GpxVersion {
     }
 }
 
-impl Serialize for Metadata {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
-        let elemname = Name::local(name);
-        try!(sink.write(XmlEvent::StartElement {
-            name: elemname.clone(),
-            attributes: Cow::Owned(vec![]),
-            namespace: Cow::Owned(Namespace::empty()),
-        }));
-        
-        if let Some(ref item) = self.name {
-            try!(item.serialize_with(sink, "name"));
-        }
-        if let Some(ref item) = self.desc {
-            try!(item.serialize_with(sink, "desc"));
-        }
-        if let Some(ref item) = self.author {
-            try!(item.serialize_with(sink, "author"));
-        }
-        if let Some(ref item) = self.copyright {
-            try!(item.serialize_with(sink, "copyright"));
-        }
-        for item in &self.links {
-            try!(item.serialize_with(sink, "link"));
-        }
-        if let Some(ref item) = self.time {
-            try!(item.serialize_with(sink, "time"));
-        }
-        if let Some(ref item) = self.keywords {
-            try!(item.serialize_with(sink, "keywords"));
-        }
-        if let Some(ref item) = self.bounds {
-            try!(item.serialize_with(sink, "bounds"));
-        }
-        if let Some(ref item) = self.extensions {
-            try!(item.serialize_with(sink, "extensions"));
-        }
-        sink.write(XmlEvent::EndElement { name: Some(elemname) })
-    }
-}
-
-
 impl Serialize for Waypoint {
     fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
         let elemname = Name::local(name);
@@ -137,65 +96,5 @@ impl SerializeCharElem for Fix {
             &Fix::DGPS => "dgps",
             &Fix::PPS => "pps"
         }.into()
-    }
-}
-
-impl Serialize for Track {
-    fn serialize_with<W: io::Write>(&self,
-                                    sink: &mut EventWriter<W>,
-                                    name: &str)
-                                    -> writer::Result<()> {
-        let elemname = Name::local(name);
-        try!(sink.write(XmlEvent::StartElement {
-            name: elemname.clone(),
-            attributes: Cow::Owned(vec![]),
-            namespace: Cow::Owned(Namespace::empty()),
-        }));
-        if let Some(ref item) = self.name {
-            try!(item.serialize_with(sink, "name"));
-        }
-        if let Some(ref item) = self.comment {
-            try!(item.serialize_with(sink, "cmt"));
-        }
-        if let Some(ref item) = self.description {
-            try!(item.serialize_with(sink, "desc"));
-        }
-        if let Some(ref item) = self.source {
-            try!(item.serialize_with(sink, "src"));
-        }
-        for item in &self.links {
-            try!(item.serialize_with(sink, "link"));
-        }
-        if let Some(ref item) = self.number {
-            try!(item.serialize_with(sink, "number"));
-        }
-        if let Some(ref item) = self.type_ {
-            try!(item.serialize_with(sink, "type"));
-        }
-        if let Some(ref item) = self.extensions {
-            try!(item.serialize_with(sink, "extensions"));
-        }
-        for item in &self.segments {
-            try!(item.serialize_with(sink, "trkseg"));
-        }
-        sink.write(XmlEvent::EndElement { name: Some(elemname) })
-    }
-}
-
-impl Serialize for TrackSegment {
-    fn serialize_with<W: io::Write>(&self,
-                                    sink: &mut EventWriter<W>,
-                                    name: &str)
-                                    -> writer::Result<()> {
-        let elemname = Name::local(name);
-        try!(sink.write(XmlEvent::StartElement {
-            name: elemname.clone(),
-            attributes: Cow::Owned(vec![]),
-            namespace: Cow::Owned(Namespace::empty()),
-        }));
-        for item in &self.waypoints {
-            try!(item.serialize_with(sink, "trkpt"));
-        }
-        sink.write(XmlEvent::EndElement { name: Some(elemname) })
     }
 }

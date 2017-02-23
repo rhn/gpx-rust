@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io;
 use std::io::{ Write, BufWriter };
 
-use xml_parsergen::{ ParserGen, StructInfo, gpx };
+use xml_parsergen::{ ParserGen, StructInfo, gpx, prettify };
 
 
 macro_rules! map(
@@ -31,7 +31,6 @@ enum Error {
 
 fn process() -> Result<(), Error> {
     let out_dir = PathBuf::from(try!(env::var("OUT_DIR").map_err(Error::Var)));
-    let mut out_path = out_dir.clone();
 
     let types = gpx::get_types();
     let structs = vec![
@@ -50,16 +49,22 @@ fn process() -> Result<(), Error> {
                      tags: map! { "trkpt" => "waypoints" } },
     ];
 
-    out_path.set_file_name("gpx_ser_auto.rs");
-    let f = try!(File::create(out_path).map_err(Error::Io));
-    let mut f = BufWriter::new(f);
+    let out_path = out_dir.join("gpx_ser_auto.rs");
+    { // to drop f before prettification
+        let f = try!(File::create(out_path.clone()).map_err(Error::Io));
+        let mut f = BufWriter::new(f);
 
-    try!(f.write(gpx::Generator::header().as_bytes()).map_err(Error::Io));
-    
-    for item in structs {
-        try!(f.write(
-            gpx::Generator::serializer_impl(&item.name, &item.tags, item.type_).as_bytes()
-        ).map_err(Error::Io));
+        try!(f.write(gpx::Generator::header().as_bytes()).map_err(Error::Io));
+        
+        for item in structs {
+            try!(f.write(
+                gpx::Generator::serializer_impl(&item.name, &item.tags, item.type_).as_bytes()
+            ).map_err(Error::Io));
+        }
+    }
+    match prettify(&out_path) {
+        Ok(_) => {},
+        Err(e) => println!("warning=prettifying failed with {:?}", e),
     }
     Ok(())
 }

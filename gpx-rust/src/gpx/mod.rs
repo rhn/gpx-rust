@@ -15,6 +15,8 @@ use xsd;
 use xsd::*;
 
 mod ser;
+mod ser_auto;
+
 
 trait EmptyInit {
     fn empty() -> Self;
