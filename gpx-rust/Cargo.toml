@@ -2,6 +2,7 @@
 name = "gpx_rust"
 version = "0.0.1"
 authors = [ "rhn <gihu.rhn@porcupinefactory.org>" ]
+build = "build.rs"
 
 [dependencies]
 xml-rs = "0.3"
@@ -10,5 +11,6 @@ chrono = "0.2"
 clap = "2"
 #num = "0.1"
 gpx_debug = { path = "../gpx_debug" }
-quote = "^0.3.8"
 
+[build-dependencies]
+xml_parsergen = { path = "../xml_parsergen" }

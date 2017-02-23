@@ -13,6 +13,7 @@ use ser::{ Serialize, SerializeCharElem };
 pub type Time = DateTime<FixedOffset>;
 pub type NonNegativeInteger = u64;
 
+
 pub fn parse_int<T: std::io::Read, Error: CharNodeError + From<std::num::ParseIntError>>
         (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
         -> Result<NonNegativeInteger, Error> {
