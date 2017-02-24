@@ -11,16 +11,25 @@ use std::process::{ Command, ExitStatus };
 use std::collections::HashMap;
 use std::path::Path;
 
-use xsd_types::XsdType;
+use xsd_types::Type;
 
 
 pub type TagMap<'a> = HashMap<&'a str, &'a str>;
 
+/// This is ugly
 pub struct StructInfo<'a> {
     pub name: String,
-    pub type_: &'a XsdType<'a>,
+    pub type_: &'a Type<'a>,
     pub tags: TagMap<'a>,
 }
+
+/// This is awful
+pub struct ParserInfo<'a> {
+    pub name: String,
+    pub type_: &'a Type<'a>,
+    pub attrs: HashMap<String, String>,
+}
+
 
 #[derive(Debug)]
 pub enum Error {
@@ -31,7 +40,8 @@ pub enum Error {
 
 pub trait ParserGen {
     fn header() -> &'static str;
-    fn serializer_impl(cls_name: &str, tags: &TagMap, data: &XsdType) -> String;
+    fn parser_cls(name: &str, data: &Type, types: &HashMap<String, String>) -> String;
+    fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type) -> String;
 }
 
 pub fn prettify(path: &Path) -> Result<(), Error> {
