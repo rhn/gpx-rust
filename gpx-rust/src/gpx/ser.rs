@@ -6,12 +6,15 @@ use std::io;
 use std::borrow::Cow;
 use self::_xml::common::XmlVersion;
 use self::_xml::name::Name;
-use self::_xml::namespace::Namespace;
+use self::_xml::namespace::{ Namespace, NS_NO_PREFIX };
 use self::_xml::attribute::Attribute;
 use self::_xml::writer;
 use self::_xml::writer::{ XmlEvent, EventWriter };
 use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix, Track, TrackSegment };
 use ser::{ Serialize, SerializeAttr, SerializeCharElem };
+
+
+const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
 
 impl Serialize for Gpx {
@@ -20,6 +23,9 @@ impl Serialize for Gpx {
                                                   encoding: None,
                                                   standalone: None }));
         let elemname = Name::local("gpx");
+        let mut ns = Namespace::empty();
+        ns.put(NS_NO_PREFIX, GPX_NS);
+        let ns = ns;
         try!(sink.write(
             XmlEvent::StartElement {
                 name: elemname.clone(),
@@ -29,7 +35,7 @@ impl Serialize for Gpx {
                          Attribute { name: Name::local("creator"),
                                      value: &self.creator }]
                 ),
-                namespace: Cow::Owned(Namespace::empty())
+                namespace: Cow::Owned(ns)
             }
         ));
         if let Some(ref meta) = self.metadata {

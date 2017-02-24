@@ -68,13 +68,28 @@ macro_rules! ParserStart {
         fn parse_start(&mut self, elem_start: ElemStart)
                 -> Result<(), Self::Error> {
             for attr in elem_start.attributes {
-                match &(attr.name.local_name) as &str {
+                let name = attr.name;
+
+                if let &Some(ref ns) = &name.namespace {
+                    match &ns as &str {
+                        "http://www.topografix.com/GPX/1/1" |
+                        "http://www.topografix.com/GPX/1/0" => (),
+                        ns => {
+                            println!("WARNING: namespace ignored on {:?}:{}: {}",
+                                 name.prefix,
+                                 name.local_name,
+                                 ns);
+                            continue;
+                        }
+                    }
+                }
+                match &(name.local_name) as &str {
                     $( $name => {
                         let v = attr.value;
                         _parser_attr! { self, v, $attr }
                     } ),*
                     _ => {
-                        return Err(Self::Error::from_unexp_attr(elem_start.name, attr.name));
+                        return Err(Self::Error::from_unexp_attr(elem_start.name, name));
                     }
                 }
             }
