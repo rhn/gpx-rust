@@ -128,8 +128,10 @@ macro_rules! _ParserImplBody {
                 -> Result<(), Self::Error> {
             if let Some(ref ns) = elem_start.name.namespace.clone() {
                 match &ns as &str {
-                    "http://www.topografix.com/GPX/1/1" |
-                    "http://www.topografix.com/GPX/1/0" => (),
+                    "http://www.topografix.com/GPX/1/1" => (),
+                    "http://www.topografix.com/GPX/1/0" => {
+                        println!("WARNING: GPX 1.0 not fully supported, errors may appear");
+                    },
                     ns => {
                         {
                             let name = &elem_start.name;
@@ -148,6 +150,7 @@ macro_rules! _ParserImplBody {
                     make_tag!(T, self, elem_start, $tagdata);
                 }),*
                 _ => {
+                    // TODO: add config and handler
                     return Err(Error::from(
                         ElementError::UnknownElement(elem_start.name,
                                                      self.reader.position())));
