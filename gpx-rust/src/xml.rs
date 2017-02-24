@@ -30,6 +30,7 @@ pub enum XmlNode {
 pub struct XmlElement {
     pub name: OwnedName,
     pub attributes: Vec<OwnedAttribute>,
+    pub namespace: Namespace,
     pub nodes: Vec<XmlNode>,
 }
 
@@ -131,6 +132,7 @@ impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
         Ok(XmlElement {
             name: elem_start.name,
             attributes: elem_start.attributes,
+            namespace: elem_start.namespace,
             nodes: self.nodes
         })
     }
