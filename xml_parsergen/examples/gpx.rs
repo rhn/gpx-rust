@@ -32,6 +32,9 @@ fn save(filename: &str, structs: Vec<StructInfo>, types: Vec<ParserInfo>) -> Res
         try!(f.write(
             gpx::Generator::parser_cls(&item.name, item.type_, &item.attrs).as_bytes()
         ));
+        try!(f.write(
+            gpx::Generator::parser_impl(&item.name, item.type_, &item.attrs).as_bytes()
+        )); 
     }
     for item in structs {
         try!(f.write(
@@ -61,8 +64,8 @@ fn main() {
         StructInfo { name: "TrackSegment".into(), type_: types.get("trksegType").unwrap(),
                      tags: map! { "trkpt" => "waypoints" } },
     ];
-    let attrs = map!{ "latitudeType".into() => "f64".into(),
-                      "longitudeType".into() => "f64".into() };
+    let attrs = map!{ "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
+                      "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()) };
     let parsers = vec![
         ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap(), attrs: attrs }
     ];

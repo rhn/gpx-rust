@@ -119,22 +119,63 @@ use gpx::*;
 "
     }
     
-    fn parser_cls(name: &str, data: &Type, types: &HashMap<String, String>) -> String {
+    fn parser_cls(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String {
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
             let type_ = quote::Ident::new(
-                types.get_or_else(&attr.type_,
-                                  &|_| { String::from("String") }));
+                types.get(&attr.type_)
+                     .unwrap_or(&("String".into(), String::new()))
+                     .0
+                     .clone()
+            );
             let name = quote::Ident::new(attr.name.clone());
             quote!(
                 #name : Option< #type_ >
             )
         });
         quote!(
-            struct #cls_name {
+            struct #cls_name<'a, T: 'a + Read> {
+                reader: &'a mut EventReader<T>,
+                elem_name: Option<OwnedName>,
                 #( #attrs ),*
             }
         ).to_string()
+    }
+    
+    fn parser_impl(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String {
+        let cls_name = quote::Ident::new(name);
+        let attrs = data.attributes.iter().map(|attr| {
+            quote::Ident::new(attr.name.clone())
+        });
+        let macroattrs = data.attributes.iter().map(|attr| {
+            let field = quote::Ident::new(attr.name.clone());
+            let tag = &attr.name;
+            let conv = quote::Ident::new(
+                types.get(&attr.type_)
+                     .unwrap_or(&(String::new(), "Result::Ok<String, _>".into()))
+                     .1
+                     .clone()
+            );
+            quote!(
+                #tag => { #field, #conv }
+            )
+        });
+        let body = quote!(
+            _ParserImplBody!(
+                attrs: { #( #macroattrs ),* },
+                tags: {},
+            );
+        );
+        quote!(
+            impl<'a, T: Read> ElementParse<'a, T> for #cls_name<'a, T> {
+                fn new(reader: &'a mut EventReader<T>) -> Self {
+                    #cls_name { reader: reader,
+                                elem_name: None,
+                                #( #attrs: None ),* }
+                }
+                #body
+            }
+        ).to_string().replace("{", "{\n").replace(";", ";\n")
     }
 
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type) -> String {

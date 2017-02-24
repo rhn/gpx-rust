@@ -15,6 +15,7 @@ use xsd_types::Type;
 
 
 pub type TagMap<'a> = HashMap<&'a str, &'a str>;
+pub type AttrMap = HashMap<String, (String, String)>;
 
 /// This is ugly
 pub struct StructInfo<'a> {
@@ -27,7 +28,7 @@ pub struct StructInfo<'a> {
 pub struct ParserInfo<'a> {
     pub name: String,
     pub type_: &'a Type<'a>,
-    pub attrs: HashMap<String, String>,
+    pub attrs: AttrMap,
 }
 
 
@@ -40,7 +41,8 @@ pub enum Error {
 
 pub trait ParserGen {
     fn header() -> &'static str;
-    fn parser_cls(name: &str, data: &Type, types: &HashMap<String, String>) -> String;
+    fn parser_cls(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String;
+    fn parser_impl(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String;
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type) -> String;
 }
 
