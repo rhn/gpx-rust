@@ -6,8 +6,11 @@ use std::io;
 use std::io::{ Read };
 use std::error::Error as Error_;
 use std::str::FromStr;
+
+use self::_xml::common::{ Position, TextPosition };
 use self::_xml::reader::{ EventReader, XmlEvent };
 use self::_xml::name::OwnedName;
+
 use xml;
 use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use parsers::*;
@@ -34,7 +37,8 @@ impl<T> EmptyInit for Vec<T> {
 pub enum ElementError {
     Str(&'static str),
     XmlEvent(_xml::reader::Error),
-    BadInt(std::num::ParseIntError)
+    BadInt(std::num::ParseIntError),
+    UnknownElement(OwnedName, TextPosition),
 }
 
 impl CharNodeError for ElementError {}

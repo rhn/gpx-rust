@@ -126,12 +126,31 @@ macro_rules! _ParserImplBody {
 
         fn parse_element(&mut self, elem_start: ElemStart)
                 -> Result<(), Self::Error> {
+            if let Some(ref ns) = elem_start.name.namespace.clone() {
+                match &ns as &str {
+                    "http://www.topografix.com/GPX/1/1" |
+                    "http://www.topografix.com/GPX/1/0" => (),
+                    ns => {
+                        {
+                            let name = &elem_start.name;
+                            println!("WARNING: unknown namespace ignored on {:?}:{}: {}",
+                                 name.prefix,
+                                 name.local_name,
+                                 ns);
+                        }
+                        try!(ElementParser::new(self.reader).parse(elem_start));
+                        return Ok(());
+                    }
+                }
+            }
             match &elem_start.name.local_name as &str {
                 $( $tag => {
                     make_tag!(T, self, elem_start, $tagdata);
                 }),*
                 _ => {
-                    try!(ElementParser::new(self.reader).parse(elem_start));
+                    return Err(Error::from(
+                        ElementError::UnknownElement(elem_start.name,
+                                                     self.reader.position())));
                 }
             };
             Ok(())
