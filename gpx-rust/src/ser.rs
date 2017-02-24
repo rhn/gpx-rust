@@ -36,7 +36,7 @@ impl Serialize for xml::XmlElement {
                                             .map(|a| { a.borrow() })
                                             .collect::<Vec<_>>()
                                             .as_slice()),
-                                     namespace: Cow::Borrowed(&self.namespace) }
+                                     namespace: Cow::Owned(Namespace::empty()) }
         ));
         for node in &self.nodes {
             try!(match node {

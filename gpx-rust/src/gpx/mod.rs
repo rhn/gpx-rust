@@ -256,6 +256,7 @@ pub struct Waypoint {
     fix: Option<Fix>,
     satellites: Option<u16>,
     name: Option<String>,
+    extensions: Option<XmlElement>,
 }
 
 struct WptParser<'a, T: 'a + Read> {
@@ -268,6 +269,7 @@ struct WptParser<'a, T: 'a + Read> {
     ele: Option<XmlDecimal>,
     sat: Option<u16>,
     name: Option<String>,
+    extensions: Option<XmlElement>,
 }
 
 impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
@@ -277,7 +279,8 @@ impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
                     name: None,
                     lat: None, lon: None, ele: None,
                     time: None,
-                    fix: None, sat: None }
+                    fix: None, sat: None,
+                    extensions: None }
     }
     _ParserImplBody!(
         attrs: { "lat" => { lat, Result::Ok<XmlDecimal, Error> },
@@ -289,6 +292,7 @@ impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
             "ele" => { ele = Some, fn, parse_decimal },
             "sat" => { sat = Some, fn, parse_u16 },
             "name" => { name = Some, fn, parse_string },
+            "extensions" => { extensions = Some, ElementParse, ElementParser },
         }
     );
 }
@@ -303,7 +307,8 @@ impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
                       time: self.time,
                       fix: self.fix,
                       satellites: self.sat,
-                      name: self.name })
+                      name: self.name,
+                      extensions: self.extensions })
     }
 }
 
