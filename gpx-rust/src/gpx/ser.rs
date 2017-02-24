@@ -17,6 +17,14 @@ use ser::{ Serialize, SerializeAttr, SerializeCharElem };
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
 
+macro_rules! set_optional(
+    ($sink:ident, $name:expr, $tag:expr) => {
+        if let Some(ref item) = $name {
+            try!(item.serialize_with($sink, $tag));
+        }
+    }
+);
+
 impl Serialize for Gpx {
     fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
         try!(sink.write(XmlEvent::StartDocument { version: XmlVersion::Version11,
@@ -80,15 +88,25 @@ impl Serialize for Waypoint {
         if let Some(ref item) = self.time {
             try!(item.serialize_with(sink, "time"));
         }
-        if let Some(ref item) = self.fix {
-            try!(item.serialize_with(sink, "fix"));
-        }
-        if let Some(ref item) = self.satellites {
-            try!(item.serialize_with(sink, "sat"));
-        }
-        if let Some(ref item) = self.name {
-            try!(item.serialize_with(sink, "name"));
-        }
+        // set_optional!(sink, self.mag_variation, "magvar");
+        /*if let Some(ref item) = self.geoid_height {
+            try!(item.serialize_with(sink, "geoidheight"));
+        }*/
+        set_optional!(sink, self.name, "name");
+        // set_optional!(sink, self.comment, "cmt");
+        // set_optional!(sink, self.description, "desc");
+        // set_optional!(sink, self.source, "src");
+        // set_optional!(sink, self.link, "link");
+        // set_optional!(sink, self.symbol, "symbol");
+        // set_optional!(sink, self.type_, "type");
+        set_optional!(sink, self.fix, "fix");
+        set_optional!(sink, self.satellites, "sat");
+        // set_optional!(sink, self.hdop, "hdop");
+        // set_optional!(sink, self.vdop, "vdop");
+        // set_optional!(sink, self.pdop, "pdop");
+        // set_optional!(sink, self.dgps_age, "ageofdgpsdata");
+        // set_optional!(sink, self.dgps_id, "dgpsid");
+        set_optional!(sink, self.extensions, "extensions");
         sink.write(XmlEvent::EndElement { name: Some(elemname) })
     }
 }
