@@ -8,7 +8,7 @@ use std::fs::File;
 use std::path::Path;
 use clap::{ App, Arg };
 
-use xml_parsergen::{ ParserGen, StructInfo, ParserInfo, gpx, prettify };
+use xml_parsergen::{ ParserGen, StructInfo, ParserInfo, gpx, prettify, AttrMap };
 
 
 macro_rules! map(
@@ -24,7 +24,7 @@ macro_rules! map(
 );
 
 /// type_convs - type->converter class mapping. So far elements only, user-provided, may be missing
-fn save(filename: &str, type_convs: HashMap<String, String>,
+fn save(filename: &str, attr_type_convs: AttrMap, type_convs: HashMap<String, String>,
                         serializers: Vec<StructInfo>,
                         types: Vec<ParserInfo>) -> Result<(), io::Error> {
     let f = try!(File::create(filename));
@@ -34,10 +34,10 @@ fn save(filename: &str, type_convs: HashMap<String, String>,
     
     for item in types {
         try!(f.write(
-            gpx::Generator::parser_cls(&item.name, item.type_, &item.attrs).as_bytes()
+            gpx::Generator::parser_cls(&item.name, item.type_, &attr_type_convs).as_bytes()
         ));
         try!(f.write(
-            gpx::Generator::parser_impl(&item.name, item.type_, &item.attrs).as_bytes()
+            gpx::Generator::parser_impl(&item.name, item.type_, &attr_type_convs).as_bytes()
         )); 
     }
     for item in serializers {
@@ -68,13 +68,14 @@ fn main() {
         StructInfo { name: "TrackSegment".into(), type_: types.get("trksegType").unwrap(),
                      tags: map! { "trkpt" => "waypoints" } },
     ];
-    let attrs = map!{ "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
-                      "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()) };
+    let attr_convs = map!{ "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
+                           "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()) };
     let elem_convs = map!{ "boundsType".into() => "gpx::conv::Bounds".into() };
     let parsers = vec![
-        ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap(), attrs: attrs }
+        ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap() },
+        ParserInfo { name: "WaypointParser".into(), type_: types.get("wptType").unwrap() },
     ];
     let dest = matches.value_of("destination").unwrap();
-    save(dest, elem_convs, structs, parsers).expect("Failed to save");
+    save(dest, attr_convs, elem_convs, structs, parsers).expect("Failed to save");
     prettify(Path::new(dest.into())).expect("Failed to prettify");
 }

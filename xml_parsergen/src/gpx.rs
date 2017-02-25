@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use quote;
 
 use xsd_types::{ Type, XsdElement, ElementMaxOccurs, Attribute };
-use ::{ ParserGen, TagMap };
+use ::{ ParserGen, TagMap, ident_safe };
 
 
 macro_rules! map(
@@ -60,7 +60,7 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                              max_occurs: ElementMaxOccurs::Unbounded },
                 XsdElementSingle!("number", "xsd:nonNegativeInteger"),
                 XsdElementSingle!("type", "xsd:string"),
-                XsdElementSingle!("extensions", "extensionType"),
+                XsdElementSingle!("extensions", "extensionsType"),
                 XsdElement { name: String::from("trkseg"),
                              type_: "trksegType".into(),
                              max_occurs: ElementMaxOccurs::Unbounded },
@@ -82,6 +82,35 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                 Attribute { name: "minlon".into(), type_: "longitudeType".into(), required: true },
                 Attribute { name: "maxlat".into(), type_: "latitudeType".into(), required: true },
                 Attribute { name: "maxlon".into(), type_: "longitudeType".into(), required: true },
+            ],
+        },
+        "wptType".into() => Type {
+            sequence: vec![
+                XsdElementSingle!("ele", "xsd:decimal"),
+                XsdElementSingle!("time", "xsd:dateTime"),
+                XsdElementSingle!("magvar", "xsd:degreesType"),
+                XsdElementSingle!("geoidheight", "xsd:decimal"),
+                XsdElementSingle!("name", "xsd:string"),
+                XsdElementSingle!("cmt", "xsd:string"),
+                XsdElementSingle!("desc", "xsd:string"),
+                XsdElementSingle!("src", "xsd:string"),
+                XsdElement { name: String::from("link"),
+                             type_: "linkType".into(),
+                             max_occurs: ElementMaxOccurs::Unbounded },
+                XsdElementSingle!("sym", "xsd:string"),
+                XsdElementSingle!("type", "xsd:string"),
+                XsdElementSingle!("fix", "fixType"),
+                XsdElementSingle!("sat", "xsd:nonNegativeInteger"),
+                XsdElementSingle!("hdop", "xsd:decimal"),
+                XsdElementSingle!("pdop", "xsd:decimal"),
+                XsdElementSingle!("vdop", "xsd:decimal"),
+                XsdElementSingle!("ageofdgpsdata", "xsd:decimal"),
+                XsdElementSingle!("dgpsid", "dgpsStationType"),
+                XsdElementSingle!("extensions", "extensionsType"),
+            ],
+            attributes: vec![
+                Attribute { name: "lat".into(), type_: "latitudeType".into(), required: true },
+                Attribute { name: "lon".into(), type_: "longitudeType".into(), required: true }
             ],
         }
     }
@@ -125,21 +154,41 @@ use gpx::*;
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
             let type_ = quote::Ident::new(
-                types.get(&attr.type_)
-                     .unwrap_or(&("String".into(), String::new()))
-                     .0
-                     .clone()
+                match types.get(&attr.type_) {
+                    Some(a) => &a.0,
+                    None => {
+                         println!("Missing type for attr {}", &attr.type_);
+                         "String"
+                    }
+                }.clone()
             );
             let name = quote::Ident::new(attr.name.clone());
             quote!(
                 #name : Option< #type_ >
             )
         });
+        let elems = data.sequence.iter().map(|elem| {
+            let elem_name = &elem.name;
+            let elem_type = match types.get(&elem.type_) {
+                Some(a) => &a.0,
+                None => {
+                     println!("Missing type for elem {}", &elem.type_);
+                     "XmlElement"
+                }
+            }.clone();
+            let wrap_type = match elem.max_occurs {
+                ElementMaxOccurs::Some(0) => panic!("Element has 0 occurrences, can't derive data type"),
+                ElementMaxOccurs::Some(1) => "Option",
+                _ => "Vec",
+            };
+            quote::Ident::new(format!("{}: {}<{}>", ident_safe(elem_name), wrap_type, elem_type))
+        });
         quote!(
             struct #cls_name<'a, T: 'a + Read> {
                 reader: &'a mut EventReader<T>,
                 elem_name: Option<OwnedName>,
-                #( #attrs ),*
+                #( #attrs, )*
+                #( #elems, )*
             }
         ).to_string()
     }

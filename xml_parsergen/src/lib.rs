@@ -28,7 +28,6 @@ pub struct StructInfo<'a> {
 pub struct ParserInfo<'a> {
     pub name: String,
     pub type_: &'a Type,
-    pub attrs: AttrMap,
 }
 
 
@@ -45,6 +44,13 @@ pub trait ParserGen {
     fn parser_impl(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String;
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
                        type_convs: &HashMap<String, String>) -> String;
+}
+
+pub fn ident_safe(name: &str) -> &str {
+    match name {
+        "type" => "type_",
+        n => n
+    }
 }
 
 pub fn prettify(path: &Path) -> Result<(), Error> {
