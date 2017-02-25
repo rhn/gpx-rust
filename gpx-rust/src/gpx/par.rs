@@ -2,9 +2,10 @@ extern crate xml as _xml;
 extern crate chrono;
 
 use std;
+use std::fmt;
 use std::io::Read;
 use std::str::FromStr;
-use std::error::Error as StdError;
+use std::error::Error as ErrorTrait;
 use self::_xml::common::Position;
 use self::_xml::name::OwnedName;
 use self::_xml::reader::{ XmlEvent, EventReader };
@@ -60,6 +61,24 @@ impl From<chrono::ParseError> for _ElementError {
 
 impl ElementErrorFree for _ElementError {}
 
+impl fmt::Display for _ElementError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        fmt::Debug::fmt(self, fmt)
+    }
+}
+
+impl ErrorTrait for _ElementError {
+    fn description(&self) -> &str {
+        match *self {
+            _ElementError::Str(_) => "Str (FIXME)",
+            _ElementError::XmlEvent(_) => "XmlEvent",
+            _ElementError::BadInt(_) => "Bad int",
+            _ElementError::BadString(_) => "Bad string",
+            _ElementError::BadTime(_) => "Bad time",
+            _ElementError::UnknownElement(_) => "Unknown element",
+        }
+    }
+}
 
 /// Raise whenever attribute value is out of bounds
 #[derive(Debug)]

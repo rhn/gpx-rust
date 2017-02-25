@@ -48,6 +48,21 @@ pub struct ElementError {
     position: TextPosition,
 }
 
+impl fmt::Display for ElementError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "Position {}: {}", self.position, self.error)
+    }
+}
+
+impl ErrorTrait for ElementError {
+    fn description(&self) -> &str {
+        ""
+    }
+    fn cause(&self) -> Option<&std::error::Error> {
+        Some(&self.error)
+    }
+}
+
 impl ElementErrorTrait for ElementError {
     type Free = par::_ElementError;
     fn from_free(err: Self::Free, position: TextPosition) -> Self {
@@ -95,7 +110,7 @@ impl std::error::Error for Error {
             Error::Xml(ref e) => Some(e),
             Error::ParseValue(ref e) => Some(e),
             //Error::BadAttributeValue(e) => Some(&e),
-            //Error::BadElement(e) => Some(&e),
+            Error::BadElement(ref e) => Some(e),
             _ => None
         }
     }

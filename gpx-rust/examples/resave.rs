@@ -2,7 +2,7 @@
 extern crate gpx_rust;
 extern crate clap;
 
-use std::error::Error as std_Error;
+use std::error::Error as ErrorTrait;
 use std::process::exit;
 use std::io::{ BufReader, BufWriter };
 use std::fs::File;
@@ -39,11 +39,11 @@ fn main() {
                       .get_matches();
     let data = match parse(matches.value_of("source").unwrap()) {
         Err(e) => {
-            println!("Failed to load: {:?}", e);
-            let mut e = e;
+            println!("Failed to load\n{}", e);
+            let mut e = &e as &std::error::Error;
             while e.cause().is_some() {
-                let e = e.cause().unwrap();
-                println!("{:?}", e);
+                e = e.cause().unwrap() as &std::error::Error;
+                println!("{}", e);
             }
             exit(1);
         }
