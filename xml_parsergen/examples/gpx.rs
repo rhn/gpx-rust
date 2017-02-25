@@ -56,7 +56,8 @@ fn main() {
 
     let types = gpx::get_types();
     let structs = vec![
-        StructInfo { name: "Metadata".into(), type_: types.get("metadataType").unwrap(), tags: map! { } },
+        StructInfo { name: "Metadata".into(), type_: types.get("metadataType").unwrap(),
+                     tags: HashMap::new() },
         StructInfo { name: "Track".into(), type_: types.get("trkType").unwrap(),
                      tags: map! {
                           "cmt" => "comment",
@@ -69,7 +70,16 @@ fn main() {
                      tags: map! { "trkpt" => "waypoints" } },
     ];
     let attr_convs = map!{ "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
-                           "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()) };
+                           "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()),
+                           "linkType".into() => ("String".into(), "FIXME".into()),
+                           "fixType".into() => ("Fix".into(), "FIXME".into()),
+                           "dgpsStationType".into() => ("String".into(), "FIXME".into()), // FIXME
+                           "extensionsType".into() => ("XmlElement".into(), "FIXME".into()), // FIXME: dedicated type?
+                           "xsd:decimal".into() => ("xsd::Decimal".into(), "FIXME".into()),
+                           "xsd:dateTime".into() => ("xsd::DateTime".into(), "FIXME".into()),
+                           "xsd:string".into() => ("String".into(), "FIXME".into()),
+                           "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "FIXME".into()),
+                           "xsd:degreesType".into() => ("xsd::Degrees".into(), "FIXME".into()), };
     let elem_convs = map!{ "boundsType".into() => "gpx::conv::Bounds".into() };
     let parsers = vec![
         ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap() },

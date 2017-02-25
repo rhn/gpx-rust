@@ -228,7 +228,7 @@ macro_attr! {
         attrs: { "version" => { version, par::parse_gpx_version },
                  "creator" => { creator, par::copy } },
         tags: { "metadata" => { metadata = Some, ElementParse, MetadataParser },
-                "wpt" => { waypoints = Vec, ElementParse, WptParser },
+                "wpt" => { waypoints = Vec, ElementParse, WaypointParser },
                 "trk" => { tracks = Vec, ElementParse, TrkParser } }
     }))]
     pub struct Gpx {
@@ -291,41 +291,52 @@ type Bounds = Bbox<f64>;
 #[derive(XmlDebug)]
 pub struct Waypoint {
     location: Point,
-    time: Option<Time>,
-    mag_variation: Option<Degrees>,
+    time: Option<xsd::DateTime>,
+    mag_variation: Option<xsd::Degrees>,
     geoid_height: Option<xsd::Decimal>,
     fix: Option<Fix>,
-    satellites: Option<u16>,
+    satellites: Option<xsd::NonNegativeInteger>,
     name: Option<String>,
     extensions: Option<XmlElement>,
 }
 
-struct WptParser<'a, T: 'a + Read> {
+struct WaypointParser<'a, T: 'a + Read> {
     reader: &'a mut EventReader<T>,
     elem_name: Option<OwnedName>,
     lat: Option<f64>,
     lon: Option<f64>,
-    time: Option<Time>,
-    mag_variation: Option<Degrees>,
-    geoid_height: Option<xsd::Decimal>,
-    fix: Option<Fix>,
-    ele: Option<XmlDecimal>,
-    sat: Option<u16>,
+    ele: Option<xsd::Decimal>,
+    time: Option<xsd::DateTime>,
+    magvar: Option<xsd::Degrees>,
+    geoidheight: Option<xsd::Decimal>,
     name: Option<String>,
+    //cmt: Option<String>,
+    //desc: Option<String>,
+    //src: Option<String>,
+    //link: Vec<String>,
+    //sym: Option<String>,
+    //type_: Option<String>,
+    fix: Option<Fix>,
+    sat: Option<xsd::NonNegativeInteger>,
+    //hdop: Option<xsd::Decimal>,
+    //pdop: Option<xsd::Decimal>,
+    //vdop: Option<xsd::Decimal>,
+    //ageofdgpsdata: Option<xsd::Decimal>,
+    //dgpsid: Option<String>,
     extensions: Option<XmlElement>,
 }
 
-impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
+impl<'a, T: Read> ElementParse<'a, T> for WaypointParser<'a, T> {
     fn new(reader: &'a mut EventReader<T>) -> Self {
-        WptParser { reader: reader,
-                    elem_name: None,
-                    lat: None, lon: None, ele: None,
-                    time: None,
-                    mag_variation: None,
-                    geoid_height: None,
-                    fix: None, sat: None,
-                    name: None,
-                    extensions: None }
+        WaypointParser { reader: reader,
+                         elem_name: None,
+                         lat: None, lon: None, ele: None,
+                         time: None,
+                         magvar: None,
+                         geoidheight: None,
+                         fix: None, sat: None,
+                         name: None,
+                         extensions: None }
     }
     ParserStart!( "lat" => { lat, conv::Latitude::from_attr },
                   "lon" => { lon, conv::Longitude::from_attr } );
@@ -334,14 +345,14 @@ impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
             "time" => { time = Some, fn, parse_time },
             "fix" => { fix = Some, fn, parse_fix },
             "ele" => { ele = Some, fn, parse_decimal },
-            "sat" => { sat = Some, fn, parse_u16 },
+            "sat" => { sat = Some, fn, parse_int },
             "name" => { name = Some, fn, parse_string },
             "extensions" => { extensions = Some, ElementParse, ElementParser },
         }
     );
 }
 
-impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
+impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
     type Element = Waypoint;
     type Error = Error;
     fn build(self) -> Result<Self::Element, Self::Error> {
@@ -349,8 +360,8 @@ impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
                                         longitude: self.lon.unwrap(),
                                         elevation: self.ele },
                       time: self.time,
-                      mag_variation: self.mag_variation,
-                      geoid_height: self.geoid_height,
+                      mag_variation: self.magvar,
+                      geoid_height: self.geoidheight,
                       fix: self.fix,
                       satellites: self.sat,
                       name: self.name,
@@ -431,7 +442,7 @@ struct TrackSegment {
     waypoints: Vec<Waypoint>,
 },
 TrkSegParser {
-    "trkpt" => { waypoints = Vec, ElementParse, WptParser },
+    "trkpt" => { waypoints = Vec, ElementParse, WaypointParser },
 }
 );
 

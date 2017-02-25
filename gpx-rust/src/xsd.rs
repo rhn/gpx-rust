@@ -3,7 +3,6 @@ extern crate xml as _xml;
 extern crate std;
 
 use std::str::FromStr;
-use self::chrono::{ DateTime, FixedOffset };
 
 use parsers::{ parse_chars, ElementError };
 use parsers::ElementErrorFree;
@@ -12,10 +11,11 @@ use xml::ElemStart;
 use ser::{ Serialize, SerializeCharElem };
 
 
-pub type Time = DateTime<FixedOffset>;
+pub type Time = chrono::DateTime<chrono::FixedOffset>;
+pub type DateTime = chrono::DateTime<chrono::FixedOffset>;
 pub type NonNegativeInteger = u64;
 pub type Decimal = String; // FIXME
-
+pub type Degrees = String; // FIXME
 
 pub fn parse_int<T: std::io::Read, Error, EFree>
         (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
