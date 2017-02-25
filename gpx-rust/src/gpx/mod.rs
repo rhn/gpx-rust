@@ -6,7 +6,7 @@ extern crate geo;
 use std;
 use std::io;
 use std::io::{ Read };
-use std::error::Error as Error_;
+use std::error::Error as ErrorTrait;
 use std::str::FromStr;
 use std::fmt;
 
@@ -86,6 +86,17 @@ impl std::error::Error for Error {
             Error::BadAttribute(_, _) => "Bad attribute (depr)",
             Error::MalformedData(_) => "Malformed data (depr)",
             Error::BadElement(_) => "Bad element (?)",
+        }
+    }
+    fn cause(&self) -> Option<&std::error::Error> {
+        match *self {
+            Error::Chrono(ref e) => Some(e),
+            Error::Io(ref e) => Some(e),
+            Error::Xml(ref e) => Some(e),
+            Error::ParseValue(ref e) => Some(e),
+            //Error::BadAttributeValue(e) => Some(&e),
+            //Error::BadElement(e) => Some(&e),
+            _ => None
         }
     }
 }
