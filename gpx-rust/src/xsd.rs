@@ -12,6 +12,7 @@ use ser::{ Serialize, SerializeCharElem };
 
 pub type Time = DateTime<FixedOffset>;
 pub type NonNegativeInteger = u64;
+pub type Decimal = String; // FIXME
 
 
 pub fn parse_int<T: std::io::Read, Error: CharNodeError + From<std::num::ParseIntError>>

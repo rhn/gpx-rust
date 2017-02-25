@@ -48,6 +48,7 @@ fn process() -> Result<(), Error> {
         StructInfo { name: "TrackSegment".into(), type_: types.get("trksegType").unwrap(),
                      tags: map! { "trkpt" => "waypoints" } },
     ];
+    let elem_convs = map!{ "boundsType".into() => "gpx::conv::Bounds".into() };
 
     let out_path = out_dir.join("gpx_ser_auto.rs");
     { // to drop f before prettification
@@ -58,7 +59,7 @@ fn process() -> Result<(), Error> {
         
         for item in structs {
             try!(f.write(
-                gpx::Generator::serializer_impl(&item.name, &item.tags, item.type_).as_bytes()
+                gpx::Generator::serializer_impl(&item.name, &item.tags, item.type_, &elem_convs).as_bytes()
             ).map_err(Error::Io));
         }
     }

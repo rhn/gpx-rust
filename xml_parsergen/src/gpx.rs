@@ -2,7 +2,7 @@ use std;
 use std::collections::HashMap;
 use quote;
 
-use xsd_types::{ Type, XsdElement, XsdElementType, ElementMaxOccurs, Attribute };
+use xsd_types::{ Type, XsdElement, ElementMaxOccurs, Attribute };
 use ::{ ParserGen, TagMap };
 
 
@@ -21,26 +21,26 @@ macro_rules! map(
 macro_rules! XsdElementSingle (
     ( $name:expr, $type_:expr ) => {
         XsdElement { name: String::from($name),
-                     type_: XsdElementType::Name(String::from($type_)),
+                     type_: $type_.into(),
                      max_occurs: ElementMaxOccurs::Some(1) }
     }
 );
 
 
-pub fn get_types<'a, 'b>() -> HashMap<&'a str, Type<'b>> {
+pub fn get_types<'a>() -> HashMap<&'a str, Type> {
     map!{
         "metadataType".into() => Type {
             sequence: vec![
                 XsdElement { name: String::from("name"),
-                             type_: XsdElementType::Name(String::from("xsd:string")),
+                             type_: "xsd:string".into(),
                              max_occurs: ElementMaxOccurs::Some(1) },
                 XsdElement { name: String::from("desc"),
-                             type_: XsdElementType::Name(String::from("xsd:string")),
+                             type_: "xsd:string".into(),
                              max_occurs: ElementMaxOccurs::Some(1) },
                 XsdElementSingle!("author", "personType"),
                 XsdElementSingle!("copyright", "copyrightType"),
                 XsdElement { name: String::from("link"),
-                             type_: XsdElementType::Name(String::from("linkType")),
+                             type_: "linkType".into(),
                              max_occurs: ElementMaxOccurs::Unbounded },
                 XsdElementSingle!("time", "xsd:dateTime"),
                 XsdElementSingle!("keywords", "xsd:string"),
@@ -56,13 +56,13 @@ pub fn get_types<'a, 'b>() -> HashMap<&'a str, Type<'b>> {
                 XsdElementSingle!("desc", "xsd:string"),
                 XsdElementSingle!("src", "xsd:string"),
                 XsdElement { name: String::from("link"),
-                             type_: XsdElementType::Name(String::from("linkType")),
+                             type_: "linkType".into(),
                              max_occurs: ElementMaxOccurs::Unbounded },
                 XsdElementSingle!("number", "xsd:nonNegativeInteger"),
                 XsdElementSingle!("type", "xsd:string"),
                 XsdElementSingle!("extensions", "extensionType"),
                 XsdElement { name: String::from("trkseg"),
-                             type_: XsdElementType::Name(String::from("trksegType")),
+                             type_: "trksegType".into(),
                              max_occurs: ElementMaxOccurs::Unbounded },
             ],
             attributes: vec![],
@@ -70,7 +70,7 @@ pub fn get_types<'a, 'b>() -> HashMap<&'a str, Type<'b>> {
         "trksegType".into() => Type {
             sequence: vec![
                 XsdElement { name: "trkpt".into(),
-                             type_: XsdElementType::Name("wptType".into()),
+                             type_: "wptType".into(),
                              max_occurs: ElementMaxOccurs::Unbounded },
             ],
             attributes: vec![],
@@ -114,7 +114,9 @@ use self::_xml::name::Name;
 use self::_xml::namespace::Namespace;
 use self::_xml::writer::{ XmlEvent, EventWriter };
 
-use ser::Serialize;
+use ser::{ Serialize, SerError };
+use gpx::ser::SerializeVia;
+use gpx;
 use gpx::*;
 "
     }
@@ -178,7 +180,8 @@ use gpx::*;
         ).to_string().replace("{", "{\n").replace(";", ";\n")
     }
 
-    fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type) -> String {
+    fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
+                       type_convs: &HashMap<String, String>) -> String {
         let cls_name = quote::Ident::new(cls_name);
         let events = data.sequence.iter().map(|elem| {
             let elem_name = elem.name.clone();
@@ -190,12 +193,19 @@ use gpx::*;
                     None => f(elem_name.as_str())
                 })
             };
+            let ser_call = match type_convs.get(&elem.type_) {
+                Some(name) => {
+                    let type_name = quote::Ident::new(name.clone());
+                    quote!(#type_name::serialize_via(&item, sink, #elem_name))
+                },
+                None => quote!(item.serialize_with(sink, #elem_name))
+            };
             match elem.max_occurs {
                 ElementMaxOccurs::Some(1) => {
                     let name = get_attr_name(&|n| { String::from(n) });
                     quote!(
                         if let Some(ref item) = self.#name {
-                            try!(item.serialize_with(sink, #elem_name));
+                            try!(#ser_call);
                         }
                     )
                 }
@@ -210,7 +220,8 @@ use gpx::*;
             }
         });
         let fun_body = quote!(
-            fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
+            fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
+                    -> Result<(), SerError> {
                 let elemname = Name::local(name);
                 try!(sink.write(
                     XmlEvent::StartElement {
@@ -222,7 +233,8 @@ use gpx::*;
                 
                 #( #events )*
                 
-                sink.write(XmlEvent::EndElement { name: Some(elemname) })
+                try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
+                Ok(())
             }
         );
         quote!(

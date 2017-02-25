@@ -1,17 +1,12 @@
-pub struct Type<'a> {
+pub struct Type {
     pub attributes: Vec<Attribute>,
-    pub sequence: Vec<XsdElement<'a>>,
+    pub sequence: Vec<XsdElement>,
 }
 
-pub struct XsdElement<'a> {
+pub struct XsdElement {
     pub name: String,
-    pub type_: XsdElementType<'a>,
+    pub type_: String,
     pub max_occurs: ElementMaxOccurs,
-}
-
-pub enum XsdElementType<'a> {
-    Name(String),
-    Type_(&'a Type<'a>)
 }
 
 pub enum ElementMaxOccurs {

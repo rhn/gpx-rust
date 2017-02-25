@@ -8,13 +8,6 @@ use xml::ElemStart;
 #[allow(unused_imports)]
 use xml::{ ElementParser, ElementParse };
 
-
-pub trait ParserMessage
-        where Self: From<&'static str> {
-    fn from_unexp_attr(elem_name: OwnedName, attr_name: OwnedName) -> Self;
-    fn from_xml_error(xml_::reader::Error) -> Self;
-}
-
 pub trait CharNodeError
     where Self: From<&'static str> + From<xml_::reader::Error> {
 }
@@ -55,10 +48,10 @@ pub fn parse_chars<T: std::io::Read, F, Res, E: CharNodeError, EInner>
 
 macro_rules! _parser_attr {
     ( $self_:ident, $value:ident, { $field:ident, $func:expr } ) => {
-        $self_.$field = Some(try!($func($value)));
+        $self_.$field = Some(try!($func($value).map_err(Self::Error::from_bad_attr_val)));
     };
     ( $self_:ident, $value:ident, { $field:ident, $func:path } ) => {
-        $self_.$field = Some(try!($func($value)));
+        $self_.$field = Some(try!($func($value).map_err(Self::Error::from_bad_attr_val)));
     };
 }
 
@@ -85,7 +78,7 @@ macro_rules! ParserStart {
                 }
                 match &(name.local_name) as &str {
                     $( $name => {
-                        let v = attr.value;
+                        let v = &attr.value;
                         _parser_attr! { self, v, $attr }
                     } ),*
                     _ => {
@@ -119,11 +112,8 @@ macro_rules! make_tag {
 
 macro_rules! _ParserImplBody {
     (
-        attrs: { $( $attr:pat => $attrdata:tt ),* },
         tags: { $( $tag:pat => $tagdata:tt, )* }
     ) => {
-        ParserStart!( $( $attr => $attrdata ),* );
-
         fn parse_element(&mut self, elem_start: ElemStart)
                 -> Result<(), Self::Error> {
             if let Some(ref ns) = elem_start.name.namespace.clone() {
@@ -221,8 +211,8 @@ macro_rules! Parser {
                           elem_name: None,
                           $( $i : <_parser_field!{ $k <$t> }>::empty(), )* }
             }
-            _ParserImplBody!( attrs: { $( $attr => $attrdata, )* },
-                              tags: { $( $tag => $tagdata, )* } );
+            ParserStart!( $( $attr => $attrdata ),* );
+            _ParserImplBody!( tags: { $( $tag => $tagdata, )* } );
         }
     }
 }
@@ -249,8 +239,8 @@ macro_rules! ParserExp {
                           elem_name: None,
                           $( $i : <_parser_field!{ $k <$t> }>::empty(), )* }
             }
-            _ParserImplBody!( attrs: { $( $attr => $attrdata ),* },
-                              tags: { $( $tag => $tagdata, )* } );
+            ParserStart!( $( $attr => $attrdata ),* );
+            _ParserImplBody!( tags: { $( $tag => $tagdata, )* } );
         }
     }
 }

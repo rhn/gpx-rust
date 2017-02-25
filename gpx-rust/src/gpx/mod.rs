@@ -1,5 +1,7 @@
 extern crate xml as _xml;
 extern crate chrono;
+extern crate geo;
+
 
 use std;
 use std::io;
@@ -7,6 +9,7 @@ use std::io::{ Read };
 use std::error::Error as Error_;
 use std::str::FromStr;
 
+use self::geo::Bbox;
 use self::_xml::common::{ Position, TextPosition };
 use self::_xml::reader::{ EventReader, XmlEvent };
 use self::_xml::name::OwnedName;
@@ -16,10 +19,14 @@ use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse
 use parsers::*;
 use xsd;
 use xsd::*;
+use par::ParserMessage;
 
-mod ser;
+mod conv;
 mod ser_auto;
+pub mod ser;
+pub mod par;
 
+use self::par::{ BoundsParser, FromAttribute };
 
 trait EmptyInit {
     fn empty() -> Self;
@@ -68,6 +75,7 @@ pub enum Error {
     Io(io::Error),
     Xml(_xml::reader::Error),
     ParseValue(std::string::ParseError), // use "bad tag" instead
+    BadAttributeValue(par::AttributeValueError), // use when value out of XML spec for any attribute
     BadAttribute(OwnedName, OwnedName),
     MalformedData(String),
     BadElement(ElementError),
@@ -81,6 +89,10 @@ impl ParserMessage for Error {
     }
     fn from_xml_error(e: _xml::reader::Error) -> Self {
         Error::Xml(e)
+    }
+    // Consider From
+    fn from_bad_attr_val(e: par::AttributeValueError) -> Self {
+        Error::BadAttributeValue(e)
     }
 }
 
@@ -179,8 +191,8 @@ macro_rules! ElemParser {
 
 macro_attr! {
     #[derive(Debug, ParserExp!(GpxElemParser {
-        attrs: { "version" => { version, parse_gpx_version },
-                 "creator" => { creator, Ok<String, Error> } },
+        attrs: { "version" => { version, par::parse_gpx_version },
+                 "creator" => { creator, par::copy } },
         tags: { "metadata" => { metadata = Some, ElementParse, MetadataParser },
                 "wpt" => { waypoints = Vec, ElementParse, WptParser },
                 "trk" => { tracks = Vec, ElementParse, TrkParser } }
@@ -191,14 +203,6 @@ macro_attr! {
         metadata: Option!(Metadata),
         waypoints: Vec!(Waypoint),
         tracks: Vec!(Track),
-    }
-}
-
-fn parse_gpx_version(value: String) -> Result<GpxVersion, Error> {
-    match &value as &str {
-        "1.0" => Ok(GpxVersion::V1_0),
-        "1.1" => Ok(GpxVersion::V1_1),
-        _ => Err(Error::Str("Unknown GPX version"))
     }
 }
 
@@ -230,7 +234,7 @@ macro_attr! {
                     "link" => { links = Vec, ElementParse, ElementParser },
                     "time" => { time = Some, fn, parse_time },
                     "keywords" => { keywords = Some, fn, parse_string },
-                    "bounds" => { bounds = Some, ElementParse, ElementParser },
+                    "bounds" => { bounds = Some, ElementParse, BoundsParser },
                     "extensions" => { extensions = Some, ElementParse, ElementParser }}
         }),
         ElementBuild!(MetadataParser, Error))]
@@ -242,17 +246,20 @@ macro_attr! {
         links: Vec<Link>,
         time: Option<Time>,
         keywords: Option<String>,
-        bounds: Option<XmlElement>,
+        bounds: Option<Bounds>,
         extensions: Option<XmlElement>,
     }
 }
 
 type Link = XmlElement;
+type Bounds = Bbox<f64>;
 
 #[derive(XmlDebug)]
 pub struct Waypoint {
-    location: LosslessPoint,
+    location: Point,
     time: Option<Time>,
+    mag_variation: Option<Degrees>,
+    geoid_height: Option<xsd::Decimal>,
     fix: Option<Fix>,
     satellites: Option<u16>,
     name: Option<String>,
@@ -262,9 +269,11 @@ pub struct Waypoint {
 struct WptParser<'a, T: 'a + Read> {
     reader: &'a mut EventReader<T>,
     elem_name: Option<OwnedName>,
-    lat: Option<XmlDecimal>,
-    lon: Option<XmlDecimal>,
+    lat: Option<f64>,
+    lon: Option<f64>,
     time: Option<Time>,
+    mag_variation: Option<Degrees>,
+    geoid_height: Option<xsd::Decimal>,
     fix: Option<Fix>,
     ele: Option<XmlDecimal>,
     sat: Option<u16>,
@@ -276,16 +285,17 @@ impl<'a, T: Read> ElementParse<'a, T> for WptParser<'a, T> {
     fn new(reader: &'a mut EventReader<T>) -> Self {
         WptParser { reader: reader,
                     elem_name: None,
-                    name: None,
                     lat: None, lon: None, ele: None,
                     time: None,
+                    mag_variation: None,
+                    geoid_height: None,
                     fix: None, sat: None,
+                    name: None,
                     extensions: None }
     }
+    ParserStart!( "lat" => { lat, conv::Latitude::from_attr },
+                  "lon" => { lon, conv::Longitude::from_attr } );
     _ParserImplBody!(
-        attrs: { "lat" => { lat, Result::Ok<XmlDecimal, Error> },
-                 "lon" => { lon, Result::Ok<XmlDecimal, Error> }
-        },
         tags: {
             "time" => { time = Some, fn, parse_time },
             "fix" => { fix = Some, fn, parse_fix },
@@ -301,10 +311,12 @@ impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
     type Element = Waypoint;
     type Error = Error;
     fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(Waypoint { location: LosslessPoint { latitude: self.lat.unwrap(),
-                                                longitude: self.lon.unwrap(),
-                                                elevation: self.ele },
+        Ok(Waypoint { location: Point { latitude: self.lat.unwrap(),
+                                        longitude: self.lon.unwrap(),
+                                        elevation: self.ele },
                       time: self.time,
+                      mag_variation: self.mag_variation,
+                      geoid_height: self.geoid_height,
                       fix: self.fix,
                       satellites: self.sat,
                       name: self.name,
@@ -313,12 +325,13 @@ impl<'a, T: Read> ElementBuild for WptParser<'a, T> {
 }
 
 #[derive(XmlDebug)]
-struct LosslessPoint {
-    latitude: XmlDecimal,
-    longitude: XmlDecimal,
+struct Point {
+    latitude: f64,
+    longitude: f64,
     elevation: Option<XmlDecimal>,
 }
 
+type Degrees = String;
 type XmlDecimal = String;
 
 #[derive(Debug)]

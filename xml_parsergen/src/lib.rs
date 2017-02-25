@@ -20,14 +20,14 @@ pub type AttrMap = HashMap<String, (String, String)>;
 /// This is ugly
 pub struct StructInfo<'a> {
     pub name: String,
-    pub type_: &'a Type<'a>,
+    pub type_: &'a Type,
     pub tags: TagMap<'a>,
 }
 
 /// This is awful
 pub struct ParserInfo<'a> {
     pub name: String,
-    pub type_: &'a Type<'a>,
+    pub type_: &'a Type,
     pub attrs: AttrMap,
 }
 
@@ -43,7 +43,8 @@ pub trait ParserGen {
     fn header() -> &'static str;
     fn parser_cls(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String;
     fn parser_impl(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String;
-    fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type) -> String;
+    fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
+                       type_convs: &HashMap<String, String>) -> String;
 }
 
 pub fn prettify(path: &Path) -> Result<(), Error> {

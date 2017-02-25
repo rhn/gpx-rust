@@ -1,6 +1,7 @@
 extern crate clap;
 extern crate xml_parsergen;
 
+use std::collections::HashMap;
 use std::io;
 use std::io::{ Write, BufWriter };
 use std::fs::File;
@@ -22,7 +23,10 @@ macro_rules! map(
      };
 );
 
-fn save(filename: &str, structs: Vec<StructInfo>, types: Vec<ParserInfo>) -> Result<(), io::Error> {
+/// type_convs - type->converter class mapping. So far elements only, user-provided, may be missing
+fn save(filename: &str, type_convs: HashMap<String, String>,
+                        serializers: Vec<StructInfo>,
+                        types: Vec<ParserInfo>) -> Result<(), io::Error> {
     let f = try!(File::create(filename));
     let mut f = BufWriter::new(f);
 
@@ -36,9 +40,9 @@ fn save(filename: &str, structs: Vec<StructInfo>, types: Vec<ParserInfo>) -> Res
             gpx::Generator::parser_impl(&item.name, item.type_, &item.attrs).as_bytes()
         )); 
     }
-    for item in structs {
+    for item in serializers {
         try!(f.write(
-            gpx::Generator::serializer_impl(&item.name, &item.tags, item.type_).as_bytes()
+            gpx::Generator::serializer_impl(&item.name, &item.tags, item.type_, &type_convs).as_bytes()
         ));
     }
     Ok(())
@@ -66,10 +70,11 @@ fn main() {
     ];
     let attrs = map!{ "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
                       "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()) };
+    let elem_convs = map!{ "boundsType".into() => "gpx::conv::Bounds".into() };
     let parsers = vec![
         ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap(), attrs: attrs }
     ];
     let dest = matches.value_of("destination").unwrap();
-    save(dest, structs, parsers).expect("Failed to save");
+    save(dest, elem_convs, structs, parsers).expect("Failed to save");
     prettify(Path::new(dest.into())).expect("Failed to prettify");
 }

@@ -10,9 +10,10 @@ use self::_xml::namespace::{ Namespace, NS_NO_PREFIX };
 use self::_xml::attribute::Attribute;
 use self::_xml::writer;
 use self::_xml::writer::{ XmlEvent, EventWriter };
-use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix, Track, TrackSegment };
-use ser::{ Serialize, SerializeAttr, SerializeCharElem };
-
+use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix, Track, TrackSegment, Bounds };
+use gpx::conv::Latitude;
+use gpx::conv;
+use ser::{ SerError, Serialize, SerializeAttr, SerializeCharElem };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -25,8 +26,59 @@ macro_rules! set_optional(
     }
 );
 
+#[derive(Debug)]
+pub enum AttributeValueError {
+    Str(&'static str)
+}
+
+trait ToAttribute<T> {
+    fn to_attribute(&self) -> Result<String, AttributeValueError>;
+}
+
+impl ToAttribute<Latitude> for f64 {
+    fn to_attribute(&self) -> Result<String, AttributeValueError> {
+        if *self > 90.0 || *self < -90.0 {
+            Err(AttributeValueError::Str("Value out of bounds"))
+        } else {
+            Ok(self.to_string())
+        }
+    }
+}
+
+pub trait SerializeVia<T> {
+    fn serialize_via<W: io::Write>(data: &T, sink: &mut EventWriter<W>, name: &str)
+        -> Result<(), SerError>;
+}
+
+impl SerializeVia<Bounds> for conv::Bounds {
+    fn serialize_via<W: io::Write>(data: &Bounds, sink: &mut EventWriter<W>, name: &str)
+            -> Result<(), SerError> {
+        let name = Name::local(name);
+        try!(sink.write(
+            XmlEvent::StartElement {
+                name: name,
+                attributes: Cow::Owned(
+                // FIXME: turn to_string() into Latitude/Longitude conv
+                    vec![Attribute { name: Name::local("minlat"),
+                                     value: &data.xmin.to_string() },
+                         Attribute { name: Name::local("minlon"),
+                                     value: &data.ymin.to_string() },
+                         Attribute { name: Name::local("maxlat"),
+                                     value: &data.xmax.to_string() },
+                         Attribute { name: Name::local("maxlon"),
+                                     value: &data.ymax.to_string() }]
+                ),
+                namespace: Cow::Owned(Namespace::empty())
+            }
+        ));
+        try!(sink.write(XmlEvent::EndElement { name: Some(name) }));    
+        Ok(())
+    }
+}
+
 impl Serialize for Gpx {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
+            -> Result<(), SerError> {
         try!(sink.write(XmlEvent::StartDocument { version: XmlVersion::Version11,
                                                   encoding: None,
                                                   standalone: None }));
@@ -56,7 +108,8 @@ impl Serialize for Gpx {
             try!(item.serialize_with(sink, "trk"));
         }
         
-        sink.write(XmlEvent::EndElement { name: Some(elemname) })
+        try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
+        Ok(())
     }
 }
 
@@ -71,15 +124,18 @@ impl GpxVersion {
 }
 
 impl Serialize for Waypoint {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) -> writer::Result<()> {
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
+            -> Result<(), SerError> {
         let elemname = Name::local(name);
+        let lat = try!(self.location.latitude.to_attribute());
+        let lon = try!(self.location.longitude.to_attribute());
         try!(sink.write(XmlEvent::StartElement {
             name: elemname.clone(),
             attributes: Cow::Owned(
                     vec![Attribute { name: Name::local("lat"),
-                                     value: self.location.latitude.to_attribute() },
+                                     value: &lat },
                          Attribute { name: Name::local("lon"),
-                                     value: self.location.longitude.to_attribute() }]),
+                                     value: &lon }]),
             namespace: Cow::Owned(Namespace::empty()),
         }));
         if let Some(ref item) = self.location.elevation {
@@ -88,10 +144,8 @@ impl Serialize for Waypoint {
         if let Some(ref item) = self.time {
             try!(item.serialize_with(sink, "time"));
         }
-        // set_optional!(sink, self.mag_variation, "magvar");
-        /*if let Some(ref item) = self.geoid_height {
-            try!(item.serialize_with(sink, "geoidheight"));
-        }*/
+        set_optional!(sink, self.mag_variation, "magvar");
+        set_optional!(sink, self.geoid_height, "geoidheight");
         set_optional!(sink, self.name, "name");
         // set_optional!(sink, self.comment, "cmt");
         // set_optional!(sink, self.description, "desc");
@@ -107,7 +161,8 @@ impl Serialize for Waypoint {
         // set_optional!(sink, self.dgps_age, "ageofdgpsdata");
         // set_optional!(sink, self.dgps_id, "dgpsid");
         set_optional!(sink, self.extensions, "extensions");
-        sink.write(XmlEvent::EndElement { name: Some(elemname) })
+        try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
+        Ok(())
     }
 }
 
