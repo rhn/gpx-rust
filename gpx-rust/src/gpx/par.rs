@@ -1,4 +1,5 @@
 extern crate xml as _xml;
+extern crate chrono;
 
 use std;
 use std::io::Read;
@@ -14,6 +15,50 @@ use gpx::{ Error, ElementError, Bounds, GpxVersion };
 use gpx::ser;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::ParserMessage;
+use parsers::{ ElementError as ElementErrorTrait, ElementErrorFree };
+
+
+#[derive(Debug)]
+pub enum _ElementError {
+    Str(&'static str),
+    XmlEvent(_xml::reader::Error),
+    BadInt(std::num::ParseIntError),
+    BadString(std::string::ParseError),
+    BadTime(chrono::ParseError),
+    UnknownElement(OwnedName),
+}
+
+impl From<_xml::reader::Error> for _ElementError {
+    fn from(err: _xml::reader::Error) -> _ElementError {
+        _ElementError::XmlEvent(err)
+    }
+}
+
+impl From<&'static str> for _ElementError {
+    fn from(msg: &'static str) -> _ElementError {
+        _ElementError::Str(msg)
+    }
+}
+
+impl From<std::num::ParseIntError> for _ElementError {
+    fn from(err: std::num::ParseIntError) -> _ElementError {
+        _ElementError::BadInt(err)
+    }
+}
+
+impl From<std::string::ParseError> for _ElementError {
+    fn from(err: std::string::ParseError) -> _ElementError {
+        _ElementError::BadString(err)
+    }
+}
+
+impl From<chrono::ParseError> for _ElementError {
+    fn from(err: chrono::ParseError) -> _ElementError {
+        _ElementError::BadTime(err)
+    }
+}
+
+impl ElementErrorFree for _ElementError {}
 
 
 /// Raise whenever attribute value is out of bounds

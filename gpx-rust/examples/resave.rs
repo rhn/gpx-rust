@@ -2,9 +2,12 @@
 extern crate gpx_rust;
 extern crate clap;
 
+use std::error::Error as std_Error;
+use std::process::exit;
 use std::io::{ BufReader, BufWriter };
 use std::fs::File;
 use clap::{ App, Arg };
+
 use gpx_rust::xml::{ ParseXml, WspMode };
 use gpx_rust::ser::Serialize;
 use gpx_rust::gpx::{ Gpx, Parser, Error };
@@ -34,6 +37,17 @@ fn main() {
                       .arg(Arg::with_name("destination")
                               .required(true))
                       .get_matches();
-    let data = parse(matches.value_of("source").unwrap()).expect("Failed to load");
+    let data = match parse(matches.value_of("source").unwrap()) {
+        Err(e) => {
+            println!("Failed to load: {:?}", e);
+            let mut e = e;
+            while e.cause().is_some() {
+                let e = e.cause().unwrap();
+                println!("{:?}", e);
+            }
+            exit(1);
+        }
+        Ok(d) => d
+    };
     save(matches.value_of("destination").unwrap(), data).expect("Failed to save");
 }

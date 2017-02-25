@@ -8,6 +8,7 @@ use std::io;
 use std::io::{ Read };
 use std::error::Error as Error_;
 use std::str::FromStr;
+use std::fmt;
 
 use self::geo::Bbox;
 use self::_xml::common::{ Position, TextPosition };
@@ -16,6 +17,7 @@ use self::_xml::name::OwnedName;
 
 use xml;
 use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
+use parsers::ElementError as ElementErrorTrait;
 use parsers::*;
 use xsd;
 use xsd::*;
@@ -26,7 +28,7 @@ mod ser_auto;
 pub mod ser;
 pub mod par;
 
-use self::par::{ BoundsParser, FromAttribute };
+use self::par::{ BoundsParser, FromAttribute, _ElementError };
 
 trait EmptyInit {
     fn empty() -> Self;
@@ -41,30 +43,15 @@ impl<T> EmptyInit for Vec<T> {
 }
 
 #[derive(Debug)]
-pub enum ElementError {
-    Str(&'static str),
-    XmlEvent(_xml::reader::Error),
-    BadInt(std::num::ParseIntError),
-    UnknownElement(OwnedName, TextPosition),
+pub struct ElementError {
+    error: par::_ElementError,
+    position: TextPosition,
 }
 
-impl CharNodeError for ElementError {}
-
-impl From<_xml::reader::Error> for ElementError {
-    fn from(err: _xml::reader::Error) -> ElementError {
-        ElementError::XmlEvent(err)
-    }
-}
-
-impl From<&'static str> for ElementError {
-    fn from(msg: &'static str) -> ElementError {
-        ElementError::Str(msg)
-    }
-}
-
-impl From<std::num::ParseIntError> for ElementError {
-    fn from(err: std::num::ParseIntError) -> ElementError {
-        ElementError::BadInt(err)
+impl ElementErrorTrait for ElementError {
+    type Free = par::_ElementError;
+    fn from_free(err: Self::Free, position: TextPosition) -> Self {
+        ElementError { error: err, position: position }
     }
 }
 
@@ -81,7 +68,28 @@ pub enum Error {
     BadElement(ElementError),
 }
 
-impl CharNodeError for Error {}
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        fmt::Debug::fmt(self, fmt)
+    }
+}
+
+impl std::error::Error for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::Str(_) => "Str (depr)",
+            Error::Chrono(_) => "Chrono (depr)",
+            Error::Io(_) => "Io (?)",
+            Error::Xml(_) => "Xml (?)",
+            Error::ParseValue(_) => "ParseValue (?)",
+            Error::BadAttributeValue(_) => "Bad attribute value",
+            Error::BadAttribute(_, _) => "Bad attribute (depr)",
+            Error::MalformedData(_) => "Malformed data (depr)",
+            Error::BadElement(_) => "Bad element (?)",
+        }
+    }
+}
+
 
 impl ParserMessage for Error {
     fn from_unexp_attr(elem_name: OwnedName, attr_name: OwnedName) -> Self {
@@ -344,7 +352,7 @@ enum Fix {
 }
 
 impl FromStr for Fix {
-    type Err = Error;
+    type Err = _ElementError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "none" => Fix::None,
@@ -352,7 +360,7 @@ impl FromStr for Fix {
             "3d" => Fix::_3D,
             "dgps" => Fix::DGPS,
             "pps" => Fix::PPS,
-            _ => { return Err(Error::Str("Unknown fix kind")); }
+            _ => { return Err(_ElementError::Str("Unknown fix kind")); }
         })
     }
 }
@@ -410,38 +418,35 @@ impl<'a, T: Read> ElementBuild for TrkSegParser<'a, T> {
 }
 
 fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<Fix, Error> {
+        -> Result<Fix, ElementError> {
     parse_chars(parser, elem_start, Fix::from_str)
 }
 
 fn parse_u16<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<u16, Error> {
+        -> Result<u16, ElementError> {
     parse_chars(parser, elem_start,
-                |chars| u16::from_str(chars).map_err(
-                    |e| Error::MalformedData(String::from(e.description()))
-                )
-    )
+                |chars| u16::from_str(chars).map_err(_ElementError::from))
 }
 
 fn parse_decimal<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<XmlDecimal, Error> {
+        -> Result<XmlDecimal, ElementError> {
     parse_chars(parser,
                 elem_start,
-                |chars| XmlDecimal::from_str(chars).map_err(Error::ParseValue))
+                |chars| XmlDecimal::from_str(chars).map_err(_ElementError::from))
 }
 
 fn parse_time<T: std::io::Read>
         (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<xsd::Time, Error> {
+        -> Result<xsd::Time, ElementError> {
     parse_chars(parser, elem_start,
-                |chars| xsd::Time::parse_from_rfc3339(chars).map_err(Error::from))
+                |chars| xsd::Time::parse_from_rfc3339(chars).map_err(_ElementError::from))
 }
 
 pub fn parse_string<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<String, Error> {
+        -> Result<String, ElementError> {
     parse_chars(parser,
                 elem_start,
-                |chars| String::from_str(chars).map_err(Error::ParseValue))
+                |chars| Ok::<_, _ElementError>(chars.into()))
 }
 
 pub struct Parser<T: Read> {
