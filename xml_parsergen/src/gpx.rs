@@ -1,10 +1,20 @@
+extern crate rustache;
+
 use std;
+use std::io;
 use std::collections::HashMap;
 use quote;
+use self::rustache::{ HashBuilder, Render };
 
 use xsd_types::{ Type, XsdElement, ElementMaxOccurs, Attribute };
 use ::{ ParserGen, TagMap, ident_safe };
 
+
+fn render_string(data: HashBuilder, template: &str) -> String {
+    let mut out = io::Cursor::new(Vec::new());
+    data.render(template, &mut out).expect("Error in rendering");
+    String::from_utf8(out.into_inner()).expect("Error in encoding") // FIXME: what's the encoding of the source?
+}
 
 macro_rules! map(
     { $($key:expr => $value:expr),* $(,)* } => {
@@ -200,7 +210,7 @@ use gpx::*;
         });
         let macroattrs = data.attributes.iter().map(|attr| {
             let field = quote::Ident::new(attr.name.clone());
-            let tag = &attr.name;
+            let attr_name = &attr.name;
             let conv = quote::Ident::new(
                 types.get(&attr.type_)
                      .unwrap_or(&(String::new(), "Result::Ok<String, _>".into()))
@@ -208,22 +218,85 @@ use gpx::*;
                      .clone()
             );
             quote!(
-                #tag => { #field, #conv }
+                #attr_name => { #field, #conv }
             )
         });
-        let body = quote!(
-            _ParserImplBody!(
-                attrs: { #( #macroattrs ),* },
-                tags: {},
+        let elems = data.sequence.iter().map(|elem| {
+            quote::Ident::new(ident_safe(&elem.name).clone())
+        });
+        let macroelems = data.sequence.iter().map(|elem| {
+            let field = quote::Ident::new(ident_safe(&elem.name).clone());
+            let tag = &elem.name;
+            let conv = quote::Ident::new(
+                match types.get(&elem.type_) {
+                    Some(t) => &t.1,
+                    None => {
+                        println!("Missing conversion for {}", &elem.type_);
+                        "parse_elem"
+                    }.clone()
+                }
             );
-        );
+            quote!(
+                #tag => {
+                    self.#field = Some(try!(#conv(self.reader, elem_start)));
+                }
+            )
+        });
+        let body = render_string(HashBuilder::new().insert("match_code",
+                                                           quote!( #( #macroelems, )* ).to_string()),
+                                 r#"
+        fn parse_element(&mut self, elem_start: ElemStart)
+                -> Result<(), Self::Error> {
+            if let Some(ref ns) = elem_start.name.namespace.clone() {
+                match &ns as &str {
+                    "http://www.topografix.com/GPX/1/1" => (),
+                    "http://www.topografix.com/GPX/1/0" => {
+                        println!("WARNING: GPX 1.0 not fully supported, errors may appear");
+                    },
+                    ns => {
+                        {
+                            let name = &elem_start.name;
+                            println!("WARNING: unknown namespace ignored on {:?}:{}: {}",
+                                 name.prefix,
+                                 name.local_name,
+                                 ns);
+                        }
+                        try!(ElementParser::new(self.reader).parse(elem_start));
+                        return Ok(());
+                    }
+                }
+            }
+            match &elem_start.name.local_name as &str {
+                {{{ match_code }}}
+                _ => {
+                    // TODO: add config and handler
+                    return Err(Error::from(
+                        ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
+                                                self.reader.position())));
+                }
+            };
+            Ok(())
+        }
+        
+        fn get_name(&self) -> &OwnedName {
+            match &self.elem_name {
+                &Some(ref i) => i,
+                &None => panic!("Name was not set while parsing"),
+            }
+        }
+        fn next(&mut self) -> Result<XmlEvent, xml::Error> {
+            self.reader.next().map_err(xml::Error::Xml)
+        }"#);
+        let body = quote::Ident::new(body);
         quote!(
             impl<'a, T: Read> ElementParse<'a, T> for #cls_name<'a, T> {
                 fn new(reader: &'a mut EventReader<T>) -> Self {
                     #cls_name { reader: reader,
                                 elem_name: None,
-                                #( #attrs: None ),* }
+                                #( #attrs: None, )*
+                                #( #elems: None, )* }
                 }
+                ParserStart!( #( #macroattrs ),* );
                 #body
             }
         ).to_string().replace("{", "{\n").replace(";", ";\n")
@@ -231,7 +304,6 @@ use gpx::*;
 
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
                        type_convs: &HashMap<String, String>) -> String {
-        let cls_name = quote::Ident::new(cls_name);
         let events = data.sequence.iter().map(|elem| {
             let elem_name = elem.name.clone();
             let get_attr_name = |f: &Fn(&str) -> String| {
@@ -268,7 +340,10 @@ use gpx::*;
                 }
             }
         });
-        let fun_body = quote!(
+        render_string(HashBuilder::new().insert("cls_name", cls_name)
+                                        .insert("events", quote!( #( #events )* ).to_string()),
+                      r#"
+        impl Serialize for {{{ cls_name }}} {
             fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
                     -> Result<(), SerError> {
                 let elemname = Name::local(name);
@@ -280,16 +355,11 @@ use gpx::*;
                     }
                 ));
                 
-                #( #events )*
+                {{{ events }}}
                 
                 try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
                 Ok(())
             }
-        );
-        quote!(
-            impl Serialize for #cls_name {
-                #fun_body
-            }
-        ).to_string()
+        }"#)
     }
 }

@@ -4,8 +4,7 @@ extern crate std;
 
 use std::str::FromStr;
 
-use parsers::{ parse_chars, ElementError };
-use parsers::ElementErrorFree;
+use parsers;
 use gpx::par::_ElementError;
 use xml::ElemStart;
 use ser::{ Serialize, SerializeCharElem };
@@ -20,11 +19,19 @@ pub type Degrees = String; // FIXME
 pub fn parse_int<T: std::io::Read, Error, EFree>
         (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
         -> Result<NonNegativeInteger, Error>
-        where Error: ElementError<Free=EFree>,
-              EFree: ElementErrorFree + From<std::num::ParseIntError> {
-    parse_chars(parser, elem_start,
-                |chars| NonNegativeInteger::from_str(chars)
-    )
+        where Error: parsers::ElementError<Free=EFree>,
+              EFree: parsers::ElementErrorFree + From<std::num::ParseIntError> {
+    parsers::parse_chars(parser, elem_start,
+                         |chars| NonNegativeInteger::from_str(chars))
+}
+
+pub fn parse_string<T: std::io::Read, Error, EFree>
+        (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
+        -> Result<String, Error>
+        where Error: parsers::ElementError<Free=EFree>,
+              EFree: parsers::ElementErrorFree + From<std::num::ParseIntError> {
+    parsers::parse_chars(parser, elem_start,
+                        |chars| Ok::<_, EFree>(chars.into()))
 }
 
 impl SerializeCharElem for Time {

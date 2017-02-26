@@ -10,3 +10,9 @@ pub trait ParserMessage
     fn from_xml_error(_xml::reader::Error) -> Self;
     fn from_bad_attr_val(::gpx::par::AttributeValueError) -> Self;
 }
+
+/*pub trait FromElement {
+    fn from_element<T: std::io::Read>(mut parser: &mut EventReader<T>, elem_start: ElemStart)
+        -> Result<Self, ElementError>;
+}
+*/
