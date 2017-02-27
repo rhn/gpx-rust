@@ -161,7 +161,7 @@ use gpx::*;
     }
     
     fn parser_cls(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String {
-        let cls_name = quote::Ident::new(name);
+        let parser_cls_name = quote::Ident::new(format!("{class}Parser", class=name));
         let attrs = data.attributes.iter().map(|attr| {
             let type_ = quote::Ident::new(
                 match types.get(&attr.type_) {
@@ -194,7 +194,7 @@ use gpx::*;
             quote::Ident::new(format!("{}: {}<{}>", ident_safe(elem_name), wrap_type, elem_type))
         });
         quote!(
-            struct #cls_name<'a, T: 'a + Read> {
+            struct #parser_cls_name<'a, T: 'a + Read> {
                 reader: &'a mut EventReader<T>,
                 elem_name: Option<OwnedName>,
                 #( #attrs, )*
