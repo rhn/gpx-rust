@@ -221,8 +221,17 @@ use gpx::*;
                 #attr_name => { #field, #conv }
             )
         });
-        let elems = data.sequence.iter().map(|elem| {
-            quote::Ident::new(ident_safe(&elem.name).clone())
+        let elem_inits = data.sequence.iter().map(|elem| {
+            quote::Ident::new(
+                format!("{ident}: {init}",
+                        ident=ident_safe(&elem.name),
+                        init=match elem.max_occurs {
+                            ElementMaxOccurs::Some(0) => {
+                                panic!("Element has 0 occurrences, can't derive data type")
+                            }
+                            ElementMaxOccurs::Some(1) => "None",
+                            _ => "Vec::new()"
+                        }))
         });
         let macroelems = data.sequence.iter().map(|elem| {
             let field = quote::Ident::new(ident_safe(&elem.name).clone());
@@ -294,7 +303,7 @@ use gpx::*;
                     #cls_name { reader: reader,
                                 elem_name: None,
                                 #( #attrs: None, )*
-                                #( #elems: None, )* }
+                                #( #elem_inits, )* }
                 }
                 ParserStart!( #( #macroattrs ),* );
                 #body
