@@ -262,17 +262,6 @@ pub enum GpxVersion {
 
 macro_attr! {
     #[derive(XmlDebug)]
-             /*Parser!(MetadataParser {
-                 attrs: {},
-                 tags: { "author" => { author = Some, ElementParse, ElementParser },
-                         "copyright" => { copyright = Some, ElementParse, ElementParser },
-                         "link" => { links = Vec, ElementParse, ElementParser },
-                         "time" => { time = Some, fn, parse_time },
-                         "keywords" => { keywords = Some, fn, parse_string },
-                         "bounds" => { bounds = Some, ElementParse, BoundsParser },
-                         "extensions" => { extensions = Some, ElementParse, ElementParser }}
-             }),*/
-             //ElementBuild!(MetadataParser, Error))]
     pub struct Metadata {
         name: Option<String>,
         description: Option<String>,
@@ -330,7 +319,7 @@ struct WaypointParser<'a, T: 'a + Read> {
     cmt: Option<String>,
     desc: Option<String>,
     src: Option<String>,
-    link: Vec<String>,
+    link: Vec<Link>,
     sym: Option<String>,
     type_: Option<String>,
     fix: Option<Fix>,
@@ -343,96 +332,8 @@ struct WaypointParser<'a, T: 'a + Read> {
     extensions: Option<XmlElement>,
 }
 
-impl<'a, T: Read> ElementParse<'a, T> for WaypointParser<'a, T> {
-    fn new(reader: &'a mut EventReader<T>) -> Self {
-        WaypointParser {
-            reader: reader,
-            elem_name: None,
-            lat: None,
-            lon: None,
-            ele: None,
-            time: None,
-            magvar: None,
-            geoidheight: None,
-            name: None,
-            cmt: None,
-            desc: None,
-            src: None,
-            link: Vec::new(),
-            sym: None,
-            type_: None,
-            fix: None,
-            sat: None,
-            hdop: None,
-            pdop: None,
-            vdop: None,
-            ageofdgpsdata: None,
-            dgpsid: None,
-            extensions: None,
-        }
-    }
-    ParserStart!( "lat" => { lat, conv::Latitude::from_attr },
-                  "lon" => { lon, conv::Longitude::from_attr } );
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), Self::Error> {
-        if let Some(ref ns) = elem_start.name.namespace.clone() {
-            match &ns as &str {
-                "http://www.topografix.com/GPX/1/1" => (),
-                "http://www.topografix.com/GPX/1/0" => {
-                    println!("WARNING: GPX 1.0 not fully supported, errors may appear");
-                }
-                ns => {
-                    {
-                        let name = &elem_start.name;
-                        println!("WARNING: unknown namespace ignored on {:?}:{}: {}",
-                                 name.prefix,
-                                 name.local_name,
-                                 ns);
-                    }
-                    try!(ElementParser::new(self.reader).parse(elem_start));
-                    return Ok(());
-                }
-            }
-        }
-        match &elem_start.name.local_name as &str {
-            "ele" => {
-                self.ele = Some(try!(parse_decimal(self.reader, elem_start)));
-            }
-            "time" => {
-                self.time = Some(try!(parse_time(self.reader, elem_start)));
-            }
-            "geoidheight" => {
-                self.geoidheight = Some(try!(parse_decimal(self.reader, elem_start)));
-            }
-            "name" => {
-                self.name = Some(try!(parse_string(self.reader, elem_start)));
-            }
-            "fix" => {
-                self.fix = Some(try!(parse_fix(self.reader, elem_start)));
-            }
-            "extensions" => {
-                self.extensions = Some(try!(parse_elem(self.reader, elem_start)));
-            }
-            _ => {
+include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
-                // TODO: add config and handler
-                return Err(Error::from(
-                        ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
-                                                self.reader.position())));
-            }
-        };
-        Ok(())
-    }
-
-    fn get_name(&self) -> &OwnedName {
-        match &self.elem_name {
-            &Some(ref i) => i,
-            &None => panic!("Name was not set while parsing"),
-        }
-    }
-    fn next(&mut self) -> Result<XmlEvent, xml::Error> {
-        self.reader.next().map_err(xml::Error::Xml)
-    }
-}
 
 impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
     type Element = Waypoint;
@@ -524,7 +425,7 @@ pub struct TrackSegment {
     waypoints: Vec<Waypoint>,
 }
 
-include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
+
 
 impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
     type Element = TrackSegment;
@@ -539,10 +440,10 @@ fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: Ele
     parse_chars(parser, elem_start, Fix::from_str)
 }
 
-fn parse_u16<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<u16, ElementError> {
+fn parse_u64<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
+        -> Result<u64, ElementError> {
     parse_chars(parser, elem_start,
-                |chars| u16::from_str(chars).map_err(_ElementError::from))
+                |chars| u64::from_str(chars).map_err(_ElementError::from))
 }
 
 fn parse_decimal<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)

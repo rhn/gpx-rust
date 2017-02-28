@@ -65,8 +65,8 @@ fn process() -> Result<(), Error> {
     let attr_convs: TypeMap = map!{
         "boundsType".into() => ("Bounds".into(), TypeConverter::ParserClass("BoundsParser".into())),
         "copyrightType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
-        "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
-        "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()),
+        "latitudeType".into() => ("f64".into(), TypeConverter::AttributeFun("conv::Latitude::from_attr".into())),
+        "longitudeType".into() => ("f64".into(), TypeConverter::AttributeFun("conv::Longitude::from_attr".into())),
         "linkType".into() => ("XmlElement".into(), "parse_elem".into()),
         "fixType".into() => ("Fix".into(), "parse_fix".into()),
         "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
@@ -76,7 +76,7 @@ fn process() -> Result<(), Error> {
         "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
         "xsd:string".into() => ("String".into(), "parse_string".into()),
-        "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u16".into()),
+        "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u64".into()),
         "xsd:degreesType".into() => ("xsd::Degrees".into(), "parse_string".into()),
     };
     let mut elem_convs = map!{ "boundsType".into() => "::gpx::conv::Bounds".into() };
@@ -89,12 +89,19 @@ fn process() -> Result<(), Error> {
         ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
         ParserInfo { name: "MetadataParser".into(), type_: types.get("metadataType").unwrap() },
     ];
+    let parser_impls = vec![
+        ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
+        ParserInfo { name: "MetadataParser".into(), type_: types.get("metadataType").unwrap() },
+        ParserInfo { name: "WaypointParser".into(), type_: types.get("wptType").unwrap() },
+    ];
     
     try!(write_file(&out_dir.join("gpx_par_auto.rs"), |f| {
         for item in &parsers {
             try!(f.write(
                 gpx::Generator::parser_cls(&item.name, item.type_, &attr_convs).as_bytes()
             ).map_err(Error::Io));
+        }
+        for item in &parser_impls {
             try!(f.write(
                 gpx::Generator::parser_impl(&item.name, item.type_, &attr_convs).as_bytes()
             ).map_err(Error::Io));
