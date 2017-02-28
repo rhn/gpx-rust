@@ -33,6 +33,7 @@ pub struct ParserInfo<'a> {
 pub enum TypeConverter {
     ParserClass(String),
     ParseFun(String),
+    AttributeFun(String),
 }
 
 impl<'a> From<&'a str> for TypeConverter {
@@ -54,7 +55,7 @@ pub trait ParserGen {
     fn header() -> &'static str;
     fn parser_cls(name: &str, data: &Type, type_convs: &TypeMap) -> String;
     fn parser_impl(name: &str, data: &Type, types: &TypeMap) -> String;
-    fn build_impl(cls_name: &str, data: &Type, tage: &TagMap) -> String;
+    //fn build_impl(cls_name: &str, data: &Type, tage: &TagMap) -> String;
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
                        type_convs: &HashMap<String, String>) -> String;
 }

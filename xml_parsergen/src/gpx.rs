@@ -212,7 +212,7 @@ use gpx::*;
             let field = quote::Ident::new(attr.name.clone());
             let attr_name = &attr.name;
             let conv = quote::Ident::new(match types.get(&attr.type_) {
-                Some(&(_, TypeConverter::ParseFun(ref foo))) => foo.clone(),
+                Some(&(_, TypeConverter::AttributeFun(ref foo))) => foo.clone(),
                 Some(_) => panic!("Attribute {} must be parsed with a function"),
                 None => {
                     println!("No parser for {}", &attr.type_);
@@ -254,6 +254,9 @@ use gpx::*;
                 Some(&(_, TypeConverter::ParserClass(ref cls))) => {
                     format!("{cls}::new(self.reader).parse(elem_start)", cls=cls)
                 },
+                Some(&(_, TypeConverter::AttributeFun(_))) => {
+                    panic!("Element {} has attribute conversion", &elem.type_)
+                }
                 None => panic!("Missing conversion for {}", &elem.type_),
             };
             quote::Ident::new(format!("{tag} => {{
@@ -322,10 +325,10 @@ use gpx::*;
             }
         ).to_string()
     }
-
-    fn build_impl(cls_name: &str, data: &Type, tage: &TagMap) -> String {
-        panic!("not implemented");
-    }
+    
+    //fn build_impl(cls_name: &str, data: &Type, tage: &TagMap) -> String {
+       // panic!("not implemented");
+    //}
 
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
                        type_convs: &HashMap<String, String>) -> String {
