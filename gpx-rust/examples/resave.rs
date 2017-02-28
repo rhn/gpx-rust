@@ -2,13 +2,12 @@
 extern crate gpx_rust;
 extern crate clap;
 
-use std::error::Error as ErrorTrait;
 use std::process::exit;
 use std::io::{ BufReader, BufWriter };
 use std::fs::File;
 use clap::{ App, Arg };
 
-use gpx_rust::xml::{ ParseXml, WspMode };
+use gpx_rust::xml::{ ParseXml };
 use gpx_rust::ser::Serialize;
 use gpx_rust::gpx::{ Gpx, Parser, Error };
 

@@ -127,7 +127,7 @@ impl SerializeVia<xml::XmlElement> for xml::XmlElement {
                 &xml::XmlNode::Text(ref s) => {
                     sink.write(XmlEvent::Characters(s)).map_err(SerError::from)
                 },
-                &xml::XmlNode::Element(ref e) => e.serialize_with(sink, ""),
+                &xml::XmlNode::Element(ref e) => e.serialize_with(sink, name),
             });
         }
         try!(sink.write(XmlEvent::EndElement { name: Some(data.name.borrow()) }));
