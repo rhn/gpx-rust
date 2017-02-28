@@ -31,20 +31,13 @@ impl From<AttributeValueError> for SerError {
 }
 
 pub trait Serialize {
-    fn serialize<W: io::Write>(&self, sink: W, name: &str) -> Result<(), io::Error> {
+    fn serialize<W: io::Write>(&self, sink: W, name: &str) -> Result<(), SerError> {
         let mut xw = EmitterConfig::new()
             .line_separator("\n")
             .perform_indent(true)
             .create_writer(sink);
         
-        match self.serialize_with(&mut xw, "gpx") {
-            Err(SerError::Writer(writer::Error::Io(e))) => { Err(e) },
-            Err(SerError::Attribute(e)) => {
-                panic!(format!("FIXME: Alerting about data problems not implemented {:?}", e));
-            }
-            Err(e) => panic!(format!("Bug: {:?}", e)),
-            _ => Ok(())
-        }
+        self.serialize_with(&mut xw, "gpx")
     }
     fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
         -> Result<(), SerError>;
