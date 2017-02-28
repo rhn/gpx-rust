@@ -1,9 +1,9 @@
 pub struct Type {
     pub attributes: Vec<Attribute>,
-    pub sequence: Vec<XsdElement>,
+    pub sequence: Vec<Element>,
 }
 
-pub struct XsdElement {
+pub struct Element {
     pub name: String,
     pub type_: String,
     pub max_occurs: ElementMaxOccurs,

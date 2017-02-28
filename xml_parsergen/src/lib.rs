@@ -11,7 +11,7 @@ use std::process::{ Command, ExitStatus };
 use std::collections::HashMap;
 use std::path::Path;
 
-use xsd_types::Type;
+use xsd_types::{ Type, Element, ElementMaxOccurs };
 
 
 pub type TagMap<'a> = HashMap<&'a str, &'a str>;
@@ -40,7 +40,7 @@ pub enum Error {
 
 pub trait ParserGen {
     fn header() -> &'static str;
-    fn parser_cls(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String;
+    fn parser_cls(name: &str, data: &Type, type_convs: &HashMap<String, String>) -> String;
     fn parser_impl(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String;
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
                        type_convs: &HashMap<String, String>) -> String;
@@ -51,6 +51,14 @@ pub fn ident_safe(name: &str) -> &str {
         "type" => "type_",
         n => n
     }
+}
+
+pub fn get_elem_fieldname(e: &Element) -> String {
+    ident_safe(match e.max_occurs {
+        ElementMaxOccurs::Some(0) => panic!("Element has 0 occurrences, can't derive name"),
+        ElementMaxOccurs::Some(1) => e.name.clone(),
+        _ => format!("{}s", e.name)
+    }.as_str()).into()
 }
 
 pub fn prettify(path: &Path) -> Result<(), Error> {

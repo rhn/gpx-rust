@@ -34,11 +34,11 @@ fn save(filename: &str, attr_type_convs: AttrMap, type_convs: HashMap<String, St
     
     for item in types {
         try!(f.write(
-            gpx::Generator::parser_cls(&item.name, item.type_, &attr_type_convs).as_bytes()
+            gpx::Generator::parser_cls(&item.name, item.type_, &type_convs).as_bytes()
         ));
         try!(f.write(
             gpx::Generator::parser_impl(&item.name, item.type_, &attr_type_convs).as_bytes()
-        )); 
+        ));
     }
     for item in serializers {
         try!(f.write(
@@ -69,18 +69,23 @@ fn main() {
         StructInfo { name: "TrackSegment".into(), type_: types.get("trksegType").unwrap(),
                      tags: map! { "trkpt" => "waypoints" } },
     ];
-    let attr_convs = map!{ "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
-                           "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()),
-                           "linkType".into() => ("String".into(), "parse_string".into()),
-                           "fixType".into() => ("Fix".into(), "parse_fix".into()),
-                           "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
-                           //"extensionsType".into() => ("XmlElement".into(), "FIXME".into()), // FIXME: dedicated type?
-                           "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
-                           "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
-                           "xsd:string".into() => ("String".into(), "parse_string".into()),
-                           "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u16".into()),
-                           "xsd:degreesType".into() => ("xsd::Degrees".into(), "parse_string".into()), };
-    let elem_convs = map!{ "boundsType".into() => "gpx::conv::Bounds".into() };
+    let attr_convs: AttrMap = map!{
+        "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
+        "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()),
+        "linkType".into() => ("XmlElement".into(), "parse_elem".into()),
+        "fixType".into() => ("Fix".into(), "parse_fix".into()),
+        "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
+        "extensionsType".into() => ("XmlElement".into(), "parse_elem".into()), // FIXME: dedicated type?
+        "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
+        "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
+        "xsd:string".into() => ("String".into(), "parse_string".into()),
+        "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u16".into()),
+        "xsd:degreesType".into() => ("xsd::Degrees".into(), "parse_string".into()),
+    };
+    let mut elem_convs = map!{ "boundsType".into() => "gpx::conv::Bounds".into() };
+    for (name, &(ref type_, _)) in &attr_convs {
+        elem_convs.insert(name.clone(), type_.clone());
+    }
     let parsers = vec![
         ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap() },
         ParserInfo { name: "WaypointParser".into(), type_: types.get("wptType").unwrap() },
