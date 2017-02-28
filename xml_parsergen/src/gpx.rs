@@ -7,7 +7,7 @@ use quote;
 use self::rustache::{ HashBuilder, Render };
 
 use xsd_types::{ Type, Element, ElementMaxOccurs, Attribute };
-use ::{ ParserGen, TagMap, ident_safe, get_elem_fieldname };
+use ::{ ParserGen, TagMap, TypeConverter, TypeMap, ident_safe };
 
 
 fn render_string(data: HashBuilder, template: &str) -> String {
@@ -190,7 +190,7 @@ use gpx::*;
                 ElementMaxOccurs::Some(1) => "Option",
                 _ => "Vec",
             };
-            quote::Ident::new(format!("{}: {}<{}>", get_elem_fieldname(&elem), wrap_type, elem_type))
+            quote::Ident::new(format!("{}: {}<{}>", ident_safe(&elem.name), wrap_type, elem_type))
         });
         quote!(
             pub struct #cls_name<'a, T: 'a + Read> {
@@ -202,7 +202,7 @@ use gpx::*;
         ).to_string()
     }
     
-    fn parser_impl(name: &str, data: &Type, types: &HashMap<String, (String, String)>) -> String {
+    fn parser_impl(name: &str, data: &Type, types: &TypeMap) -> String {
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
             quote::Ident::new(attr.name.clone())
@@ -210,12 +210,14 @@ use gpx::*;
         let macroattrs = data.attributes.iter().map(|attr| {
             let field = quote::Ident::new(attr.name.clone());
             let attr_name = &attr.name;
-            let conv = quote::Ident::new(
-                types.get(&attr.type_)
-                     .unwrap_or(&(String::new(), "Result::Ok<String, _>".into()))
-                     .1
-                     .clone()
-            );
+            let conv = quote::Ident::new(match types.get(&attr.type_) {
+                Some(&(_, TypeConverter::ParseFun(ref foo))) => foo.clone(),
+                Some(_) => panic!("Attribute {} must be parsed with a function"),
+                None => {
+                    println!("No parser for {}", &attr.type_);
+                    "FIXME".into()
+                }
+            });
             quote!(
                 #attr_name => { #field, #conv }
             )
@@ -230,28 +232,35 @@ use gpx::*;
                             }
                             ElementMaxOccurs::Some(1) => "None",
                             _ => "Vec::new()"
-                        }))
-        });
-        let macroelems = data.sequence.iter().map(|elem| {
-            let field = quote::Ident::new(ident_safe(&elem.name).clone());
-            let tag = &elem.name;
-            let conv = quote::Ident::new(
-                match types.get(&elem.type_) {
-                    Some(t) => &t.1,
-                    None => {
-                        println!("Missing conversion for {}", &elem.type_);
-                        "parse_elem"
-                    }.clone()
-                }
-            );
-            quote!(
-                #tag => {
-                    self.#field = Some(try!(#conv(self.reader, elem_start)));
-                }
+                        })
             )
         });
-        let body = render_string(HashBuilder::new().insert("match_code",
-                                                           quote!( #( #macroelems, )* ).to_string()),
+        let match_elems = data.sequence.iter().map(|elem| {
+            let field = ident_safe(&elem.name).clone();
+            let tag = &elem.name;
+            let saver = match elem.max_occurs {
+                ElementMaxOccurs::Some(0) => {
+                    println!("cargo:warning=\"Element has 0 occurrences, inserting panic on encounter.\"");
+                    format!("panic!(\"Element {} should never appear\")", tag)
+                },
+                ElementMaxOccurs::Some(1) => format!("self.{} = Some", field),
+                _ => format!("self.{}.push", field),
+            };
+            let conv = match types.get(&elem.type_) {
+                Some(&(_, TypeConverter::ParseFun(ref fun))) => {
+                    format!("{fun}(self.reader, elem_start)", fun=fun)
+                },
+                Some(&(_, TypeConverter::ParserClass(ref cls))) => {
+                    format!("{cls}::new(self.reader).parse(elem_start)", cls=cls)
+                },
+                None => panic!("Missing conversion for {}", &elem.type_),
+            };
+            quote::Ident::new(format!("{tag} => {{
+                {saver}(try!({conv}));
+            }}", tag=quote!(#tag), saver=saver, conv=conv))
+        });
+        let body = render_string(HashBuilder::new().insert("match_elems",
+                                                           quote!( #( #match_elems, )* ).to_string()),
                                  r#"
         fn parse_element(&mut self, elem_start: ElemStart)
                 -> Result<(), Self::Error> {
@@ -275,7 +284,7 @@ use gpx::*;
                 }
             }
             match &elem_start.name.local_name as &str {
-                {{{ match_code }}}
+                {{{ match_elems }}}
                 _ => {
                     // TODO: add config and handler
                     return Err(Error::from(
