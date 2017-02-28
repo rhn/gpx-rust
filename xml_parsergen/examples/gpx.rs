@@ -8,7 +8,7 @@ use std::fs::File;
 use std::path::Path;
 use clap::{ App, Arg };
 
-use xml_parsergen::{ ParserGen, StructInfo, ParserInfo, gpx, prettify, AttrMap };
+use xml_parsergen::{ ParserGen, StructInfo, ParserInfo, gpx, prettify, TypeMap };
 
 
 macro_rules! map(
@@ -24,7 +24,7 @@ macro_rules! map(
 );
 
 /// type_convs - type->converter class mapping. So far elements only, user-provided, may be missing
-fn save(filename: &str, attr_type_convs: AttrMap, type_convs: HashMap<String, String>,
+fn save(filename: &str, attr_type_convs: TypeMap, type_convs: HashMap<String, String>,
                         serializers: Vec<StructInfo>,
                         types: Vec<ParserInfo>) -> Result<(), io::Error> {
     let f = try!(File::create(filename));
@@ -34,7 +34,7 @@ fn save(filename: &str, attr_type_convs: AttrMap, type_convs: HashMap<String, St
     
     for item in types {
         try!(f.write(
-            gpx::Generator::parser_cls(&item.name, item.type_, &type_convs).as_bytes()
+            gpx::Generator::parser_cls(&item.name, item.type_, &attr_type_convs).as_bytes()
         ));
         try!(f.write(
             gpx::Generator::parser_impl(&item.name, item.type_, &attr_type_convs).as_bytes()
@@ -69,7 +69,7 @@ fn main() {
         StructInfo { name: "TrackSegment".into(), type_: types.get("trksegType").unwrap(),
                      tags: map! { "trkpt" => "waypoints" } },
     ];
-    let attr_convs: AttrMap = map!{
+    let attr_convs: TypeMap = map!{
         "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
         "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()),
         "linkType".into() => ("XmlElement".into(), "parse_elem".into()),

@@ -159,13 +159,14 @@ use gpx::*;
 "
     }
     
-    fn parser_cls(name: &str, data: &Type, types: &HashMap<String, String>)
+    fn parser_cls(name: &str, data: &Type, types: &TypeMap)
             -> String {
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
             let type_ = quote::Ident::new(
                 match types.get(&attr.type_) {
-                    Some(a) => &a,
+                    Some(&(_, TypeConverter::ParseFun(ref a))) => &a,
+                    Some(_) => panic!("Type {} doesn't have converter appropriate for attribute", &attr.type_),
                     None => {
                          println!("cargo:warning=\"Missing type for attr {}\"", &attr.type_);
                          "String"
@@ -179,7 +180,7 @@ use gpx::*;
         });
         let elems = data.sequence.iter().map(|elem| {
             let elem_type = match types.get(&elem.type_) {
-                Some(a) => &a,
+                Some(&(ref cls, _)) => &cls,
                 None => {
                      println!("cargo:warning=\"Missing type for elem {}\"", &elem.type_);
                      "XmlElement"
@@ -320,6 +321,10 @@ use gpx::*;
                 #body
             }
         ).to_string()
+    }
+
+    fn build_impl(cls_name: &str, data: &Type, tage: &TagMap) -> String {
+        panic!("not implemented");
     }
 
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
