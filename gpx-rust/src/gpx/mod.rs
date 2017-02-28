@@ -260,8 +260,6 @@ pub enum GpxVersion {
     V1_1,
 }
 
-include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
-
 macro_attr! {
     #[derive(XmlDebug,
              Parser!(MetadataParser {
@@ -483,7 +481,7 @@ macro_attr! {
                 "number" => { number = Some, fn, parse_int },
                 "type" => { type_ = Some, fn, parse_string },
                 "extensions" => { extensions = Some, ElementParse, ElementParser },
-                "trkseg" => { segments = Vec, ElementParse, TrkSegParser }
+                "trkseg" => { segments = Vec, ElementParse, TrackSegmentParser }
             }
         }
     ), ElementBuild!(TrkParser, Error), XmlDebug)]
@@ -505,20 +503,18 @@ fn parse_int<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: Ele
     xsd::parse_int(parser, elem_start)
 }
 
-ElemParser!(
-struct TrackSegment {
+#[derive(Debug)]
+pub struct TrackSegment {
     waypoints: Vec<Waypoint>,
-},
-TrkSegParser {
-    "trkpt" => { waypoints = Vec, ElementParse, WaypointParser },
 }
-);
 
-impl<'a, T: Read> ElementBuild for TrkSegParser<'a, T> {
+include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
+
+impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
     type Element = TrackSegment;
     type Error = Error;
     fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(TrackSegment { waypoints: self.waypoints })
+        Ok(TrackSegment { waypoints: self.trkpt })
     }
 }
 
