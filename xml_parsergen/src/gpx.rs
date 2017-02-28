@@ -161,7 +161,7 @@ use gpx::*;
     
     fn parser_cls(name: &str, data: &Type, types: &HashMap<String, String>)
             -> String {
-        let parser_cls_name = quote::Ident::new(format!("{class}Parser", class=name));
+        let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
             let type_ = quote::Ident::new(
                 match types.get(&attr.type_) {
@@ -193,7 +193,7 @@ use gpx::*;
             quote::Ident::new(format!("{}: {}<{}>", get_elem_fieldname(&elem), wrap_type, elem_type))
         });
         quote!(
-            pub struct #parser_cls_name<'a, T: 'a + Read> {
+            pub struct #cls_name<'a, T: 'a + Read> {
                 reader: &'a mut EventReader<T>,
                 elem_name: Option<OwnedName>,
                 #( #attrs, )*
@@ -296,18 +296,21 @@ use gpx::*;
             self.reader.next().map_err(xml::Error::Xml)
         }"#);
         let body = quote::Ident::new(body);
-        quote!(
-            impl<'a, T: Read> ElementParse<'a, T> for #cls_name<'a, T> {
-                fn new(reader: &'a mut EventReader<T>) -> Self {
+        let body1 = quote::Ident::new(quote!(
+            fn new(reader: &'a mut EventReader<T>) -> Self {
                     #cls_name { reader: reader,
                                 elem_name: None,
                                 #( #attrs: None, )*
                                 #( #elem_inits, )* }
-                }
-                ParserStart!( #( #macroattrs ),* );
+            }
+            ParserStart!( #( #macroattrs ),* );
+        ).to_string().replace("{", "{\n").replace(";", ";\n"));
+        quote!(
+            impl<'a, T: Read> ElementParse<'a, T> for #cls_name<'a, T> {
+                #body1
                 #body
             }
-        ).to_string().replace("{", "{\n").replace(";", ";\n")
+        ).to_string()
     }
 
     fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,

@@ -76,6 +76,7 @@ fn main() {
         "fixType".into() => ("Fix".into(), "parse_fix".into()),
         "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
         "extensionsType".into() => ("XmlElement".into(), "parse_elem".into()), // FIXME: dedicated type?
+        "wptType".into() => ("Waypoint".into(), "FIXME".into()),
         "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
         "xsd:string".into() => ("String".into(), "parse_string".into()),
@@ -89,6 +90,7 @@ fn main() {
     let parsers = vec![
         ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap() },
         ParserInfo { name: "WaypointParser".into(), type_: types.get("wptType").unwrap() },
+        ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
     ];
     let dest = matches.value_of("destination").unwrap();
     save(dest, attr_convs, elem_convs, structs, parsers).expect("Failed to save");
