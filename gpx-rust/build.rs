@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io;
 use std::io::{ Write, BufWriter };
 
-use xml_parsergen::{ ParserGen, StructInfo, gpx, prettify };
+use xml_parsergen::{ ParserGen, StructInfo, AttrMap, gpx, prettify };
 
 
 macro_rules! map(
@@ -35,8 +35,6 @@ fn write_file<F: FnOnce(&mut BufWriter<File>) -> Result<(), Error>>(filename: &P
     { // to drop and flush & close f before prettifying
         let f = try!(File::create(filename.clone()).map_err(Error::Io));
         let mut f = BufWriter::new(f);
-
-        try!(f.write(gpx::Generator::header().as_bytes()).map_err(Error::Io));
         
         try!(inner(&mut f));
     }
@@ -65,28 +63,33 @@ fn process() -> Result<(), Error> {
         StructInfo { name: "TrackSegment".into(), type_: types.get("trksegType").unwrap(),
                      tags: map! { "trkpt" => "waypoints" } },
     ];
-    let attr_convs = map!{ "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
-                           "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()),
-                           "linkType".into() => ("String".into(), "parse_string".into()),
-                           "fixType".into() => ("Fix".into(), "parse_fix".into()),
-                           "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
-                           "extensionsType".into() => ("XmlElement".into(), "parse_elem".into()), // FIXME: dedicated type?
-                           "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
-                           "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
-                           "xsd:string".into() => ("String".into(), "parse_string".into()),
-                           "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u16".into()),
-                           "xsd:degreesType".into() => ("xsd::Degrees".into(), "parse_string".into()), };
-    let elem_convs = map!{ "boundsType".into() => "gpx::conv::Bounds".into() };
-
+    let attr_convs: AttrMap = map!{
+        "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
+        "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()),
+        "linkType".into() => ("XmlElement".into(), "parse_elem".into()),
+        "fixType".into() => ("Fix".into(), "parse_fix".into()),
+        "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
+        "extensionsType".into() => ("XmlElement".into(), "parse_elem".into()), // FIXME: dedicated type?
+        "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
+        "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
+        "xsd:string".into() => ("String".into(), "parse_string".into()),
+        "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u16".into()),
+        "xsd:degreesType".into() => ("xsd::Degrees".into(), "parse_string".into()),
+    };
+    let mut elem_convs = map!{ "boundsType".into() => "::gpx::conv::Bounds".into() };
+    for (name, &(ref type_, _)) in &attr_convs {
+        elem_convs.insert(name.clone(), type_.clone());
+    }
     try!(write_file(&out_dir.join("gpx_par_auto.rs"), |f| {
-        for item in &structs {
+        for item in &structs[1..] {
             try!(f.write(
-                gpx::Generator::parser_cls(&item.name, item.type_, &attr_convs).as_bytes()
+                gpx::Generator::parser_cls(&item.name, item.type_, &elem_convs).as_bytes()
             ).map_err(Error::Io));
         }
         Ok(())
     }));
     try!(write_file(&out_dir.join("gpx_ser_auto.rs"), |f| {
+        try!(f.write(gpx::Generator::header().as_bytes()).map_err(Error::Io));
         for item in &structs {
             try!(f.write(
                 gpx::Generator::serializer_impl(&item.name, &item.tags, item.type_, &elem_convs).as_bytes()

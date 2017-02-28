@@ -7,7 +7,7 @@ use std::str::FromStr;
 use parsers;
 use gpx::par::_ElementError;
 use xml::ElemStart;
-use ser::{ Serialize, SerializeCharElem };
+use ser::{ Serialize, SerializeCharElem, SerializeVia };
 
 
 pub type Time = chrono::DateTime<chrono::FixedOffset>;
@@ -34,10 +34,10 @@ pub fn parse_string<T: std::io::Read, Error, EFree>
                         |chars| Ok::<_, EFree>(chars.into()))
 }
 
-impl SerializeCharElem for Time {
-    fn to_characters(&self) -> String { self.to_rfc3339() }
-}
-
 impl SerializeCharElem for NonNegativeInteger {
     fn to_characters(&self) -> String { self.to_string() }
+}
+
+impl SerializeCharElem for DateTime {
+    fn to_characters(&self) -> String { self.to_rfc3339() }
 }

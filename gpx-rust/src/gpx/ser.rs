@@ -13,7 +13,7 @@ use self::_xml::writer::{ XmlEvent, EventWriter };
 use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix, Track, TrackSegment, Bounds };
 use gpx::conv::Latitude;
 use gpx::conv;
-use ser::{ SerError, Serialize, SerializeAttr, SerializeCharElem };
+use ser::{ SerError, Serialize, SerializeVia, SerializeAttr, SerializeCharElem };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -45,10 +45,16 @@ impl ToAttribute<Latitude> for f64 {
     }
 }
 
-pub trait SerializeVia<T> {
-    fn serialize_via<W: io::Write>(data: &T, sink: &mut EventWriter<W>, name: &str)
-        -> Result<(), SerError>;
-}
+/// via XSD string type
+/*impl SerializeVia<String> for XsdString {
+    fn serialize_via<W: io::Write>(data: &String, sink: &mut EventWriter<W>, name: &str)
+            -> Result<(), SerError> {
+        try!(sink.write(XmlEvent::start_element(name)));
+        try!(sink.write(XmlEvent::characters(data)));
+        try!(sink.write(XmlEvent::EndElement { name: Some(name.into()) }));
+        Ok(())
+    }
+}*/
 
 impl SerializeVia<Bounds> for conv::Bounds {
     fn serialize_via<W: io::Write>(data: &Bounds, sink: &mut EventWriter<W>, name: &str)

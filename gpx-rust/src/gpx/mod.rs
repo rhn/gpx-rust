@@ -23,12 +23,13 @@ use xsd;
 use xsd::*;
 use par::ParserMessage;
 
-mod conv;
+pub mod conv;
 mod ser_auto;
 pub mod ser;
 pub mod par;
 
 use self::par::{ BoundsParser, FromAttribute, _ElementError };
+
 
 trait EmptyInit {
     fn empty() -> Self;
@@ -259,19 +260,21 @@ pub enum GpxVersion {
     V1_1,
 }
 
+include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
+
 macro_attr! {
     #[derive(XmlDebug,
-        Parser!(MetadataParser {
-            attrs: {},
-            tags: { "author" => { author = Some, ElementParse, ElementParser },
-                    "copyright" => { copyright = Some, ElementParse, ElementParser },
-                    "link" => { links = Vec, ElementParse, ElementParser },
-                    "time" => { time = Some, fn, parse_time },
-                    "keywords" => { keywords = Some, fn, parse_string },
-                    "bounds" => { bounds = Some, ElementParse, BoundsParser },
-                    "extensions" => { extensions = Some, ElementParse, ElementParser }}
-        }),
-        ElementBuild!(MetadataParser, Error))]
+             Parser!(MetadataParser {
+                 attrs: {},
+                 tags: { "author" => { author = Some, ElementParse, ElementParser },
+                         "copyright" => { copyright = Some, ElementParse, ElementParser },
+                         "link" => { links = Vec, ElementParse, ElementParser },
+                         "time" => { time = Some, fn, parse_time },
+                         "keywords" => { keywords = Some, fn, parse_string },
+                         "bounds" => { bounds = Some, ElementParse, BoundsParser },
+                         "extensions" => { extensions = Some, ElementParse, ElementParser }}
+             }),
+             ElementBuild!(MetadataParser, Error))]
     pub struct Metadata {
         name: Option<String>,
         desc: Option<String>,
@@ -310,33 +313,49 @@ struct WaypointParser<'a, T: 'a + Read> {
     magvar: Option<xsd::Degrees>,
     geoidheight: Option<xsd::Decimal>,
     name: Option<String>,
-    //cmt: Option<String>,
-    //desc: Option<String>,
-    //src: Option<String>,
-    //link: Vec<String>,
-    //sym: Option<String>,
-    //type_: Option<String>,
+    cmt: Option<String>,
+    desc: Option<String>,
+    src: Option<String>,
+    link: Vec<String>,
+    sym: Option<String>,
+    type_: Option<String>,
     fix: Option<Fix>,
     sat: Option<xsd::NonNegativeInteger>,
-    //hdop: Option<xsd::Decimal>,
-    //pdop: Option<xsd::Decimal>,
-    //vdop: Option<xsd::Decimal>,
-    //ageofdgpsdata: Option<xsd::Decimal>,
-    //dgpsid: Option<String>,
+    hdop: Option<xsd::Decimal>,
+    pdop: Option<xsd::Decimal>,
+    vdop: Option<xsd::Decimal>,
+    ageofdgpsdata: Option<xsd::Decimal>,
+    dgpsid: Option<String>,
     extensions: Option<XmlElement>,
 }
 
 impl<'a, T: Read> ElementParse<'a, T> for WaypointParser<'a, T> {
     fn new(reader: &'a mut EventReader<T>) -> Self {
-        WaypointParser { reader: reader,
-                         elem_name: None,
-                         lat: None, lon: None, ele: None,
-                         time: None,
-                         magvar: None,
-                         geoidheight: None,
-                         fix: None, sat: None,
-                         name: None,
-                         extensions: None }
+        WaypointParser {
+            reader: reader,
+            elem_name: None,
+            lat: None,
+            lon: None,
+            ele: None,
+            time: None,
+            magvar: None,
+            geoidheight: None,
+            name: None,
+            cmt: None,
+            desc: None,
+            src: None,
+            link: Vec::new(),
+            sym: None,
+            type_: None,
+            fix: None,
+            sat: None,
+            hdop: None,
+            pdop: None,
+            vdop: None,
+            ageofdgpsdata: None,
+            dgpsid: None,
+            extensions: None,
+        }
     }
     ParserStart!( "lat" => { lat, conv::Latitude::from_attr },
                   "lon" => { lon, conv::Longitude::from_attr } );

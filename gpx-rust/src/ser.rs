@@ -10,6 +10,7 @@ use self::_xml::writer::{ EmitterConfig, EventWriter, XmlEvent };
 use xml;
 
 use gpx::ser::AttributeValueError;
+use xsd;
 
 #[derive(Debug)]
 pub enum SerError {
@@ -49,47 +50,6 @@ pub trait Serialize {
         -> Result<(), SerError>;
 }
 
-impl Serialize for xml::XmlElement {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) 
-            -> Result<(), SerError> {
-        try!(sink.write(
-            XmlEvent::StartElement { name: self.name.borrow(),
-                                     attributes: Cow::Borrowed(
-                                        self.attributes
-                                            .iter()
-                                            .map(|a| { a.borrow() })
-                                            .collect::<Vec<_>>()
-                                            .as_slice()),
-                                     namespace: Cow::Borrowed(&self.namespace) }
-        ));
-        for node in &self.nodes {
-            try!(match node {
-                &xml::XmlNode::Text(ref s) => {
-                    sink.write(XmlEvent::Characters(s)).map_err(SerError::from)
-                },
-                &xml::XmlNode::Element(ref e) => e.serialize_with(sink, ""),
-            });
-        }
-        try!(sink.write(XmlEvent::EndElement { name: Some(self.name.borrow()) }));
-        Ok(())
-    }
-}
-
-impl Serialize for String {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), SerError> {
-        let elemname = Name::local(name);
-        try!(sink.write(
-            XmlEvent::StartElement { name: elemname.clone(),
-                                     attributes: Cow::Owned(Vec::new()),
-                                     namespace: Cow::Owned(Namespace::empty()) }
-        ));
-        try!(sink.write(XmlEvent::Characters(&self)));
-        try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
-        Ok(())
-    }
-}
-
 pub trait SerializeAttr {
     fn to_attribute(&self) -> &str;
 }
@@ -121,4 +81,64 @@ impl<T: SerializeCharElem> Serialize for T {
 
 impl SerializeCharElem for u16 {
     fn to_characters(&self) -> String { self.to_string() }
+}
+
+impl SerializeCharElem for String {
+    fn to_characters(&self) -> String { self.clone() }
+}
+
+/// Implement on converters to do Conv::serialize_via(data, ...)
+pub trait SerializeVia<Data> {
+    fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
+        -> Result<(), SerError>;
+}
+
+/// Trivial case: a type knows how to convert itself
+impl<Data: SerializeCharElem> SerializeVia<Data> for Data {
+    fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
+            -> Result<(), SerError> {
+        let elemname = Name::local(name);
+        try!(sink.write(
+            XmlEvent::StartElement { name: elemname.clone(),
+                                     attributes: Cow::Owned(Vec::new()),
+                                     namespace: Cow::Owned(Namespace::empty()) }
+        ));
+        try!(sink.write(XmlEvent::Characters(&data.to_characters())));
+        try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
+        Ok(())
+    }
+}
+
+impl SerializeVia<xml::XmlElement> for xml::XmlElement {
+    fn serialize_via<W: io::Write>(data: &xml::XmlElement, sink: &mut EventWriter<W>, name: &str) 
+            -> Result<(), SerError> {
+        try!(sink.write(
+            XmlEvent::StartElement { name: data.name.borrow(),
+                                     attributes: Cow::Borrowed(
+                                         data.attributes
+                                             .iter()
+                                             .map(|a| { a.borrow() })
+                                             .collect::<Vec<_>>()
+                                             .as_slice()),
+                                     namespace: Cow::Borrowed(&data.namespace) }
+        ));
+        for node in &data.nodes {
+            try!(match node {
+                &xml::XmlNode::Text(ref s) => {
+                    sink.write(XmlEvent::Characters(s)).map_err(SerError::from)
+                },
+                &xml::XmlNode::Element(ref e) => e.serialize_with(sink, ""),
+            });
+        }
+        try!(sink.write(XmlEvent::EndElement { name: Some(data.name.borrow()) }));
+        Ok(())
+    }
+}
+
+/// TODO: drop
+impl Serialize for xml::XmlElement {
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) 
+            -> Result<(), SerError> {
+        xml::XmlElement::serialize_via(self, sink, name)
+    }
 }

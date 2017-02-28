@@ -194,6 +194,29 @@ macro_rules! _parser_field {
     ( $k:ident <$t:ty> ) => { $k <$t> };
 }
 
+macro_rules! ParserImpl {
+    (
+        ( $parser:ident {
+            attrs: { $( $attr:pat => $attrdata:tt ),* },
+            tags: { $( $tag:pat => $tagdata:tt ),* $(,)* }
+        })
+        $(pub)* struct $name:ident {
+            $( $i:ident : $k:tt <$t:ty>, )*
+        }
+    ) => {
+        impl<'a, T: Read> ElementParse<'a, T> for $parser<'a, T> {
+            fn new(reader: &'a mut EventReader<T>) -> Self {
+                $parser { reader: reader,
+                          elem_name: None,
+                          $( $i : <_parser_field!{ $k <$t> }>::empty(), )* }
+            }
+            ParserStart!( $( $attr => $attrdata ),* );
+            _ParserImplBody!( tags: { $( $tag => $tagdata, )* } );
+        }
+    }
+}
+
+
 macro_rules! Parser {
     (
         ( $parser:ident {
