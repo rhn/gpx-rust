@@ -165,19 +165,21 @@ impl Serialize for Waypoint {
         set_optional!(sink, self.mag_variation, "magvar");
         set_optional!(sink, self.geoid_height, "geoidheight");
         set_optional!(sink, self.name, "name");
-        // set_optional!(sink, self.comment, "cmt");
-        // set_optional!(sink, self.description, "desc");
-        // set_optional!(sink, self.source, "src");
-        // set_optional!(sink, self.link, "link");
-        // set_optional!(sink, self.symbol, "symbol");
-        // set_optional!(sink, self.type_, "type");
+        set_optional!(sink, self.comment, "cmt");
+        set_optional!(sink, self.description, "desc");
+        set_optional!(sink, self.source, "src");
+        for item in &self.links {
+            try!(item.serialize_with(sink, "link"));
+        }
+        set_optional!(sink, self.symbol, "symbol");
+        set_optional!(sink, self.type_, "type");
         set_optional!(sink, self.fix, "fix");
         set_optional!(sink, self.satellites, "sat");
-        // set_optional!(sink, self.hdop, "hdop");
-        // set_optional!(sink, self.vdop, "vdop");
-        // set_optional!(sink, self.pdop, "pdop");
-        // set_optional!(sink, self.dgps_age, "ageofdgpsdata");
-        // set_optional!(sink, self.dgps_id, "dgpsid");
+        set_optional!(sink, self.hdop, "hdop");
+        set_optional!(sink, self.vdop, "vdop");
+        set_optional!(sink, self.pdop, "pdop");
+        set_optional!(sink, self.dgps_age, "ageofdgpsdata");
+        set_optional!(sink, self.dgps_id, "dgpsid");
         set_optional!(sink, self.extensions, "extensions");
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
