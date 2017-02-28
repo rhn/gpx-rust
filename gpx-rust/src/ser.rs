@@ -16,6 +16,7 @@ use xsd;
 pub enum SerError {
     Writer(writer::Error),
     Attribute(AttributeValueError),
+    ElementAttributeError(&'static str, AttributeValueError),
 }
 
 impl From<writer::Error> for SerError {

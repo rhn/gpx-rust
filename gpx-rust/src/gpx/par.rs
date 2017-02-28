@@ -97,6 +97,11 @@ impl FromAttribute<f64> for Latitude {
     }
 }
 
+impl FromAttribute<f64> for Longitude {
+    fn from_attr(attr: &str) -> Result<f64, AttributeValueError> {
+        f64::from_str(attr).map_err(|e| { AttributeValueError::Error(Box::new(e)) })
+    }
+}
 
 pub struct BoundsParser<'a, T: 'a + Read> {
     reader: &'a mut EventReader<T>,

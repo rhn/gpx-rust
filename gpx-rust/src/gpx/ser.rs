@@ -11,7 +11,7 @@ use self::_xml::attribute::Attribute;
 use self::_xml::writer;
 use self::_xml::writer::{ XmlEvent, EventWriter };
 use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix, Track, TrackSegment, Bounds };
-use gpx::conv::Latitude;
+use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
 use ser::{ SerError, Serialize, SerializeVia, SerializeAttr, SerializeCharElem };
 
@@ -28,19 +28,29 @@ macro_rules! set_optional(
 
 #[derive(Debug)]
 pub enum AttributeValueError {
-    Str(&'static str)
+    LatitudeOutOfBounds(f64)
 }
 
-trait ToAttribute<T> {
-    fn to_attribute(&self) -> Result<String, AttributeValueError>;
+trait ToAttributeVia<Data> {
+    fn to_attribute(&Data) -> Result<String, AttributeValueError>;
 }
 
-impl ToAttribute<Latitude> for f64 {
-    fn to_attribute(&self) -> Result<String, AttributeValueError> {
-        if *self > 90.0 || *self < -90.0 {
-            Err(AttributeValueError::Str("Value out of bounds"))
+impl ToAttributeVia<f64> for Latitude {
+    fn to_attribute(data: &f64) -> Result<String, AttributeValueError> {
+        if *data >= 90.0 || *data < -90.0 {
+            Err(AttributeValueError::LatitudeOutOfBounds(*data))
         } else {
-            Ok(self.to_string())
+            Ok(data.to_string())
+        }
+    }
+}
+
+impl ToAttributeVia<f64> for Longitude {
+    fn to_attribute(data: &f64) -> Result<String, AttributeValueError> {
+        if *data >= 180.0 || *data < -180.0 {
+            Err(AttributeValueError::LatitudeOutOfBounds(*data))
+        } else {
+            Ok(data.to_string())
         }
     }
 }
@@ -133,8 +143,10 @@ impl Serialize for Waypoint {
     fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), SerError> {
         let elemname = Name::local(name);
-        let lat = try!(self.location.latitude.to_attribute());
-        let lon = try!(self.location.longitude.to_attribute());
+        let lat = try!(Latitude::to_attribute(&self.location.latitude)
+            .map_err(|e| SerError::ElementAttributeError("latitude", e)));
+        let lon = try!(Longitude::to_attribute(&self.location.longitude)
+            .map_err(|e| SerError::ElementAttributeError("longitude", e)));
         try!(sink.write(XmlEvent::StartElement {
             name: elemname.clone(),
             attributes: Cow::Owned(
