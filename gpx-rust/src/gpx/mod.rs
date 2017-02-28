@@ -261,8 +261,8 @@ pub enum GpxVersion {
 }
 
 macro_attr! {
-    #[derive(XmlDebug,
-             Parser!(MetadataParser {
+    #[derive(XmlDebug)]
+             /*Parser!(MetadataParser {
                  attrs: {},
                  tags: { "author" => { author = Some, ElementParse, ElementParser },
                          "copyright" => { copyright = Some, ElementParse, ElementParser },
@@ -271,11 +271,11 @@ macro_attr! {
                          "keywords" => { keywords = Some, fn, parse_string },
                          "bounds" => { bounds = Some, ElementParse, BoundsParser },
                          "extensions" => { extensions = Some, ElementParse, ElementParser }}
-             }),
-             ElementBuild!(MetadataParser, Error))]
+             }),*/
+             //ElementBuild!(MetadataParser, Error))]
     pub struct Metadata {
         name: Option<String>,
-        desc: Option<String>,
+        description: Option<String>,
         author: Option<XmlElement>,
         copyright: Option<XmlElement>,
         links: Vec<Link>,
@@ -283,6 +283,22 @@ macro_attr! {
         keywords: Option<String>,
         bounds: Option<Bounds>,
         extensions: Option<XmlElement>,
+    }
+}
+
+impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
+    type Element = Metadata;
+    type Error = Error;
+    fn build(self) -> Result<Self::Element, Self::Error> {
+        Ok(Metadata { name: self.name,
+                      description: self.desc,
+                      author: self.author,
+                      copyright: self.copyright,
+                      links: self.link,
+                      time: self.time,
+                      keywords: self.keywords,
+                      bounds: self.bounds,
+                      extensions: self.extensions })
     }
 }
 

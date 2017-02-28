@@ -1,14 +1,13 @@
 //! Generates foo_auto.rs files containing impls
 extern crate xml_parsergen;
 
-use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::fs::File;
 use std::io;
 use std::io::{ Write, BufWriter };
 
-use xml_parsergen::{ ParserGen, ParserInfo, StructInfo, TypeConverter, AttrMap, TypeMap, gpx, prettify };
+use xml_parsergen::{ ParserGen, ParserInfo, StructInfo, TypeConverter, TypeMap, gpx, prettify };
 
 
 macro_rules! map(
@@ -51,7 +50,7 @@ fn process() -> Result<(), Error> {
     let structs = vec![
         StructInfo { name: "Metadata".into(),
                      type_: types.get("metadataType").unwrap(),
-                     tags: HashMap::new() },
+                     tags: map! { "desc" => "description" } },
         StructInfo { name: "Track".into(), type_: types.get("trkType").unwrap(),
                      tags: map! {
                          "cmt" => "comment",
@@ -64,12 +63,15 @@ fn process() -> Result<(), Error> {
                      tags: map! { "trkpt" => "waypoints" } },
     ];
     let attr_convs: TypeMap = map!{
+        "boundsType".into() => ("Bounds".into(), TypeConverter::ParserClass("BoundsParser".into())),
+        "copyrightType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
         "latitudeType".into() => ("f64".into(), "Latitude::from_attr".into()),
         "longitudeType".into() => ("f64".into(), "Longitude::from_attr".into()),
         "linkType".into() => ("XmlElement".into(), "parse_elem".into()),
         "fixType".into() => ("Fix".into(), "parse_fix".into()),
         "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
         "extensionsType".into() => ("XmlElement".into(), "parse_elem".into()), // FIXME: dedicated type?
+        "personType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
         "wptType".into() => ("Waypoint".into(), TypeConverter::ParserClass("WaypointParser".into())),
         "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
@@ -79,16 +81,19 @@ fn process() -> Result<(), Error> {
     };
     let mut elem_convs = map!{ "boundsType".into() => "::gpx::conv::Bounds".into() };
     for (name, &(ref type_, _)) in &attr_convs {
-        elem_convs.insert(name.clone(), type_.clone());
+        if let None = elem_convs.get(name) {
+            elem_convs.insert(name.clone(), type_.clone());
+        }
     }
     let parsers = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
+        ParserInfo { name: "MetadataParser".into(), type_: types.get("metadataType").unwrap() },
     ];
     
     try!(write_file(&out_dir.join("gpx_par_auto.rs"), |f| {
         for item in &parsers {
             try!(f.write(
-                gpx::Generator::parser_cls(&item.name, item.type_, &elem_convs).as_bytes()
+                gpx::Generator::parser_cls(&item.name, item.type_, &attr_convs).as_bytes()
             ).map_err(Error::Io));
             try!(f.write(
                 gpx::Generator::parser_impl(&item.name, item.type_, &attr_convs).as_bytes()
