@@ -306,32 +306,6 @@ pub struct Waypoint {
     extensions: Option<XmlElement>,
 }
 
-struct WaypointParser<'a, T: 'a + Read> {
-    reader: &'a mut EventReader<T>,
-    elem_name: Option<OwnedName>,
-    lat: Option<f64>,
-    lon: Option<f64>,
-    ele: Option<xsd::Decimal>,
-    time: Option<xsd::DateTime>,
-    magvar: Option<xsd::Degrees>,
-    geoidheight: Option<xsd::Decimal>,
-    name: Option<String>,
-    cmt: Option<String>,
-    desc: Option<String>,
-    src: Option<String>,
-    link: Vec<Link>,
-    sym: Option<String>,
-    type_: Option<String>,
-    fix: Option<Fix>,
-    sat: Option<xsd::NonNegativeInteger>,
-    hdop: Option<xsd::Decimal>,
-    pdop: Option<xsd::Decimal>,
-    vdop: Option<xsd::Decimal>,
-    ageofdgpsdata: Option<xsd::Decimal>,
-    dgpsid: Option<String>,
-    extensions: Option<XmlElement>,
-}
-
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
 

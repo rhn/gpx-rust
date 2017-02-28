@@ -39,10 +39,21 @@ pub enum TypeConverter {
 impl<'a> From<&'a str> for TypeConverter {
     fn from(data: &str) -> TypeConverter {
         TypeConverter::ParseFun(data.into())
-    } 
+    }
 }
 
-pub type TypeMap = HashMap<String, (String, TypeConverter)>;
+pub struct UserType(String);
+
+impl UserType {
+    fn as_str(&self) -> &str { &self.0 }
+    fn as_user_type(&self) -> &str { self.as_str() }
+}
+
+impl<'a> From<&'a str> for UserType {
+    fn from(data: &'a str) -> UserType { UserType(data.into()) }
+}
+
+pub type TypeMap = HashMap<String, (UserType, TypeConverter)>;
 
 #[derive(Debug)]
 pub enum Error {

@@ -7,7 +7,7 @@ use quote;
 use self::rustache::{ HashBuilder, Render };
 
 use xsd_types::{ Type, Element, ElementMaxOccurs, Attribute };
-use ::{ ParserGen, TagMap, TypeConverter, TypeMap, ident_safe };
+use ::{ ParserGen, TagMap, TypeConverter, TypeMap, ident_safe, UserType };
 
 
 fn render_string(data: HashBuilder, template: &str) -> String {
@@ -163,35 +163,37 @@ use gpx::*;
             -> String {
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
-            let type_ = quote::Ident::new(
-                match types.get(&attr.type_) {
-                    Some(&(_, TypeConverter::ParseFun(ref a))) => &a,
-                    Some(_) => panic!("Type {} doesn't have converter appropriate for attribute", &attr.type_),
-                    None => {
-                         println!("cargo:warning=\"Missing type for attr {}\"", &attr.type_);
-                         "String"
-                    }
-                }.clone()
-            );
-            let name = quote::Ident::new(attr.name.clone());
-            quote!(
-                #name : Option< #type_ >
-            )
+            let fallback = UserType("String".into());
+            let attr_type = match types.get(&attr.type_) {
+                Some(&(ref type_, TypeConverter::AttributeFun(_))) => type_,
+                Some(_) => panic!("Type {} doesn't have converter appropriate for attribute", &attr.type_),
+                None => {
+                     println!("cargo:warning=\"Missing type for attr {}\"", &attr.type_);
+                     &fallback
+                }
+            };
+            quote::Ident::new(format!("{}: Option<{}>",
+                                      ident_safe(&attr.name),
+                                      attr_type.as_user_type()))
         });
         let elems = data.sequence.iter().map(|elem| {
+            let fallback = UserType("XmlElement".into());
             let elem_type = match types.get(&elem.type_) {
-                Some(&(ref cls, _)) => &cls,
+                Some(&(ref cls, _)) => cls,
                 None => {
                      println!("cargo:warning=\"Missing type for elem {}\"", &elem.type_);
-                     "XmlElement"
+                     &fallback
                 }
-            }.clone();
+            };
             let wrap_type = match elem.max_occurs {
                 ElementMaxOccurs::Some(0) => panic!("Element has 0 occurrences, can't derive data type"),
                 ElementMaxOccurs::Some(1) => "Option",
                 _ => "Vec",
             };
-            quote::Ident::new(format!("{}: {}<{}>", ident_safe(&elem.name), wrap_type, elem_type))
+            quote::Ident::new(format!("{}: {}<{}>",
+                                      ident_safe(&elem.name),
+                                      wrap_type,
+                                      elem_type.as_user_type()))
         });
         quote!(
             pub struct #cls_name<'a, T: 'a + Read> {

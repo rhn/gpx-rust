@@ -80,14 +80,10 @@ fn process() -> Result<(), Error> {
         "xsd:degreesType".into() => ("xsd::Degrees".into(), "parse_string".into()),
     };
     let mut elem_convs = map!{ "boundsType".into() => "::gpx::conv::Bounds".into() };
-    for (name, &(ref type_, _)) in &attr_convs {
-        if let None = elem_convs.get(name) {
-            elem_convs.insert(name.clone(), type_.clone());
-        }
-    }
     let parsers = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
         ParserInfo { name: "MetadataParser".into(), type_: types.get("metadataType").unwrap() },
+        ParserInfo { name: "WaypointParser".into(), type_: types.get("wptType").unwrap() },
     ];
     let parser_impls = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
