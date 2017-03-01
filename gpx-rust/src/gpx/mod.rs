@@ -17,18 +17,18 @@ use self::_xml::name::OwnedName;
 
 use xml;
 use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
-use parsers::ElementError as ElementErrorTrait;
+use par::ElementError as ElementErrorTrait;
 use parsers::*;
 use xsd;
 use xsd::*;
-use par::ParserMessage;
+use par::{ ParserMessage, parse_string };
 
 pub mod conv;
 mod ser_auto;
 pub mod ser;
 pub mod par;
 
-use self::par::{ BoundsParser, FromAttribute, _ElementError };
+use self::par::{ WaypointParser, MetadataParser, BoundsParser, TrackSegmentParser, FromAttribute, _ElementError };
 
 
 trait EmptyInit {
@@ -45,8 +45,8 @@ impl<T> EmptyInit for Vec<T> {
 
 #[derive(Debug)]
 pub struct ElementError {
-    error: par::_ElementError,
-    position: TextPosition,
+    pub error: par::_ElementError,
+    pub position: TextPosition,
 }
 
 impl fmt::Display for ElementError {
@@ -275,22 +275,6 @@ macro_attr! {
     }
 }
 
-impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
-    type Element = Metadata;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(Metadata { name: self.name,
-                      description: self.desc,
-                      author: self.author,
-                      copyright: self.copyright,
-                      links: self.link,
-                      time: self.time,
-                      keywords: self.keywords,
-                      bounds: self.bounds,
-                      extensions: self.extensions })
-    }
-}
-
 type Link = XmlElement;
 type Bounds = Bbox<f64>;
 
@@ -315,37 +299,6 @@ pub struct Waypoint {
     dgps_age: Option<xsd::Decimal>,
     dgps_id: Option<String>,
     extensions: Option<XmlElement>,
-}
-
-include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
-
-
-impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
-    type Element = Waypoint;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(Waypoint { location: Point { latitude: self.lat.unwrap(),
-                                        longitude: self.lon.unwrap(),
-                                        elevation: self.ele },
-                      time: self.time,
-                      mag_variation: self.magvar,
-                      geoid_height: self.geoidheight,
-                      name: self.name,
-                      comment: self.cmt,
-                      description: self.desc,
-                      source: self.src,
-                      links: self.link,
-                      symbol: self.sym,
-                      type_: self.type_,
-                      fix: self.fix,
-                      satellites: self.sat,
-                      hdop: self.hdop,
-                      pdop: self.pdop,
-                      vdop: self.vdop,
-                      dgps_age: self.ageofdgpsdata,
-                      dgps_id: self.dgpsid,
-                      extensions: self.extensions })
-    }
 }
 
 #[derive(XmlDebug)]
@@ -412,59 +365,12 @@ macro_attr! {
 
 fn parse_int<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
         -> Result<NonNegativeInteger, ElementError> {
-    xsd::parse_int(parser, elem_start)
+    xsd::par::parse_int(parser, elem_start)
 }
 
 #[derive(Debug)]
 pub struct TrackSegment {
     waypoints: Vec<Waypoint>,
-}
-
-
-
-impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
-    type Element = TrackSegment;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(TrackSegment { waypoints: self.trkpt })
-    }
-}
-
-fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<Fix, ElementError> {
-    parse_chars(parser, elem_start, Fix::from_str)
-}
-
-fn parse_u64<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<u64, ElementError> {
-    parse_chars(parser, elem_start,
-                |chars| u64::from_str(chars).map_err(_ElementError::from))
-}
-
-fn parse_decimal<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<XmlDecimal, ElementError> {
-    parse_chars(parser,
-                elem_start,
-                |chars| XmlDecimal::from_str(chars).map_err(_ElementError::from))
-}
-
-fn parse_time<T: std::io::Read>
-        (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<xsd::Time, ElementError> {
-    parse_chars(parser, elem_start,
-                |chars| xsd::Time::parse_from_rfc3339(chars).map_err(_ElementError::from))
-}
-
-pub fn parse_string<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<String, ElementError> {
-    parse_chars(parser,
-                elem_start,
-                |chars| Ok::<_, _ElementError>(chars.into()))
-}
-
-fn parse_elem<T: std::io::Read>(parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<XmlElement, Error> {
-    ElementParser::new(parser).parse(elem_start).map_err(Error::from)
 }
 
 pub struct Parser<T: Read> {

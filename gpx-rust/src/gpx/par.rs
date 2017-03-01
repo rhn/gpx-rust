@@ -11,11 +11,16 @@ use self::_xml::name::OwnedName;
 use self::_xml::reader::{ XmlEvent, EventReader };
 
 use xml;
-use xml::{ ElemStart, ElementParser, ElementParse, ElementBuild };
-use gpx::{ Error, ElementError, Bounds, GpxVersion };
+use xml::{ XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
+use xsd;
+use xsd::par::{ parse_time, parse_decimal };
+use gpx;
+use gpx::{ Error, ElementError, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment };
 use gpx::conv::{ Latitude, Longitude };
-use ::par::ParserMessage;
-use parsers::{ ElementError as ElementErrorTrait, ElementErrorFree };
+use ::par::{ parse_chars, parse_string, parse_u64, parse_elem, ParserMessage };
+use ::par::{ ElementError as ElementErrorTrait, ElementErrorFree };
+
+include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
 
 #[derive(Debug)]
@@ -55,6 +60,20 @@ impl From<std::string::ParseError> for _ElementError {
 impl From<chrono::ParseError> for _ElementError {
     fn from(err: chrono::ParseError) -> _ElementError {
         _ElementError::BadTime(err)
+    }
+}
+
+/// Remove this once gpx::Error figured out
+impl From<gpx::Error> for _ElementError {
+    fn from(err: gpx::Error) -> _ElementError {
+        _ElementError::Str("BUG: gpx::Error")
+    }
+}
+
+/// Remove this once xml::Error figured out
+impl From<xml::Error> for _ElementError {
+    fn from(err: xml::Error) -> _ElementError {
+        _ElementError::Str("BUG: xml::Error")
     }
 }
 
@@ -152,6 +171,63 @@ pub fn parse_gpx_version(value: &str) -> Result<GpxVersion, AttributeValueError>
     }
 }
 
+fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
+        -> Result<Fix, ElementError> {
+    parse_chars(parser, elem_start, Fix::from_str)
+}
+
 pub fn copy(value: &str) -> Result<String, AttributeValueError> {
     Ok(value.into())
+}
+
+impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
+    type Element = Metadata;
+    type Error = Error;
+    fn build(self) -> Result<Self::Element, Self::Error> {
+        Ok(Metadata { name: self.name,
+                      description: self.desc,
+                      author: self.author,
+                      copyright: self.copyright,
+                      links: self.link,
+                      time: self.time,
+                      keywords: self.keywords,
+                      bounds: self.bounds,
+                      extensions: self.extensions })
+    }
+}
+
+impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
+    type Element = Waypoint;
+    type Error = Error;
+    fn build(self) -> Result<Self::Element, Self::Error> {
+        Ok(Waypoint { location: Point { latitude: self.lat.unwrap(),
+                                        longitude: self.lon.unwrap(),
+                                        elevation: self.ele },
+                      time: self.time,
+                      mag_variation: self.magvar,
+                      geoid_height: self.geoidheight,
+                      name: self.name,
+                      comment: self.cmt,
+                      description: self.desc,
+                      source: self.src,
+                      links: self.link,
+                      symbol: self.sym,
+                      type_: self.type_,
+                      fix: self.fix,
+                      satellites: self.sat,
+                      hdop: self.hdop,
+                      pdop: self.pdop,
+                      vdop: self.vdop,
+                      dgps_age: self.ageofdgpsdata,
+                      dgps_id: self.dgpsid,
+                      extensions: self.extensions })
+    }
+}
+
+impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
+    type Element = TrackSegment;
+    type Error = Error;
+    fn build(self) -> Result<Self::Element, Self::Error> {
+        Ok(TrackSegment { waypoints: self.trkpt })
+    }
 }

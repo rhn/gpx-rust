@@ -6,7 +6,7 @@ use self::xml::name::OwnedName;
 use self::xml::attribute::OwnedAttribute;
 use self::xml::namespace::Namespace;
 use self::xml::reader::{ EventReader, XmlEvent };
-use self::xml::common::XmlVersion;
+use self::xml::common::{ XmlVersion, TextPosition };
 
 
 #[derive(Debug)]
@@ -74,7 +74,7 @@ pub struct DocInfo {
 
 pub trait ElementBuild {
     type Element;
-    type Error : From<Error> + From<&'static str>;
+    type Error : From<Error> + From<&'static str> + Into<::gpx::par::_ElementError>;
     fn build(self) -> Result<Self::Element, Self::Error>;
 }
 
@@ -105,6 +105,11 @@ pub trait ElementParse<'a, T: Read> where Self: Sized + ElementBuild {
             }
         }
         self.build()
+    }
+    fn parse_self(mut self, elem_start: ElemStart) -> Result<Self::Element, ::gpx::ElementError> {
+        self.parse(elem_start).map_err(|e| {
+            ::gpx::ElementError { error: e.into(), position: TextPosition { row: 0, column: 0 } }
+        })
     }
     fn parse_start(&mut self, elem_start: ElemStart) -> Result<(), Self::Error> {
         let _ = elem_start;

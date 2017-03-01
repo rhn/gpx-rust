@@ -8,48 +8,6 @@ use self::xml_::common::{ Position, TextPosition };
 use xml::ElemStart;
 use xml::{ ElementParser, ElementParse };
 
-pub trait ElementErrorFree where Self: From<&'static str> + From<xml_::reader::Error> {}
-
-pub trait ElementError {
-    type Free: ElementErrorFree;
-    fn from_free(err: Self::Free, position: TextPosition) -> Self;
-}
-
-pub fn parse_chars<T: std::io::Read, F, Res, E: ElementError, EInner>
-    (mut parser: &mut EventReader<T>, elem_start: ElemStart, decode: F)
-    -> Result<Res, E>
-        where F: Fn(&str) -> Result<Res, EInner>,
-              E::Free: From<EInner> {
-    let mut ret = None;
-    loop {
-        match parser.next() {
-            Ok(XmlEvent::Characters(data)) => {
-                ret = Some(try!(decode(&data).map_err(|e| {
-                    E::from_free(e.into(), parser.position())
-                })));
-            }
-            Ok(XmlEvent::EndElement { name }) => {
-                if name == elem_start.name {
-                    return match ret {
-                        Some(c) => Ok(c),
-                        None => Err(E::from_free("Missing data".into(), parser.position()))
-                    }
-                }
-                return Err(E::from_free("Unexpected end".into(), parser.position()));
-            }
-            Ok(XmlEvent::Whitespace(s)) => {
-                println!("{:?}", s);
-            }
-            Ok(ev) => {
-                println!("{:?}", ev);
-                return Err(E::from_free("Unexpected event".into(), parser.position()));
-            }
-            Err(error) => {
-                return Err(E::from_free(error.into(), parser.position()));
-            }
-        }
-    }
-}
 
 macro_rules! _parser_attr {
     ( $self_:ident, $value:ident, { $field:ident, $func:expr } ) => {
