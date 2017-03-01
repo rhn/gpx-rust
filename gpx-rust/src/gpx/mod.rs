@@ -355,7 +355,6 @@ struct Point {
     elevation: Option<XmlDecimal>,
 }
 
-type Degrees = String;
 type XmlDecimal = String;
 
 #[derive(Debug)]
