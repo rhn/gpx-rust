@@ -13,7 +13,6 @@ use self::_xml::reader::{ XmlEvent, EventReader };
 use xml;
 use xml::{ ElemStart, ElementParser, ElementParse, ElementBuild };
 use gpx::{ Error, ElementError, Bounds, GpxVersion };
-use gpx::ser;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::ParserMessage;
 use parsers::{ ElementError as ElementErrorTrait, ElementErrorFree };
