@@ -10,7 +10,6 @@ use self::_xml::writer::{ EmitterConfig, EventWriter, XmlEvent };
 use xml;
 
 use gpx::ser::AttributeValueError;
-use xsd;
 
 #[derive(Debug)]
 pub enum SerError {
