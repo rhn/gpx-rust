@@ -38,7 +38,7 @@ pub trait Serialize {
             .perform_indent(true)
             .create_writer(sink);
         
-        self.serialize_with(&mut xw, "gpx")
+        self.serialize_with(&mut xw, name)
     }
     fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
         -> Result<(), SerError>;
