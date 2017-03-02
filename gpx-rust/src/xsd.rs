@@ -68,7 +68,7 @@ pub mod par {
                 -> Result<String, ElementError> {
             parse_chars(parser,
                         elem_start,
-                        |chars| Ok::<_, _ElementError>(chars.into()))
+                        |chars| Ok::<_, _ElementError>(String::from(chars)))
         }
     }
     
