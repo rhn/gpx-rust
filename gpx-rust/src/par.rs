@@ -11,6 +11,7 @@ use self::_xml::reader::{ EventReader, XmlEvent };
 use xml::{ ElementParse, ElementParser, XmlElement, ElemStart };
 use gpx::par::{ AttributeValueError, _ElementError };
 use gpx::ElementError as ElementErrorE;
+use conv;
 
 
 pub trait ElementErrorFree where Self: From<&'static str> + From<_xml::reader::Error> {}
@@ -32,6 +33,13 @@ pub trait ParserMessage
 pub trait ParseVia<Data> {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
         -> Result<Data, ElementErrorE>;
+}
+
+impl ParseVia<XmlElement> for conv::XmlElement {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<XmlElement, ElementErrorE> {
+        ElementParser::new(parser).parse_self(elem_start)//.map_err(ElementErrorE::from)
+    }
 }
 
 pub trait FromAttributeVia<Data> {
@@ -87,7 +95,8 @@ pub fn parse_u64<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start:
                 |chars| u64::from_str(chars).map_err(_ElementError::from))
 }
 
+// unused
 pub fn parse_elem<T: std::io::Read>(parser: &mut EventReader<T>, elem_start: ElemStart)
         -> Result<XmlElement, ElementErrorE> {
-    ElementParser::new(parser).parse_self(elem_start)//.map_err(ElementErrorE::from)
+    ElementParser::new(parser).parse_self(elem_start)
 }

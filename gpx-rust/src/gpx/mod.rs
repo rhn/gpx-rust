@@ -343,6 +343,21 @@ macro_attr! {
     }
 }
 
+/*#[derive(Debug)]
+struct Route {
+    name: Option<String>,
+    comment: Option<String>,
+    description: Option<String>,
+    source: Option<String>,
+    links: Vec<XmlElement>,
+    number: Option<xsd::NonNegativeInteger>,
+    type_: Option<String>,
+    extensions: Option<XmlElement>,
+    waypoints: Vec<Waypoint>,
+}*/
+
+type Route = XmlElement;
+
 fn parse_int<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
         -> Result<NonNegativeInteger, ElementError> {
     xsd::par::parse_int(parser, elem_start)

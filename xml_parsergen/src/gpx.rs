@@ -45,9 +45,9 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                 Element { name: "wpt".into(),
                           type_: "wptType".into(),
                           max_occurs: ElementMaxOccurs::Unbounded },
-                //Element { name: "rte".into(),
-                  //        type_: "rteType".into(),
-                    //      max_occurs: ElementMaxOccurs::Unbounded },
+                Element { name: "rte".into(),
+                          type_: "rteType".into(),
+                          max_occurs: ElementMaxOccurs::Unbounded },
                 Element { name: "trk".into(),
                           type_: "trkType".into(),
                           max_occurs: ElementMaxOccurs::Unbounded },
@@ -92,6 +92,24 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                 ElementSingle!("extensions", "extensionsType"),
                 Element { name: String::from("trkseg"),
                           type_: "trksegType".into(),
+                          max_occurs: ElementMaxOccurs::Unbounded },
+            ],
+            attributes: vec![],
+        },
+        "rteType".into() => Type {
+            sequence: vec![
+                ElementSingle!("name", "xsd:string"),
+                ElementSingle!("cmt", "xsd:string"),
+                ElementSingle!("desc", "xsd:string"),
+                ElementSingle!("src", "xsd:string"),
+                Element { name: String::from("link"),
+                          type_: "linkType".into(),
+                          max_occurs: ElementMaxOccurs::Unbounded },
+                ElementSingle!("number", "xsd:nonNegativeInteger"),
+                ElementSingle!("type", "xsd:string"),
+                ElementSingle!("extensions", "extensionsType"),
+                Element { name: String::from("rtept"),
+                          type_: "wptType".into(),
                           max_occurs: ElementMaxOccurs::Unbounded },
             ],
             attributes: vec![],
@@ -177,9 +195,49 @@ use gpx;
 use gpx::*;
 "
     }
-    
-    fn parser_cls(name: &str, data: &Type, types: &TypeMap)
-            -> String {
+    fn struct_def(name: &str, tags: &TagMap, data: &Type, type_convs: &TypeMap) -> String {
+        let get_elem_field_name = |elem: &Element| {
+            match tags.get(elem.name.as_str()) {
+                Some(i) => String::from(*i),
+                None => {
+                    match elem.max_occurs {
+                        ElementMaxOccurs::Some(1) => elem.name.clone(),
+                        _ => format!("{}s", elem.name)
+                    }
+                }
+            }
+        };
+        let fields = data.attributes.iter().fold(String::new(), |mut s, _| {
+            s.push_str(&format!("x"));
+            s
+        }) + &data.sequence.iter().fold(String::new(), |mut s, elem| {
+            let data_type = match type_convs.get(elem.type_.as_str()) {
+                Some(&(ref type_, _)) => type_,
+                None => panic!("No type found for field {} ({}) on {}", elem.name, elem.type_, name)
+            };
+            let field_type = match elem.max_occurs {
+                ElementMaxOccurs::Some(0) => {
+                    println!("cargo:warning=\"Element {} can repeat 0 times, skipping\"",
+                             elem.name);
+                    String::new()
+                }
+                ElementMaxOccurs::Some(1) => format!("Option<{}>", data_type.as_user_type()),
+                _ => format!("Vec<{}>", data_type.as_user_type()),
+            };
+            s.push_str(&format!("    {}: {},\n",
+                                get_elem_field_name(elem), field_type));
+            s
+        });
+        render_string(HashBuilder::new().insert("name", name)
+                                        .insert("fields", fields),
+                      r#"
+#[derive(Debug)]
+struct {{{ name }}} {
+{{{ fields }}}
+}"#)
+    }
+
+    fn parser_cls(name: &str, data: &Type, types: &TypeMap) -> String {
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
             let fallback = UserType("String".into());

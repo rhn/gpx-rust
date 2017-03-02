@@ -15,7 +15,7 @@ use xml::{ XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use xsd;
 use xsd::par::{ parse_time, parse_decimal };
 use gpx;
-use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, TrkParser };
+use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, TrkParser, Route };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem, ParserMessage };
@@ -64,15 +64,17 @@ impl From<chrono::ParseError> for _ElementError {
     }
 }
 
-/// Remove this once gpx::Error figured out
+/// FIXME: Remove this once gpx::Error figured out
 impl From<gpx::Error> for _ElementError {
+    #[allow(unused_variables)]
     fn from(err: gpx::Error) -> _ElementError {
         _ElementError::Str("BUG: gpx::Error")
     }
 }
 
-/// Remove this once xml::Error figured out
+/// FIXME: Remove this once xml::Error figured out
 impl From<xml::Error> for _ElementError {
+    #[allow(unused_variables)]
     fn from(err: xml::Error) -> _ElementError {
         _ElementError::Str("BUG: xml::Error")
     }

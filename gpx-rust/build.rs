@@ -47,21 +47,6 @@ fn process() -> Result<(), Error> {
     let out_dir = PathBuf::from(try!(env::var("OUT_DIR").map_err(Error::Var)));
 
     let types = gpx::get_types();
-    let structs = vec![
-        StructInfo { name: "Metadata".into(),
-                     type_: types.get("metadataType").unwrap(),
-                     tags: map! { "desc" => "description" } },
-        StructInfo { name: "Track".into(), type_: types.get("trkType").unwrap(),
-                     tags: map! {
-                         "cmt" => "comment",
-                         "desc" => "description",
-                         "src" => "source",
-                         "link" => "links",
-                         "type" => "type_",
-                         "trkseg" => "segments"} },
-        StructInfo { name: "TrackSegment".into(), type_: types.get("trksegType").unwrap(),
-                     tags: map! { "trkpt" => "waypoints" } },
-    ];
     let attr_convs: TypeMap = map!{
         "boundsType".into() => ("Bounds".into(), TypeConverter::ParserClass("BoundsParser".into())),
         "copyrightType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
@@ -75,6 +60,8 @@ fn process() -> Result<(), Error> {
         "wptType".into() => ("Waypoint".into(), TypeConverter::ParserClass("WaypointParser".into())),
         "metadataType".into() => ("Metadata".into(), TypeConverter::ParserClass("MetadataParser".into())),
         "trkType".into() => ("Track".into(), TypeConverter::ParserClass("TrkParser".into())),
+        "rteType".into() => ("XmlElement".into(), TypeConverter::UniversalClass("::conv::XmlElement".into())), // FIXME
+        "trksegType".into() => ("TrackSegment".into(), "FIXME".into()),
         "_gpx:version".into() => ("GpxVersion".into(), TypeConverter::UniversalClass("::gpx::conv::Version".into())),
         "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
@@ -97,7 +84,38 @@ fn process() -> Result<(), Error> {
         ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap() },
         ParserInfo { name: "GpxElemParser".into(), type_: types.get("gpxType").unwrap() },
     ];
-    
+    let structs = vec![
+        StructInfo { name: "Metadata".into(),
+                     type_: types.get("metadataType").unwrap(),
+                     tags: map! { "desc" => "description" } },
+        StructInfo { name: "Track".into(), type_: types.get("trkType").unwrap(),
+                     tags: map! {
+                         "cmt" => "comment",
+                         "desc" => "description",
+                         "src" => "source",
+                         "link" => "links",
+                         "type" => "type_",
+                         "trkseg" => "segments" } },
+        StructInfo { name: "TrackSegment".into(), type_: types.get("trksegType").unwrap(),
+                     tags: map! { "trkpt" => "waypoints" } },
+        StructInfo { name: "Route".into(), type_: types.get("rteType").unwrap(),
+                     tags: map! { 
+                         "cmt" => "comment",
+                         "desc" => "description",
+                         "src" => "source",
+                         "link" => "links",
+                         "type" => "type_",
+                         "rtept" => "waypoints" } },
+    ];
+    try!(write_file(&out_dir.join("gpx_auto.rs"), |f| {
+        for item in &structs {
+            try!(f.write(
+                gpx::Generator::struct_def(&item.name, &item.tags, item.type_,
+                                           &attr_convs).as_bytes()
+            ).map_err(Error::Io));
+        }
+        Ok(())
+    }));
     try!(write_file(&out_dir.join("gpx_par_auto.rs"), |f| {
         for item in &parsers {
             try!(f.write(
@@ -113,9 +131,10 @@ fn process() -> Result<(), Error> {
     }));
     try!(write_file(&out_dir.join("gpx_ser_auto.rs"), |f| {
         try!(f.write(gpx::Generator::header().as_bytes()).map_err(Error::Io));
-        for item in &structs {
+        for item in &structs[..3] {
             try!(f.write(
-                gpx::Generator::serializer_impl(&item.name, &item.tags, item.type_, &elem_convs).as_bytes()
+                gpx::Generator::serializer_impl(&item.name, &item.tags, item.type_,
+                                                &elem_convs).as_bytes()
             ).map_err(Error::Io));
         }
         Ok(())
