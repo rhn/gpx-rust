@@ -5,7 +5,7 @@ authors = [ "rhn <gihu.rhn@porcupinefactory.org>" ]
 build = "build.rs"
 
 [dependencies]
-xml-rs = "0.3"
+xml-rs = "^0.4"
 macro-attr = "^0.2.0"
 chrono = "0.2"
 clap = "2"
