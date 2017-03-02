@@ -1,6 +1,7 @@
 extern crate xml as _xml;
 
 use std;
+use std::io;
 use std::str::FromStr;
 
 use self::_xml::name::OwnedName;
@@ -8,7 +9,7 @@ use self::_xml::common::{ Position, TextPosition };
 use self::_xml::reader::{ EventReader, XmlEvent };
 
 use xml::{ ElementParse, ElementParser, XmlElement, ElemStart };
-use gpx::par::_ElementError;
+use gpx::par::{ AttributeValueError, _ElementError };
 use gpx::ElementError as ElementErrorE;
 
 
@@ -24,11 +25,21 @@ pub trait ParserMessage
         where Self: From<&'static str> {
     fn from_unexp_attr(elem_name: OwnedName, attr_name: OwnedName) -> Self;
     fn from_xml_error(_xml::reader::Error) -> Self;
-    fn from_bad_attr_val(::gpx::par::AttributeValueError) -> Self;
+    fn from_bad_attr_val(AttributeValueError) -> Self;
 }
 
-pub fn parse_chars<T: std::io::Read, F, Res, E: ElementError, EInner>
-    (mut parser: &mut EventReader<T>, elem_start: ElemStart, decode: F)
+/// Implement on converters to do Par::parse_via(data, ...)
+pub trait ParseVia<Data> {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+        -> Result<Data, ElementErrorE>;
+}
+
+pub trait FromAttributeVia<Data> {
+    fn from_attribute(&str) -> Result<Data, AttributeValueError>;
+}
+
+pub fn parse_chars<R: std::io::Read, F, Res, E: ElementError, EInner>
+    (mut parser: &mut EventReader<R>, elem_start: ElemStart, decode: F)
     -> Result<Res, E>
         where F: Fn(&str) -> Result<Res, EInner>,
               E::Free: From<EInner> {

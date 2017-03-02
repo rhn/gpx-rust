@@ -34,6 +34,7 @@ pub enum TypeConverter {
     ParserClass(String),
     ParseFun(String),
     AttributeFun(String),
+    UniversalClass(String),
 }
 
 impl<'a> From<&'a str> for TypeConverter {

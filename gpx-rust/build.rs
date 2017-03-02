@@ -73,9 +73,12 @@ fn process() -> Result<(), Error> {
         "extensionsType".into() => ("XmlElement".into(), "parse_elem".into()), // FIXME: dedicated type?
         "personType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
         "wptType".into() => ("Waypoint".into(), TypeConverter::ParserClass("WaypointParser".into())),
+        "metadataType".into() => ("Metadata".into(), TypeConverter::ParserClass("MetadataParser".into())),
+        "trkType".into() => ("Track".into(), TypeConverter::ParserClass("TrkParser".into())),
+        "_gpx:version".into() => ("GpxVersion".into(), TypeConverter::UniversalClass("::gpx::conv::Version".into())),
         "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
-        "xsd:string".into() => ("String".into(), "parse_string".into()),
+        "xsd:string".into() => ("String".into(), TypeConverter::UniversalClass("::xsd::conv::String".into())),
         "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u64".into()),
         "xsd:degreesType".into() => ("xsd::Degrees".into(), "parse_string".into()),
     };
@@ -85,12 +88,14 @@ fn process() -> Result<(), Error> {
         ParserInfo { name: "MetadataParser".into(), type_: types.get("metadataType").unwrap() },
         ParserInfo { name: "WaypointParser".into(), type_: types.get("wptType").unwrap() },
         ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap() },
+        ParserInfo { name: "GpxElemParser".into(), type_: types.get("gpxType").unwrap() },
     ];
     let parser_impls = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
         ParserInfo { name: "MetadataParser".into(), type_: types.get("metadataType").unwrap() },
         ParserInfo { name: "WaypointParser".into(), type_: types.get("wptType").unwrap() },
         ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap() },
+        ParserInfo { name: "GpxElemParser".into(), type_: types.get("gpxType").unwrap() },
     ];
     
     try!(write_file(&out_dir.join("gpx_par_auto.rs"), |f| {

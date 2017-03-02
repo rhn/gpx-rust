@@ -17,15 +17,18 @@ pub mod par {
     extern crate xml as _xml;
 
     use std;
+    use std::io;
     use std::str::FromStr;
     
     use xml::ElemStart;
     use par;
+    use par::ParseVia;
     use par::parse_chars;
     use gpx::ElementError; // FIXME: move to par and concretize these types
     use xsd;
     use xsd::NonNegativeInteger;
-    use gpx::par::_ElementError; // FIXME: move to par
+    use gpx::par::{ _ElementError, AttributeValueError, FromAttribute }; // FIXME: move to par
+    use xsd::conv;
     
     pub fn parse_int<T: std::io::Read, Error, EFree>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
@@ -59,6 +62,25 @@ pub mod par {
                     elem_start,
                     |chars| xsd::Decimal::from_str(chars).map_err(_ElementError::from))
     }
+    
+    impl ParseVia<String> for conv::String {
+        fn parse_via<R: io::Read>(parser: &mut _xml::EventReader<R>, elem_start: ElemStart)
+                -> Result<String, ElementError> {
+            parse_chars(parser,
+                        elem_start,
+                        |chars| Ok::<_, _ElementError>(chars.into()))
+        }
+    }
+    
+    impl FromAttribute<String> for conv::String {
+        fn from_attr(attr: &str) -> Result<String, AttributeValueError> {
+            Ok(String::from(attr))
+        }
+    }
+}
+
+pub mod conv {
+    pub struct String {}
 }
 
 impl SerializeCharElem for NonNegativeInteger {

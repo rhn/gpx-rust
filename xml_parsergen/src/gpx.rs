@@ -39,6 +39,25 @@ macro_rules! ElementSingle (
 
 pub fn get_types<'a>() -> HashMap<&'a str, Type> {
     map!{
+        "gpxType".into() => Type {
+            sequence: vec![
+                ElementSingle!("metadata", "metadataType"),
+                Element { name: "wpt".into(),
+                          type_: "wptType".into(),
+                          max_occurs: ElementMaxOccurs::Unbounded },
+                //Element { name: "rte".into(),
+                  //        type_: "rteType".into(),
+                    //      max_occurs: ElementMaxOccurs::Unbounded },
+                Element { name: "trk".into(),
+                          type_: "trkType".into(),
+                          max_occurs: ElementMaxOccurs::Unbounded },
+                ElementSingle!("extensions", "extensionsType"),
+            ],
+            attributes: vec![
+                Attribute { name: "version".into(), type_: "_gpx:version".into(), required: true },
+                Attribute { name: "creator".into(), type_: "xsd:string".into(), required: true },
+            ],
+        },
         "metadataType".into() => Type {
             sequence: vec![
                 Element { name: String::from("name"),
@@ -166,6 +185,7 @@ use gpx::*;
             let fallback = UserType("String".into());
             let attr_type = match types.get(&attr.type_) {
                 Some(&(ref type_, TypeConverter::AttributeFun(_))) => type_,
+                Some(&(ref type_, TypeConverter::UniversalClass(_))) => type_,
                 Some(_) => panic!("Type {} doesn't have converter appropriate for attribute", &attr.type_),
                 None => {
                      println!("cargo:warning=\"Missing type for attr {}\"", &attr.type_);
@@ -215,7 +235,10 @@ use gpx::*;
             let attr_name = &attr.name;
             let conv = quote::Ident::new(match types.get(&attr.type_) {
                 Some(&(_, TypeConverter::AttributeFun(ref foo))) => foo.clone(),
-                Some(_) => panic!("Attribute {} must be parsed with a function"),
+                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
+                    format!("{}::from_attr", conv_name)
+                },
+                Some(_) => panic!("Attribute {} must be parsed with a function", &attr.name),
                 None => {
                     println!("No parser for {}", &attr.type_);
                     "FIXME".into()
@@ -256,6 +279,9 @@ use gpx::*;
                 Some(&(_, TypeConverter::ParserClass(ref cls))) => {
                     format!("{cls}::new(self.reader).parse(elem_start)", cls=cls)
                 },
+                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
+                    format!("{}::parse_via(self.reader, elem_start)", conv_name)
+                }
                 Some(&(_, TypeConverter::AttributeFun(_))) => {
                     panic!("Element {} has attribute conversion", &elem.type_)
                 }

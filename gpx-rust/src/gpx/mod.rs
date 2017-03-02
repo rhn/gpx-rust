@@ -28,7 +28,7 @@ mod ser_auto;
 pub mod ser;
 pub mod par;
 
-use self::par::{ WaypointParser, MetadataParser, TrackSegmentParser, _ElementError };
+use self::par::{ WaypointParser, MetadataParser, TrackSegmentParser, GpxElemParser, _ElementError };
 
 
 trait EmptyInit {
@@ -224,21 +224,13 @@ macro_rules! ElemParser {
     }
 }
 
-macro_attr! {
-    #[derive(Debug, ParserExp!(GpxElemParser {
-        attrs: { "version" => { version, par::parse_gpx_version },
-                 "creator" => { creator, par::copy } },
-        tags: { "metadata" => { metadata = Some, ElementParse, MetadataParser },
-                "wpt" => { waypoints = Vec, ElementParse, WaypointParser },
-                "trk" => { tracks = Vec, ElementParse, TrkParser } }
-    }))]
-    pub struct Gpx {
-        version: One!(GpxVersion),
-        creator: One!(String),
-        metadata: Option!(Metadata),
-        waypoints: Vec!(Waypoint),
-        tracks: Vec!(Track),
-    }
+#[derive(Debug)]
+pub struct Gpx {
+    version: One!(GpxVersion),
+    creator: One!(String),
+    metadata: Option!(Metadata),
+    waypoints: Vec!(Waypoint),
+    tracks: Vec!(Track),
 }
 
 #[derive(Debug)]

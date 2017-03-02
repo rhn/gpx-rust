@@ -15,9 +15,10 @@ use xml::{ XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use xsd;
 use xsd::par::{ parse_time, parse_decimal };
 use gpx;
-use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, GpxElemParser };
+use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, TrkParser };
+use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
-use ::par::{ parse_chars, parse_string, parse_u64, parse_elem, ParserMessage };
+use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem, ParserMessage };
 use ::par::{ ElementError as ElementErrorTrait, ElementErrorFree };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
@@ -104,7 +105,7 @@ pub enum AttributeValueError {
     Str(&'static str),
     Error(Box<std::error::Error>),
 }
-
+/// FIXME: move to general par.rs
 pub trait FromAttribute<T> {
     fn from_attr(&str) -> Result<T, AttributeValueError>;
 }
@@ -121,6 +122,16 @@ impl FromAttribute<f64> for Longitude {
     }
 }
 
+impl FromAttribute<GpxVersion> for conv::Version {
+    fn from_attr(attr: &str) -> Result<GpxVersion, AttributeValueError> {
+        match attr {
+            "1.0" => Ok(GpxVersion::V1_0),
+            "1.1" => Ok(GpxVersion::V1_1),
+            _ => Err(AttributeValueError::Str("Unknown GPX version"))
+        }
+    }
+}
+
 impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
     type Element = Bounds;
     type Error = Error;
@@ -132,7 +143,7 @@ impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
     }
 }
 
-pub fn parse_gpx_version(value: &str) -> Result<GpxVersion, AttributeValueError> {
+fn parse_gpx_version(value: &str) -> Result<GpxVersion, AttributeValueError> {
     match value {
         "1.0" => Ok(GpxVersion::V1_0),
         "1.1" => Ok(GpxVersion::V1_1),
@@ -208,7 +219,7 @@ impl<'a, T: Read> ElementBuild for GpxElemParser<'a, T> {
         Ok(Gpx { version: self.version.expect("Version uninitialized"),
                  creator: self.creator.expect("Creator uninitialized"),
                  metadata: self.metadata,
-                 waypoints: self.waypoints,
-                 tracks: self.tracks })
+                 waypoints: self.wpt,
+                 tracks: self.trk })
     }
 }
