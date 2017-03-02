@@ -130,28 +130,6 @@ pub struct BoundsParser<'a, T: 'a + Read> {
     maxlon: Option<f64>,
 }
 
-impl<'a, T: Read> ElementParse<'a, T> for BoundsParser<'a, T> {
-    fn new(reader: &'a mut EventReader<T>) -> Self {
-        BoundsParser {
-            reader: reader,
-            elem_name: None,
-            minlat: None,
-            minlon: None,
-            maxlat: None,
-            maxlon: None,
-        }
-    }
-    ParserStart!(
-        "minlat" => { minlat , Latitude::from_attr },
-        "minlon" => { minlon , Longitude::from_attr },
-        "maxlat" => { maxlat , Latitude::from_attr },
-        "maxlon" => { maxlon , Longitude::from_attr }
-    );
-    _ParserImplBody!(
-        tags: {}
-    );
-}
-
 impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
     type Element = Bounds;
     type Error = Error;
