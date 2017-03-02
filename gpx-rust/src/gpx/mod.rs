@@ -28,7 +28,7 @@ mod ser_auto;
 pub mod ser;
 pub mod par;
 
-use self::par::{ WaypointParser, MetadataParser, TrackSegmentParser, GpxElemParser, _ElementError };
+use self::par::{ TrackSegmentParser, GpxElemParser, _ElementError };
 
 
 trait EmptyInit {

@@ -143,14 +143,6 @@ impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
     }
 }
 
-fn parse_gpx_version(value: &str) -> Result<GpxVersion, AttributeValueError> {
-    match value {
-        "1.0" => Ok(GpxVersion::V1_0),
-        "1.1" => Ok(GpxVersion::V1_1),
-        _ => Err(AttributeValueError::Str("Unknown GPX version"))
-    }
-}
-
 fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
         -> Result<Fix, ElementError> {
     parse_chars(parser, elem_start, Fix::from_str)
