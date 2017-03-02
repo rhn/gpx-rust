@@ -84,6 +84,7 @@ fn process() -> Result<(), Error> {
         ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
         ParserInfo { name: "MetadataParser".into(), type_: types.get("metadataType").unwrap() },
         ParserInfo { name: "WaypointParser".into(), type_: types.get("wptType").unwrap() },
+        ParserInfo { name: "BoundsParser".into(), type_: types.get("boundsType").unwrap() },
     ];
     let parser_impls = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },

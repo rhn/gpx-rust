@@ -121,15 +121,6 @@ impl FromAttribute<f64> for Longitude {
     }
 }
 
-pub struct BoundsParser<'a, T: 'a + Read> {
-    reader: &'a mut EventReader<T>,
-    elem_name: Option<OwnedName>,
-    minlat: Option<f64>,
-    minlon: Option<f64>,
-    maxlat: Option<f64>,
-    maxlon: Option<f64>,
-}
-
 impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
     type Element = Bounds;
     type Error = Error;
