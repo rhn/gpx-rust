@@ -15,7 +15,7 @@ use xml::{ XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use xsd;
 use xsd::par::{ parse_time, parse_decimal };
 use gpx;
-use gpx::{ Error, ElementError, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment };
+use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, GpxElemParser };
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ parse_chars, parse_string, parse_u64, parse_elem, ParserMessage };
 use ::par::{ ElementError as ElementErrorTrait, ElementErrorFree };
@@ -229,5 +229,17 @@ impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
     type Error = Error;
     fn build(self) -> Result<Self::Element, Self::Error> {
         Ok(TrackSegment { waypoints: self.trkpt })
+    }
+}
+
+impl<'a, T: Read> ElementBuild for GpxElemParser<'a, T> {
+    type Element = Gpx;
+    type Error = Error;
+    fn build(self) -> Result<Self::Element, Self::Error> {
+        Ok(Gpx { version: self.version.expect("Version uninitialized"),
+                 creator: self.creator.expect("Creator uninitialized"),
+                 metadata: self.metadata,
+                 waypoints: self.waypoints,
+                 tracks: self.tracks })
     }
 }

@@ -241,18 +241,6 @@ macro_attr! {
     }
 }
 
-impl<'a, T: Read> ElementBuild for GpxElemParser<'a, T> {
-    type Element = Gpx;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(Gpx { version: self.version.expect("Version uninitialized"),
-                 creator: self.creator.expect("Creator uninitialized"),
-                 metadata: self.metadata,
-                 waypoints: self.waypoints,
-                 tracks: self.tracks })
-    }
-}
-
 #[derive(Debug)]
 #[allow(non_camel_case_types)]
 pub enum GpxVersion {
