@@ -8,7 +8,6 @@ use self::_xml::common::{ Position, TextPosition };
 use self::_xml::reader::{ EventReader, XmlEvent };
 
 use xml::{ ElementParse, ElementParser, XmlElement, ElemStart };
-use xsd;
 use gpx::par::_ElementError;
 use gpx::ElementError as ElementErrorE;
 
