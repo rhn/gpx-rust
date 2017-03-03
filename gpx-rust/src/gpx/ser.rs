@@ -120,6 +120,9 @@ impl Serialize for Gpx {
         for item in &self.waypoints {
             try!(item.serialize_with(sink, "wpt"));
         }
+        for item in &self.routes {
+            try!(item.serialize_with(sink, "rte"));
+        }
         for item in &self.tracks {
             try!(item.serialize_with(sink, "trk"));
         }
