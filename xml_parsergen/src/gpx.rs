@@ -403,8 +403,7 @@ struct {{{ name }}} {
         fn next(&mut self) -> Result<XmlEvent, xml::Error> {
             self.reader.next().map_err(xml::Error::Xml)
         }"#);
-        let body = quote::Ident::new(body);
-        let body1 = quote::Ident::new(quote!(
+        let body1 = quote!(
             fn new(reader: &'a mut EventReader<T>) -> Self {
                     #cls_name { reader: reader,
                                 elem_name: None,
@@ -412,13 +411,15 @@ struct {{{ name }}} {
                                 #( #elem_inits, )* }
             }
             ParserStart!( #( #macroattrs ),* );
-        ).to_string().replace("{", "{\n").replace(";", ";\n"));
-        quote!(
-            impl<'a, T: Read> ElementParse<'a, T> for #cls_name<'a, T> {
-                #body1
-                #body
-            }
-        ).to_string()
+        ).to_string().replace("{", "{\n").replace(";", ";\n");
+        render_string(HashBuilder::new().insert("cls_name", name)
+                                        .insert("body", body)
+                                        .insert("body1", body1),
+                      r#"
+            impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
+                {{{ body1 }}}
+                {{{ body }}}
+            }"#)
     }
     
     //fn build_impl(cls_name: &str, data: &Type, tage: &TagMap) -> String {
