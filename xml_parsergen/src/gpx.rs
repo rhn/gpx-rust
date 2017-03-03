@@ -345,14 +345,13 @@ struct {{{ name }}} {
                 }
                 None => panic!("Missing conversion for {}", &elem.type_),
             };
-            quote::Ident::new(format!("{tag} => {{
+            format!("{tag} => {{
                 {saver}(try!({conv}));
-            }}", tag=quote!(#tag), saver=saver, conv=conv))
-        }).collect::<Vec<_>>();
+            }}\n", tag=quote!(#tag), saver=saver, conv=conv)
+        }).collect::<String>();
         
         let parse_elem_body = if !match_elems.is_empty() {
-            render_string(HashBuilder::new().insert("match_elems",
-                                                           quote!( #( #match_elems, )* ).to_string()),
+            render_string(HashBuilder::new().insert("match_elems", match_elems),
                           r#"
             if let Some(ref ns) = elem_start.name.namespace.clone() {
                 match &ns as &str {
