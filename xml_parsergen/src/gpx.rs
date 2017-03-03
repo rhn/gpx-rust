@@ -348,12 +348,12 @@ struct {{{ name }}} {
             quote::Ident::new(format!("{tag} => {{
                 {saver}(try!({conv}));
             }}", tag=quote!(#tag), saver=saver, conv=conv))
-        });
-        let body = render_string(HashBuilder::new().insert("match_elems",
+        }).collect::<Vec<_>>();
+        
+        let parse_elem_body = if !match_elems.is_empty() {
+            render_string(HashBuilder::new().insert("match_elems",
                                                            quote!( #( #match_elems, )* ).to_string()),
-                                 r#"
-        fn parse_element(&mut self, elem_start: ElemStart)
-                -> Result<(), Self::Error> {
+                          r#"
             if let Some(ref ns) = elem_start.name.namespace.clone() {
                 match &ns as &str {
                     "http://www.topografix.com/GPX/1/1" => (),
@@ -382,9 +382,19 @@ struct {{{ name }}} {
                                                 self.reader.position())));
                 }
             };
-            Ok(())
-        }
+            Ok(())"#)
+        } else {
+            String::from(r#"
+            Err(Error::from(ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
+                                                    self.reader.position())))"#)
+        };
         
+        let body = render_string(HashBuilder::new().insert("parse_element_body", parse_elem_body),
+                                 r#"
+        fn parse_element(&mut self, elem_start: ElemStart)
+                -> Result<(), Self::Error> {
+            {{{ parse_element_body }}}
+        }
         fn get_name(&self) -> &OwnedName {
             match &self.elem_name {
                 &Some(ref i) => i,
