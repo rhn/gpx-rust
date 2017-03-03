@@ -20,7 +20,7 @@ macro_rules! _parser_attr {
 
 #[macro_export]
 macro_rules! ParserStart {
-    ( $( $name:pat => $attr:tt ),* ) => {
+    ( $( $name:pat => $attr:tt ),* $(,)* ) => {
         fn parse_start(&mut self, elem_start: ElemStart)
                 -> Result<(), Self::Error> {
             for attr in elem_start.attributes {

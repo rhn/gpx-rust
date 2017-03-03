@@ -289,9 +289,9 @@ struct {{{ name }}} {
             quote::Ident::new(attr.name.clone())
         });
         let macroattrs = data.attributes.iter().map(|attr| {
-            let field = quote::Ident::new(attr.name.clone());
+            let field = &attr.name;
             let attr_name = &attr.name;
-            let conv = quote::Ident::new(match types.get(&attr.type_) {
+            let conv = match types.get(&attr.type_) {
                 Some(&(_, TypeConverter::AttributeFun(ref foo))) => foo.clone(),
                 Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
                     format!("{}::from_attr", conv_name)
@@ -301,11 +301,10 @@ struct {{{ name }}} {
                     println!("No parser for {}", &attr.type_);
                     "FIXME".into()
                 }
-            });
-            quote!(
-                #attr_name => { #field, #conv }
-            )
-        });
+            };
+            format!("{attr_name} => {{ {field}, {conv} }},\n",
+                    attr_name=quote!(#attr_name), field=field, conv=conv)
+        }).collect::<String>();
         let elem_inits = data.sequence.iter().map(|elem| {
             quote::Ident::new(
                 format!("{ident}: {init}",
@@ -316,7 +315,8 @@ struct {{{ name }}} {
                             }
                             ElementMaxOccurs::Some(1) => "None",
                             _ => "Vec::new()"
-                        })
+                        }
+                )
             )
         });
         let match_elems = data.sequence.iter().map(|elem| {
@@ -387,39 +387,37 @@ struct {{{ name }}} {
             Err(Error::from(ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
                                                     self.reader.position())))"#)
         };
-        
-        let body = render_string(HashBuilder::new().insert("parse_element_body", parse_elem_body),
-                                 r#"
-        fn parse_element(&mut self, elem_start: ElemStart)
-                -> Result<(), Self::Error> {
-            {{{ parse_element_body }}}
-        }
-        fn get_name(&self) -> &OwnedName {
-            match &self.elem_name {
-                &Some(ref i) => i,
-                &None => panic!("Name was not set while parsing"),
-            }
-        }
-        fn next(&mut self) -> Result<XmlEvent, xml::Error> {
-            self.reader.next().map_err(xml::Error::Xml)
-        }"#);
-        let body1 = quote!(
+
+        let body = quote!(
             fn new(reader: &'a mut EventReader<T>) -> Self {
                     #cls_name { reader: reader,
                                 elem_name: None,
                                 #( #attrs: None, )*
                                 #( #elem_inits, )* }
             }
-            ParserStart!( #( #macroattrs ),* );
         ).to_string().replace("{", "{\n").replace(";", ";\n");
         render_string(HashBuilder::new().insert("cls_name", name)
-                                        .insert("body", body)
-                                        .insert("body1", body1),
+                                        .insert("macro_attrs", macroattrs)
+                                        .insert("parse_element_body", parse_elem_body)
+                                        .insert("body", body),
                       r#"
-            impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
-                {{{ body1 }}}
-                {{{ body }}}
-            }"#)
+impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
+    ParserStart!( {{{ macro_attrs }}} );
+    {{{ body }}}
+    fn parse_element(&mut self, elem_start: ElemStart)
+            -> Result<(), Self::Error> {
+        {{{ parse_element_body }}}
+    }
+    fn get_name(&self) -> &OwnedName {
+        match &self.elem_name {
+            &Some(ref i) => i,
+            &None => panic!("Name was not set while parsing"),
+        }
+    }
+    fn next(&mut self) -> Result<XmlEvent, xml::Error> {
+        self.reader.next().map_err(xml::Error::Xml)
+    }
+}"#)
     }
     
     //fn build_impl(cls_name: &str, data: &Type, tage: &TagMap) -> String {
