@@ -60,7 +60,7 @@ fn process() -> Result<(), Error> {
         "wptType".into() => ("Waypoint".into(), TypeConverter::ParserClass("WaypointParser".into())),
         "metadataType".into() => ("Metadata".into(), TypeConverter::ParserClass("MetadataParser".into())),
         "trkType".into() => ("Track".into(), TypeConverter::ParserClass("TrkParser".into())),
-        "rteType".into() => ("XmlElement".into(), TypeConverter::UniversalClass("::conv::XmlElement".into())), // FIXME
+        "rteType".into() => ("Route".into(), TypeConverter::UniversalClass("::gpx::conv::Rte".into())),
         "trksegType".into() => ("TrackSegment".into(), "FIXME".into()),
         "_gpx:version".into() => ("GpxVersion".into(), TypeConverter::UniversalClass("::gpx::conv::Version".into())),
         "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),

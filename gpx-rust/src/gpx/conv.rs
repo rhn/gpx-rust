@@ -5,4 +5,4 @@ pub struct Bounds {}
 
 pub struct Version {}
 
-pub type Rte = ::xml::XmlElement;
+pub type Rte = ::conv::XmlElement;
