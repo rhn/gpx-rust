@@ -214,6 +214,7 @@ impl<'a, T: Read> ElementBuild for GpxElemParser<'a, T> {
                  creator: self.creator.expect("Creator uninitialized"),
                  metadata: self.metadata,
                  waypoints: self.wpt,
+                 routes: self.rte,
                  tracks: self.trk })
     }
 }

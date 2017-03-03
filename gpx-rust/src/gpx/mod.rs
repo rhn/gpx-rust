@@ -230,6 +230,7 @@ pub struct Gpx {
     creator: One!(String),
     metadata: Option!(Metadata),
     waypoints: Vec!(Waypoint),
+    routes: Vec<Route>,
     tracks: Vec!(Track),
 }
 
@@ -352,6 +353,8 @@ fn parse_int<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: Ele
 pub struct TrackSegment {
     waypoints: Vec<Waypoint>,
 }
+
+type Route = XmlElement;
 
 pub struct Parser<T: Read> {
     reader: EventReader<T>,
