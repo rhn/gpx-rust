@@ -5,4 +5,4 @@ pub struct Bounds {}
 
 pub struct Version {}
 
-pub struct Route {}
+pub type Rte = ::xml::XmlElement;

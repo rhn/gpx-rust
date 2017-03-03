@@ -121,7 +121,7 @@ impl Serialize for Gpx {
             try!(item.serialize_with(sink, "wpt"));
         }
         for item in &self.routes {
-            try!(item.serialize_with(sink, "rte"));
+            try!(::gpx::conv::Rte::serialize_via(item, sink, "rte"));
         }
         for item in &self.tracks {
             try!(item.serialize_with(sink, "trk"));
