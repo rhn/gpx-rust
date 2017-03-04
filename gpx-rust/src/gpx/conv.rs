@@ -10,3 +10,4 @@ pub struct Link {}
 pub struct Metadata {}
 pub struct Trk {}
 pub struct Trkseg {}
+pub struct Gpx {}

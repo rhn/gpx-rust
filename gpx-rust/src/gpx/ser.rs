@@ -4,7 +4,6 @@ extern crate xml as _xml;
 
 use std::io;
 use std::borrow::Cow;
-use self::_xml::common::XmlVersion;
 use self::_xml::name::Name;
 use self::_xml::namespace::{ Namespace, NS_NO_PREFIX };
 use self::_xml::attribute::Attribute;
@@ -12,7 +11,7 @@ use self::_xml::writer::{ XmlEvent, EventWriter };
 use gpx::{ Gpx, GpxVersion, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ SerError, Serialize, SerializeVia, SerializeCharElem };
+use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -92,12 +91,16 @@ impl SerializeVia<Bounds> for conv::Bounds {
     }
 }
 
-impl Serialize for Gpx {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
+impl SerializeDocument for Gpx {
+    fn serialize_root<W: io::Write>(&self, sink: &mut EventWriter<W>)
             -> Result<(), SerError> {
-        try!(sink.write(XmlEvent::StartDocument { version: XmlVersion::Version11,
-                                                  encoding: None,
-                                                  standalone: None }));
+        conv::Gpx::serialize_via(self, sink, "gpx")
+    }
+}
+
+impl SerializeVia<Gpx> for conv::Gpx {
+    fn serialize_via<W: io::Write>(data: &Gpx, sink: &mut EventWriter<W>, name: &str)
+            -> Result<(), SerError> {
         let elemname = Name::local(name);
         let mut ns = Namespace::empty();
         ns.put(NS_NO_PREFIX, GPX_NS);
@@ -109,21 +112,21 @@ impl Serialize for Gpx {
                     vec![Attribute { name: Name::local("version"),
                                      value: GpxVersion::V1_1.to_attribute() },
                          Attribute { name: Name::local("creator"),
-                                     value: &self.creator }]
+                                     value: &data.creator }]
                 ),
                 namespace: Cow::Owned(ns)
             }
         ));
-        if let Some(ref meta) = self.metadata {
+        if let Some(ref meta) = data.metadata {
             try!(::gpx::conv::Metadata::serialize_via(meta, sink, "metadata"));
         }
-        for item in &self.waypoints {
+        for item in &data.waypoints {
             try!(item.serialize_with(sink, "wpt"));
         }
-        for item in &self.routes {
+        for item in &data.routes {
             try!(::gpx::conv::Rte::serialize_via(item, sink, "rte"));
         }
-        for item in &self.tracks {
+        for item in &data.tracks {
             try!(::gpx::conv::Trk::serialize_via(item, sink, "trk"));
         }
         

@@ -2,6 +2,7 @@ extern crate xml as _xml;
 
 use std::io;
 use std::borrow::Cow;
+use self::_xml::common::XmlVersion;
 use self::_xml::name::Name;
 use self::_xml::namespace::Namespace;
 use self::_xml::writer;
@@ -30,15 +31,33 @@ impl From<AttributeValueError> for SerError {
     }
 }
 
-pub trait Serialize {
-    fn serialize<W: io::Write>(&self, sink: W, name: &str) -> Result<(), SerError> {
-        let mut xw = EmitterConfig::new()
-            .line_separator("\n")
-            .perform_indent(true)
-            .create_writer(sink);
-        
-        self.serialize_with(&mut xw, name)
+/// Serializes XML documents
+pub trait SerializeDocument {
+    /// Default serialization, pretty prints the XML file
+    fn serialize<W: io::Write>(&self, sink: W) -> Result<(), SerError> {
+        self.serialize_with_config(EmitterConfig::new().line_separator("\n")
+                                                .perform_indent(true),
+                                   sink)
     }
+    /// Convenience method to create a custom EventWriter based on passed config
+    fn serialize_with_config<W: io::Write>(&self, config: EmitterConfig, sink: W)
+            -> Result<(), SerError> {
+        self.serialize_with(&mut config.create_writer(sink))
+    }
+    /// Serialize the data into XML file
+    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>)
+            -> Result<(), SerError> {
+        try!(sink.write(XmlEvent::StartDocument { version: XmlVersion::Version11,
+                                                  encoding: None,
+                                                  standalone: None }));
+        self.serialize_root(sink)
+    }
+    /// Write root element inside the EventWriter
+    fn serialize_root<W: io::Write>(&self, sink: &mut EventWriter<W>)
+            -> Result<(), SerError>;
+}
+
+pub trait Serialize {
     fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
         -> Result<(), SerError>;
 }

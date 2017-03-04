@@ -8,7 +8,7 @@ use std::fs::File;
 use clap::{ App, Arg };
 
 use gpx_rust::xml::{ ParseXml };
-use gpx_rust::ser::{ Serialize, SerError };
+use gpx_rust::ser::{ SerializeDocument, SerError };
 use gpx_rust::gpx::{ Gpx, Parser, Error };
 
 
@@ -27,7 +27,7 @@ fn parse(filename: &str) -> Result<Gpx, Error> {
 fn save(filename: &str, data: Gpx) -> Result<(), ResaveError> {
     let f = try!(File::create(filename).map_err(ResaveError::Io));
     let f = BufWriter::new(f);
-    data.serialize(f, "").map_err(ResaveError::Serialize)//, WspMode::IndentLevel(0)).map_err(ResaveError::Io));
+    data.serialize(f).map_err(ResaveError::Serialize)//, WspMode::IndentLevel(0)).map_err(ResaveError::Io));
 }
 
 fn main() {
