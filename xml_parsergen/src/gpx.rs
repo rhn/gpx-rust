@@ -491,32 +491,45 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
 
     fn serializer_impl(cls_name: &str, tags: &TagMap,
                        type_name: &str, data: &Type, type_convs: &TypeMap) -> String {
-        let attributes = data.attributes.iter().map(|attr| {
-            let attr_name = &attr.name;
-            let field_name = get_attr_field_name(attr, tags);
-            let field_value = match attr.required {
-                true => format!("data.{}", field_name),
-                false => "value".into()
-            };
-            let conv_name = match type_convs.get(&attr.type_) {
-                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name,
-                _ => "ccc"
-            };
-            let push = render_string(HashBuilder::new().insert("attr_name", quote!(#attr_name).to_string())
-                                            .insert("field_value", field_value.as_str())
-                                            .insert("conv_name", conv_name),
-                          r#"
-            OwnedAttribute { name: OwnedName::local( {{{ attr_name }}} ),
-                             value: try!({{{ conv_name }}}::to_attribute(&{{{ field_value }}})) },
-"#);
-            if attr.required == false {
-                format!("if let Some(value) = &data.{} {{
-                {}
-            }}", field_name, push)
-            } else {
-                push
-            }
-        }).collect::<String>();
+        let attributes = if data.attributes.is_empty() {
+            String::from("Vec::new()")
+        } else {
+            let items = data.attributes.iter().map(|attr| {
+                let attr_name = &attr.name;
+                let field_name = get_attr_field_name(attr, tags);
+                let field_value = match attr.required {
+                    true => format!("data.{}", field_name),
+                    false => "value".into()
+                };
+                let conv_name = match type_convs.get(&attr.type_) {
+                    Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name,
+                    _ => "ccc"
+                };
+                let push = render_string(HashBuilder::new().insert("attr_name", quote!(#attr_name).to_string())
+                                                .insert("field_value", field_value.as_str())
+                                                .insert("conv_name", conv_name),
+                              r#"
+                OwnedAttribute { name: OwnedName::local( {{{ attr_name }}} ),
+                                 value: try!({{{ conv_name }}}::to_attribute(&{{{ field_value }}})) },
+    "#);
+                if attr.required == false {
+                    format!("if let Some(value) = &data.{} {{
+                    {}
+                }}", field_name, push)
+                } else {
+                    push
+                }
+            }).collect::<String>();
+            render_string(HashBuilder::new().insert("attrs", items),
+                          "[ {{{ attrs }}} ];
+        /// ugly workaround - the compiler will not allow this inside map()
+        fn borrow<'a>(x: &'a OwnedAttribute) -> Attribute<'a> {
+            x.borrow()
+        }
+        let attributes = attributes.iter()
+                                   .map(|a| borrow(a))
+                                   .collect();")
+        };
         let events = data.sequence.iter().map(|elem| {
             let elem_name = elem.name.clone();
             let get_attr_name = |f: &Fn(&str) -> String| {
@@ -556,6 +569,7 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
             Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name.as_str(),
             _ => panic!("Refusing to create serializer for non-universal class {}", type_name)
         };
+        
         render_string(HashBuilder::new().insert("cls_name", cls_name)
                                         .insert("conv_name", conv_name)
                                         .insert("attributes", attributes)
@@ -565,19 +579,12 @@ impl SerializeVia<{{{ cls_name }}}> for {{{ conv_name }}} {
     fn serialize_via<W: io::Write>(data: &{{{ cls_name }}}, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), SerError> {
         let elemname = Name::local(name);
-        let attributes = [
-            {{{ attributes }}}
-        ];
-        /// ugly workaround - the compiler will not allow this inside map()
-        fn borrow<'a>(x: &'a OwnedAttribute) -> Attribute<'a> {
-            x.borrow()
-        }
+        let attributes = {{{ attributes }}};
+        
         try!(sink.write(
             XmlEvent::StartElement {
                 name: elemname.clone(),
-                attributes: Cow::Owned(attributes.iter()
-                                                 .map(|a| borrow(a))
-                                                 .collect()),
+                attributes: Cow::Owned(attributes),
                 namespace: Cow::Owned(Namespace::empty())
             }
         ));
