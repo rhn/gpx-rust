@@ -106,7 +106,7 @@ pub trait ElementParse<'a, T: Read> where Self: Sized + ElementBuild {
         }
         self.build()
     }
-    fn parse_self(mut self, elem_start: ElemStart) -> Result<Self::Element, ::gpx::ElementError> {
+    fn parse_self(self, elem_start: ElemStart) -> Result<Self::Element, ::gpx::ElementError> {
         self.parse(elem_start).map_err(|e| {
             ::gpx::ElementError { error: e.into(), position: TextPosition { row: 0, column: 0 } }
         })

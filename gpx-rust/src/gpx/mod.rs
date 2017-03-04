@@ -18,7 +18,6 @@ use self::_xml::name::OwnedName;
 use xml;
 use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use par::ElementError as ElementErrorTrait;
-use parsers::*;
 use xsd;
 use xsd::*;
 use par::{ ParserMessage, parse_string };

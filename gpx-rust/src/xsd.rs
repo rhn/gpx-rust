@@ -1,12 +1,6 @@
 extern crate chrono;
 extern crate std;
 
-use std::str::FromStr;
-
-use parsers;
-use ser::{ Serialize, SerializeCharElem, SerializeVia };
-
-
 pub type Time = chrono::DateTime<chrono::FixedOffset>;
 pub type DateTime = chrono::DateTime<chrono::FixedOffset>;
 pub type NonNegativeInteger = u64;

@@ -1,13 +1,6 @@
 extern crate xml as xml_;
 extern crate chrono;
 
-use std;
-use self::xml_::reader::{ EventReader, XmlEvent };
-use self::xml_::name::OwnedName;
-use self::xml_::common::{ Position, TextPosition };
-use xml::ElemStart;
-use xml::{ ElementParser, ElementParse };
-
 
 macro_rules! _parser_attr {
     ( $self_:ident, $value:ident, { $field:ident, $func:expr } ) => {

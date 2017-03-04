@@ -197,13 +197,11 @@ impl ParserGen for Generator {
         "extern crate xml as _xml;
 
 use std::borrow::Cow;
-use self::_xml::writer;
 use self::_xml::name::Name;
 use self::_xml::namespace::Namespace;
 use self::_xml::writer::{ XmlEvent, EventWriter };
 
 use ser::{ Serialize, SerError, SerializeVia };
-use gpx;
 use gpx::*;
 "
     }

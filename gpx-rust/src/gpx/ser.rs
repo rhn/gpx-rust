@@ -8,12 +8,11 @@ use self::_xml::common::XmlVersion;
 use self::_xml::name::Name;
 use self::_xml::namespace::{ Namespace, NS_NO_PREFIX };
 use self::_xml::attribute::Attribute;
-use self::_xml::writer;
 use self::_xml::writer::{ XmlEvent, EventWriter };
-use gpx::{ Gpx, GpxVersion, Metadata, Waypoint, Fix, Track, TrackSegment, Bounds };
+use gpx::{ Gpx, GpxVersion, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ SerError, Serialize, SerializeVia, SerializeAttr, SerializeCharElem };
+use ser::{ SerError, Serialize, SerializeVia, SerializeCharElem };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
