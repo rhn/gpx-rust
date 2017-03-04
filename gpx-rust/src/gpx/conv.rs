@@ -5,4 +5,8 @@ pub struct Bounds {}
 
 pub struct Version {}
 
-pub type Rte = ::conv::XmlElement;
+pub struct Rte {}
+
+pub struct Metadata {}
+pub struct Trk {}
+pub struct Trkseg {}

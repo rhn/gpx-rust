@@ -7,13 +7,25 @@ use quote;
 use self::rustache::{ HashBuilder, Render };
 
 use xsd_types::{ Type, Element, ElementMaxOccurs, Attribute };
-use ::{ ParserGen, TagMap, TypeConverter, TypeMap, ident_safe, UserType };
+use ::{ StructInfo, ParserGen, TagMap, TypeConverter, TypeMap, ident_safe, UserType };
 
 
 fn render_string(data: HashBuilder, template: &str) -> String {
     let mut out = io::Cursor::new(Vec::new());
     data.render(template, &mut out).expect("Error in rendering");
     String::from_utf8(out.into_inner()).expect("Error in encoding") // FIXME: what's the encoding of the source?
+}
+
+fn get_elem_field_name(elem: &Element, tags: &TagMap) -> String {
+    match tags.get(elem.name.as_str()) {
+        Some(i) => String::from(*i),
+        None => {
+            match elem.max_occurs {
+                ElementMaxOccurs::Some(1) => elem.name.clone(),
+                _ => format!("{}s", elem.name)
+            }
+        }
+    }
 }
 
 macro_rules! map(
@@ -420,12 +432,29 @@ impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
 }"#)
     }
     
-    //fn build_impl(cls_name: &str, data: &Type, tage: &TagMap) -> String {
-       // panic!("not implemented");
-    //}
+    fn build_impl(parser_name: &str, data: &Type, struct_info: &StructInfo, type_convs: &TypeMap)
+            -> String {
+        let inits = &data.sequence.iter().map(|elem| {
+            format!("{}: self.{},\n", get_elem_field_name(elem, &struct_info.tags), ident_safe(&elem.name))
+        }).collect::<String>();
+        render_string(HashBuilder::new().insert("parser_name", parser_name)
+                                        .insert("struct_name", (&struct_info.name).as_str())
+                                        .insert("error_name", "Error") // TODO: figure out how to handle the class
+                                        .insert("inits", inits.as_str()),
+                      r#"
+impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
+    type Element = {{{ struct_name }}};
+    type Error = {{{ error_name }}};
+    fn build(self) -> Result<Self::Element, Self::Error> {
+        Ok({{{ struct_name }}} {
+            {{{ inits }}}
+        })
+    }
+}"#)
+    }
 
-    fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
-                       type_convs: &HashMap<String, String>) -> String {
+    fn serializer_impl(cls_name: &str, tags: &TagMap,
+                       type_name: &str, data: &Type, type_convs: &TypeMap) -> String {
         let events = data.sequence.iter().map(|elem| {
             let elem_name = elem.name.clone();
             let get_attr_name = |f: &Fn(&str) -> String| {
@@ -437,17 +466,17 @@ impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
                 })
             };
             let ser_call = match type_convs.get(&elem.type_) {
-                Some(name) => {
-                    let type_name = quote::Ident::new(name.clone());
+                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
+                    let type_name = quote::Ident::new(conv_name.clone());
                     quote!(#type_name::serialize_via(item, sink, #elem_name))
                 },
-                None => quote!(item.serialize_with(sink, #elem_name))
+                _ => quote!(item.serialize_with(sink, #elem_name))
             };
             match elem.max_occurs {
                 ElementMaxOccurs::Some(1) => {
                     let name = get_attr_name(&|n| { String::from(n) });
                     quote!(
-                        if let Some(ref item) = self.#name {
+                        if let Some(ref item) = data.#name {
                             try!(#ser_call);
                         }
                     )
@@ -455,18 +484,24 @@ impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
                 _ => {
                     let name = get_attr_name(&|n| { format!("{}s", n) });
                     quote!(
-                        for item in &self.#name {
-                            try!(item.serialize_with(sink, #elem_name));
+                        for item in &data.#name {
+                            try!(#ser_call);
                         }
                     )
                 }
             }
         });
+        
+        let conv_name = match type_convs.get(type_name) {
+            Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name.as_str(),
+            _ => panic!("Refusing to create serializer for non-universal class {}", type_name)
+        };
         render_string(HashBuilder::new().insert("cls_name", cls_name)
+                                        .insert("conv_name", conv_name)
                                         .insert("events", quote!( #( #events )* ).to_string()),
                       r#"
-        impl Serialize for {{{ cls_name }}} {
-            fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
+        impl SerializeVia<{{{ cls_name }}}> for {{{ conv_name }}} {
+            fn serialize_via<W: io::Write>(data: &{{{ cls_name }}}, sink: &mut EventWriter<W>, name: &str)
                     -> Result<(), SerError> {
                 let elemname = Name::local(name);
                 try!(sink.write(

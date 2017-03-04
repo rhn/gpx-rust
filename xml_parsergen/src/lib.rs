@@ -20,7 +20,7 @@ pub type AttrMap = HashMap<String, (String, String)>;
 /// This is ugly
 pub struct StructInfo<'a> {
     pub name: String,
-    pub type_: &'a Type,
+    pub type_name: String,
     pub tags: TagMap<'a>,
 }
 
@@ -30,6 +30,7 @@ pub struct ParserInfo<'a> {
     pub type_: &'a Type,
 }
 
+#[derive(Debug)]
 pub enum TypeConverter {
     ParserClass(String),
     ParseFun(String),
@@ -43,6 +44,7 @@ impl<'a> From<&'a str> for TypeConverter {
     }
 }
 
+#[derive(Debug)]
 pub struct UserType(String);
 
 impl UserType {
@@ -69,9 +71,9 @@ pub trait ParserGen {
                   type_convs: &TypeMap) -> String;
     fn parser_cls(name: &str, data: &Type, type_convs: &TypeMap) -> String;
     fn parser_impl(name: &str, data: &Type, types: &TypeMap) -> String;
-    //fn build_impl(cls_name: &str, data: &Type, tage: &TagMap) -> String;
-    fn serializer_impl(cls_name: &str, tags: &TagMap, data: &Type,
-                       type_convs: &HashMap<String, String>) -> String;
+    fn build_impl(cls_name: &str, data: &Type, struct_info: &StructInfo, types: &TypeMap) -> String;
+    fn serializer_impl(cls_name: &str, tags: &TagMap,
+                       type_name: &str, data: &Type, type_convs: &TypeMap) -> String;
 }
 
 pub fn ident_safe(name: &str) -> &str {

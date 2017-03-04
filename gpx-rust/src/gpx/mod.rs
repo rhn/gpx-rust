@@ -354,7 +354,19 @@ pub struct TrackSegment {
     waypoints: Vec<Waypoint>,
 }
 
-type Route = XmlElement;
+#[derive(Debug)]
+pub struct Route {
+    name: Option<String>,
+    comment: Option<String>,
+    description: Option<String>,
+    source: Option<String>,
+    links: Vec<XmlElement>,
+    number: Option<xsd::NonNegativeInteger>,
+    type_: Option<String>,
+    extensions: Option<XmlElement>,
+    waypoints: Vec<Waypoint>,
+}
+
 
 pub struct Parser<T: Read> {
     reader: EventReader<T>,

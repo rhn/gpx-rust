@@ -3,6 +3,7 @@ extern crate chrono;
 
 use std;
 use std::fmt;
+use std::io;
 use std::io::Read;
 use std::str::FromStr;
 use std::error::Error as ErrorTrait;
@@ -15,7 +16,7 @@ use xml::{ XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use xsd;
 use xsd::par::{ parse_time, parse_decimal };
 use gpx;
-use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, TrkParser, Route };
+use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem, ParserMessage };
@@ -142,6 +143,41 @@ impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
                     ymin: self.minlon.unwrap(),
                     xmax: self.maxlat.unwrap(),
                     ymax: self.maxlon.unwrap() })
+    }
+}
+
+impl ParseVia<Bounds> for conv::Bounds {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<Bounds, ElementError> {
+        BoundsParser::new(parser).parse_self(elem_start)
+    }
+}
+
+impl ParseVia<Metadata> for conv::Metadata {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<Metadata, ElementError> {
+        MetadataParser::new(parser).parse_self(elem_start)
+    }
+}
+
+impl ParseVia<Route> for conv::Rte {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<Route, ElementError> {
+        RteParser::new(parser).parse_self(elem_start)
+    }
+}
+
+impl ParseVia<Track> for conv::Trk {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<Track, ElementError> {
+        TrkParser::new(parser).parse_self(elem_start)
+    }
+}
+
+impl ParseVia<TrackSegment> for conv::Trkseg {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<TrackSegment, ElementError> {
+        TrackSegmentParser::new(parser).parse_self(elem_start)
     }
 }
 

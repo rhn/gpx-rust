@@ -80,13 +80,18 @@ pub mod par {
 }
 
 pub mod conv {
-    pub struct String {}
+    use std;
+    pub type String = std::string::String;
 }
 
-impl SerializeCharElem for NonNegativeInteger {
-    fn to_characters(&self) -> String { self.to_string() }
-}
+mod ser {
+    use xsd;
+    use ser::SerializeCharElem;
+    impl SerializeCharElem for xsd::NonNegativeInteger {
+        fn to_characters(&self) -> String { self.to_string() }
+    }
 
-impl SerializeCharElem for DateTime {
-    fn to_characters(&self) -> String { self.to_rfc3339() }
+    impl SerializeCharElem for xsd::DateTime {
+        fn to_characters(&self) -> String { self.to_rfc3339() }
+    }
 }

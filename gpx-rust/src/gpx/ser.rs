@@ -115,7 +115,7 @@ impl Serialize for Gpx {
             }
         ));
         if let Some(ref meta) = self.metadata {
-            try!(meta.serialize_with(sink, "metadata"));
+            try!(::gpx::conv::Metadata::serialize_via(meta, sink, "metadata"));
         }
         for item in &self.waypoints {
             try!(item.serialize_with(sink, "wpt"));
@@ -124,7 +124,7 @@ impl Serialize for Gpx {
             try!(::gpx::conv::Rte::serialize_via(item, sink, "rte"));
         }
         for item in &self.tracks {
-            try!(item.serialize_with(sink, "trk"));
+            try!(::gpx::conv::Trk::serialize_via(item, sink, "trk"));
         }
         
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));

@@ -38,7 +38,7 @@ pub trait ParseVia<Data> {
 impl ParseVia<XmlElement> for conv::XmlElement {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<XmlElement, ElementErrorE> {
-        ElementParser::new(parser).parse_self(elem_start)//.map_err(ElementErrorE::from)
+        ElementParser::new(parser).parse_self(elem_start)
     }
 }
 
