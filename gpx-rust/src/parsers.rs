@@ -129,24 +129,6 @@ macro_rules! _elem_field {
     ( $k:ident <$t:ty> ) => { $k <$t> };
 }
 
-macro_rules! Elem {
-    ((),
-        then $cb:tt,
-        $(#[$($attrs:tt)*])*
-        $(pub)* struct $name:ident {
-            $( $i:ident : $k:tt <$t:ty>, )*
-        }
-    ) => {
-        macro_attr_callback! {
-            $cb,
-            $(#[$($attrs)*])*
-            pub struct $name {
-                $( $i : _elem_field!( $k <$t> ), )*
-            }
-        }
-    };
-}
-
 macro_rules! _parser_field {
     ( One <$t:ty> ) => { Option<$t> };
     ( $k:ident <$t:ty> ) => { $k <$t> };
