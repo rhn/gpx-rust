@@ -98,7 +98,7 @@ impl Serialize for Gpx {
         try!(sink.write(XmlEvent::StartDocument { version: XmlVersion::Version11,
                                                   encoding: None,
                                                   standalone: None }));
-        let elemname = Name::local("gpx");
+        let elemname = Name::local(name);
         let mut ns = Namespace::empty();
         ns.put(NS_NO_PREFIX, GPX_NS);
         let ns = ns;
