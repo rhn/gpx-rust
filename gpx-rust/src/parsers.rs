@@ -124,11 +124,6 @@ macro_rules! _ParserImplBody {
     }
 }
 
-macro_rules! _elem_field {
-    ( One <$t:ty> ) => { $t };
-    ( $k:ident <$t:ty> ) => { $k <$t> };
-}
-
 macro_rules! _parser_field {
     ( One <$t:ty> ) => { Option<$t> };
     ( $k:ident <$t:ty> ) => { $k <$t> };
