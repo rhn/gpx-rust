@@ -27,7 +27,7 @@ mod ser_auto;
 pub mod ser;
 pub mod par;
 
-use self::par::{ TrackSegmentParser, GpxElemParser, _ElementError };
+use self::par::{ TrackSegmentParser, GpxElemParser, LinkParser, _ElementError };
 
 
 trait EmptyInit {
@@ -240,35 +240,39 @@ pub enum GpxVersion {
     V1_1,
 }
 
-macro_attr! {
-    #[derive(XmlDebug)]
-    pub struct Metadata {
-        name: Option<String>,
-        description: Option<String>,
-        author: Option<XmlElement>,
-        copyright: Option<XmlElement>,
-        links: Vec<Link>,
-        time: Option<Time>,
-        keywords: Option<String>,
-        bounds: Option<Bounds>,
-        extensions: Option<XmlElement>,
-    }
+#[derive(XmlDebug)]
+pub struct Metadata {
+    name: Option<String>,
+    description: Option<String>,
+    author: Option<XmlElement>,
+    copyright: Option<XmlElement>,
+    links: Vec<Link>,
+    time: Option<Time>,
+    keywords: Option<String>,
+    bounds: Option<Bounds>,
+    extensions: Option<XmlElement>,
 }
 
-type Link = XmlElement;
+#[derive(Debug)]
+pub struct Link {
+    href: xsd::Uri,
+    text: Option<String>,
+    type_: Option<String>,
+}
+
 type Bounds = Bbox<f64>;
 
 #[derive(XmlDebug)]
 pub struct Waypoint {
     location: Point,
     time: Option<xsd::DateTime>,
-    mag_variation: Option<xsd::Degrees>,
+    mag_variation: Option<Degrees>,
     geoid_height: Option<xsd::Decimal>,
     name: Option<String>,
     comment: Option<String>,
     description: Option<String>,
     source: Option<String>,
-    links: Vec<XmlElement>,
+    links: Vec<Link>,
     symbol: Option<String>,
     type_: Option<String>,
     fix: Option<Fix>,
@@ -322,7 +326,7 @@ macro_attr! {
                 "cmt" => { comment = Some, fn, parse_string },
                 "desc" => { description = Some, fn, parse_string },
                 "src" => { source = Some, fn, parse_string },
-                "link" => { links = Vec, ElementParse, ElementParser },
+                "link" => { links = Vec, ElementParse, LinkParser },
                 "number" => { number = Some, fn, parse_int },
                 "type" => { type_ = Some, fn, parse_string },
                 "extensions" => { extensions = Some, ElementParse, ElementParser },
@@ -359,13 +363,14 @@ pub struct Route {
     comment: Option<String>,
     description: Option<String>,
     source: Option<String>,
-    links: Vec<XmlElement>,
+    links: Vec<Link>,
     number: Option<xsd::NonNegativeInteger>,
     type_: Option<String>,
     extensions: Option<XmlElement>,
     waypoints: Vec<Waypoint>,
 }
 
+pub type Degrees = String; // FIXME
 
 pub struct Parser<T: Read> {
     reader: EventReader<T>,

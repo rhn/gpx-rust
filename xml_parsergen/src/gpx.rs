@@ -17,7 +17,7 @@ fn render_string(data: HashBuilder, template: &str) -> String {
 }
 
 fn get_elem_field_name(elem: &Element, tags: &TagMap) -> String {
-    match tags.get(elem.name.as_str()) {
+    ident_safe(&match tags.get(elem.name.as_str()) {
         Some(i) => String::from(*i),
         None => {
             match elem.max_occurs {
@@ -25,7 +25,14 @@ fn get_elem_field_name(elem: &Element, tags: &TagMap) -> String {
                 _ => format!("{}s", elem.name)
             }
         }
-    }
+    }).into()
+}
+
+fn get_attr_field_name(attr: &Attribute, tags: &TagMap) -> String {
+    ident_safe(&match tags.get(attr.name.as_str()) {
+        Some(i) => *i,
+        None => &attr.name,
+    }).into()
 }
 
 macro_rules! map(
@@ -147,7 +154,7 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
             sequence: vec![
                 ElementSingle!("ele", "xsd:decimal"),
                 ElementSingle!("time", "xsd:dateTime"),
-                ElementSingle!("magvar", "xsd:degreesType"),
+                ElementSingle!("magvar", "degreesType"),
                 ElementSingle!("geoidheight", "xsd:decimal"),
                 ElementSingle!("name", "xsd:string"),
                 ElementSingle!("cmt", "xsd:string"),
@@ -170,6 +177,15 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
             attributes: vec![
                 Attribute { name: "lat".into(), type_: "latitudeType".into(), required: true },
                 Attribute { name: "lon".into(), type_: "longitudeType".into(), required: true }
+            ],
+        },
+        "linkType".into() => Type {
+            sequence: vec![
+                ElementSingle!("text", "xsd:string"),
+                ElementSingle!("type", "xsd:string"),
+            ],
+            attributes: vec![
+                Attribute { name: "href".into(), type_: "xsd:anyURI".into(), required: true },
             ],
         }
     }
@@ -217,27 +233,35 @@ use gpx::*;
                 }
             }
         };
-        let fields = data.attributes.iter().fold(String::new(), |mut s, _| {
-            s.push_str(&format!("x"));
-            s
-        }) + &data.sequence.iter().fold(String::new(), |mut s, elem| {
-            let data_type = match type_convs.get(elem.type_.as_str()) {
+        let fields = data.attributes.iter().map(|attr| {
+            let data_type = match type_convs.get(attr.type_.as_str()) {
                 Some(&(ref type_, _)) => type_,
-                None => panic!("No type found for field {} ({}) on {}", elem.name, elem.type_, name)
+                None => panic!("No type found for attr {} ({}) on {}", attr.name, attr.type_, name)
             };
-            let field_type = match elem.max_occurs {
-                ElementMaxOccurs::Some(0) => {
-                    println!("cargo:warning=\"Element {} can repeat 0 times, skipping\"",
-                             elem.name);
-                    String::new()
-                }
-                ElementMaxOccurs::Some(1) => format!("Option<{}>", data_type.as_user_type()),
-                _ => format!("Vec<{}>", data_type.as_user_type()),
-            };
-            s.push_str(&format!("    {}: {},\n",
-                                get_elem_field_name(elem), field_type));
-            s
-        });
+            (attr.name.clone(), match attr.required {
+                true => data_type.as_user_type().into(),
+                false => format!("Option<{}>", data_type.as_user_type())
+            })
+        }).chain(
+            data.sequence.iter().map(|elem| {
+                let data_type = match type_convs.get(elem.type_.as_str()) {
+                    Some(&(ref type_, _)) => type_,
+                    None => panic!("No type found for field {} ({}) on {}", elem.name, elem.type_, name)
+                };
+                let field_type = match elem.max_occurs {
+                    ElementMaxOccurs::Some(0) => {
+                        println!("cargo:warning=\"Element {} can repeat 0 times, skipping\"",
+                                 elem.name);
+                        String::new()
+                    }
+                    ElementMaxOccurs::Some(1) => format!("Option<{}>", data_type.as_user_type()),
+                    _ => format!("Vec<{}>", data_type.as_user_type()),
+                };
+                (get_elem_field_name(elem), field_type)
+            })
+        ).map(|(field_name, field_type)| {
+            format!("    {}: {},\n", ident_safe(&field_name), field_type)
+        }).collect::<String>();
         render_string(HashBuilder::new().insert("name", name)
                                         .insert("fields", fields),
                       r#"
@@ -432,9 +456,23 @@ impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
     
     fn build_impl(parser_name: &str, data: &Type, struct_info: &StructInfo, type_convs: &TypeMap)
             -> String {
-        let inits = &data.sequence.iter().map(|elem| {
-            format!("{}: self.{},\n", get_elem_field_name(elem, &struct_info.tags), ident_safe(&elem.name))
-        }).collect::<String>();
+        let inits = data.attributes.iter().map(|attr| {
+            let field_name = ident_safe(&attr.name);
+            let attr_val = match attr.required {
+                true => format!("self.{name}.expect(\"BUG: Attribute {name} is required but not present\")",
+                                name=field_name),
+                false => format!("self.{name}", name=field_name)
+            };
+            format!("{}: {},\n",
+                    ident_safe(&get_attr_field_name(attr, &struct_info.tags)),
+                    attr_val)
+        }).chain(
+            data.sequence.iter().map(|elem| {
+                format!("{}: self.{},\n",
+                        get_elem_field_name(elem, &struct_info.tags),
+                        ident_safe(&elem.name))
+            })
+        ).collect::<String>();
         render_string(HashBuilder::new().insert("parser_name", parser_name)
                                         .insert("struct_name", (&struct_info.name).as_str())
                                         .insert("error_name", "Error") // TODO: figure out how to handle the class
@@ -453,15 +491,39 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
 
     fn serializer_impl(cls_name: &str, tags: &TagMap,
                        type_name: &str, data: &Type, type_convs: &TypeMap) -> String {
+        let attributes = data.attributes.iter().map(|attr| {
+            let attr_name = &attr.name;
+            let field_name = get_attr_field_name(attr, tags);
+            let field_value = match attr.required {
+                true => format!("data.{}", field_name),
+                false => "value".into()
+            };
+            let conv_name = match type_convs.get(&attr.type_) {
+                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name,
+                _ => "ccc"
+            };
+            let push = render_string(HashBuilder::new().insert("attr_name", quote!(#attr_name).to_string())
+                                            .insert("field_value", field_value.as_str())
+                                            .insert("conv_name", conv_name),
+                          r#"
+            OwnedAttribute { name: OwnedName::local( {{{ attr_name }}} ),
+                             value: try!({{{ conv_name }}}::to_attribute(&{{{ field_value }}})) },
+"#);
+            if attr.required == false {
+                format!("if let Some(value) = &data.{} {{
+                {}
+            }}", field_name, push)
+            } else {
+                push
+            }
+        }).collect::<String>();
         let events = data.sequence.iter().map(|elem| {
             let elem_name = elem.name.clone();
             let get_attr_name = |f: &Fn(&str) -> String| {
-                quote::Ident::new(match tags.get(elem_name.as_str()) {
-                    Some(i) => { 
-                        String::from(i.clone())
-                    },
+                String::from(ident_safe(&match tags.get(elem_name.as_str()) {
+                    Some(i) => String::from(*i),
                     None => f(elem_name.as_str())
-                })
+                }))
             };
             let ser_call = match type_convs.get(&elem.type_) {
                 Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
@@ -472,7 +534,7 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
             };
             match elem.max_occurs {
                 ElementMaxOccurs::Some(1) => {
-                    let name = get_attr_name(&|n| { String::from(n) });
+                    let name = quote::Ident::new(get_attr_name(&|n| { String::from(n) }));
                     quote!(
                         if let Some(ref item) = data.#name {
                             try!(#ser_call);
@@ -480,7 +542,7 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
                     )
                 }
                 _ => {
-                    let name = get_attr_name(&|n| { format!("{}s", n) });
+                    let name = quote::Ident::new(get_attr_name(&|n| { format!("{}s", n) }));
                     quote!(
                         for item in &data.#name {
                             try!(#ser_call);
@@ -496,25 +558,35 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
         };
         render_string(HashBuilder::new().insert("cls_name", cls_name)
                                         .insert("conv_name", conv_name)
+                                        .insert("attributes", attributes)
                                         .insert("events", quote!( #( #events )* ).to_string()),
                       r#"
-        impl SerializeVia<{{{ cls_name }}}> for {{{ conv_name }}} {
-            fn serialize_via<W: io::Write>(data: &{{{ cls_name }}}, sink: &mut EventWriter<W>, name: &str)
-                    -> Result<(), SerError> {
-                let elemname = Name::local(name);
-                try!(sink.write(
-                    XmlEvent::StartElement {
-                        name: elemname.clone(),
-                        attributes: Cow::Owned(vec![]),
-                        namespace: Cow::Owned(Namespace::empty())
-                    }
-                ));
-                
-                {{{ events }}}
-                
-                try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
-                Ok(())
+impl SerializeVia<{{{ cls_name }}}> for {{{ conv_name }}} {
+    fn serialize_via<W: io::Write>(data: &{{{ cls_name }}}, sink: &mut EventWriter<W>, name: &str)
+            -> Result<(), SerError> {
+        let elemname = Name::local(name);
+        let attributes = [
+            {{{ attributes }}}
+        ];
+        /// ugly workaround - the compiler will not allow this inside map()
+        fn borrow<'a>(x: &'a OwnedAttribute) -> Attribute<'a> {
+            x.borrow()
+        }
+        try!(sink.write(
+            XmlEvent::StartElement {
+                name: elemname.clone(),
+                attributes: Cow::Owned(attributes.iter()
+                                                 .map(|a| borrow(a))
+                                                 .collect()),
+                namespace: Cow::Owned(Namespace::empty())
             }
-        }"#)
+        ));
+        
+        {{{ events }}}
+        
+        try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
+        Ok(())
+    }
+}"#)
     }
 }

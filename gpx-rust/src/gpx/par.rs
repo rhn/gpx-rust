@@ -16,7 +16,7 @@ use xml::{ XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use xsd;
 use xsd::par::{ parse_time, parse_decimal };
 use gpx;
-use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route };
+use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem, ParserMessage };
@@ -178,6 +178,13 @@ impl ParseVia<TrackSegment> for conv::Trkseg {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<TrackSegment, ElementError> {
         TrackSegmentParser::new(parser).parse_self(elem_start)
+    }
+}
+
+impl ParseVia<Link> for conv::Link {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<Link, ElementError> {
+        LinkParser::new(parser).parse_self(elem_start)
     }
 }
 

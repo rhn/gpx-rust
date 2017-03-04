@@ -1,6 +1,7 @@
 //! Generates foo_auto.rs files containing impls
 extern crate xml_parsergen;
 
+use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::fs::File;
@@ -52,7 +53,7 @@ fn process() -> Result<(), Error> {
         "copyrightType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
         "latitudeType".into() => ("f64".into(), TypeConverter::AttributeFun("gpx::conv::Latitude::from_attr".into())),
         "longitudeType".into() => ("f64".into(), TypeConverter::AttributeFun("gpx::conv::Longitude::from_attr".into())),
-        "linkType".into() => ("XmlElement".into(), "parse_elem".into()),
+        "linkType".into() => ("Link".into(), TypeConverter::UniversalClass("::gpx::conv::Link".into())),
         "fixType".into() => ("Fix".into(), "parse_fix".into()),
         "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
         "extensionsType".into() => ("XmlElement".into(), "parse_elem".into()), // FIXME: dedicated type?
@@ -67,7 +68,8 @@ fn process() -> Result<(), Error> {
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
         "xsd:string".into() => ("String".into(), TypeConverter::UniversalClass("::xsd::conv::String".into())),
         "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u64".into()),
-        "xsd:degreesType".into() => ("xsd::Degrees".into(), "parse_string".into()),
+        "degreesType".into() => ("Degrees".into(), "parse_string".into()),
+        "xsd:anyURI".into() => ("xsd::Uri".into(), TypeConverter::UniversalClass("::xsd::conv::Uri".into())),
     };
     let parsers = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
@@ -77,6 +79,7 @@ fn process() -> Result<(), Error> {
         ParserInfo { name: "GpxElemParser".into(), type_: types.get("gpxType").unwrap() },
         ParserInfo { name: "RteParser".into(), type_: types.get("rteType").unwrap() },
         ParserInfo { name: "TrkParser".into(), type_: types.get("trkType").unwrap() },
+        ParserInfo { name: "LinkParser".into(), type_: types.get("linkType").unwrap() },
     ];
     let parser_impls = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: types.get("trksegType").unwrap() },
@@ -86,6 +89,7 @@ fn process() -> Result<(), Error> {
         ParserInfo { name: "GpxElemParser".into(), type_: types.get("gpxType").unwrap() },
         ParserInfo { name: "RteParser".into(), type_: types.get("rteType").unwrap() },
         ParserInfo { name: "TrkParser".into(), type_: types.get("trkType").unwrap() },
+        ParserInfo { name: "LinkParser".into(), type_: types.get("linkType").unwrap() },
     ];
     let structs = vec![
         StructInfo { name: "Metadata".into(),
@@ -109,8 +113,11 @@ fn process() -> Result<(), Error> {
                          "link" => "links",
                          "type" => "type_",
                          "rtept" => "waypoints" } },
+        StructInfo { name: "Link".into(),
+                     type_name: "linkType".into(),
+                     tags: HashMap::new() },
     ];
-    let builder_impls = ["RteParser", "TrkParser"].iter().map(|name: &&'static str| {
+    let builder_impls = ["RteParser", "TrkParser", "LinkParser"].iter().map(|name: &&'static str| {
         let type_ = parser_impls.iter().find(|pinfo| pinfo.name.as_str() == *name).unwrap().type_;
         let sinfo = structs.iter()
                            .find(|sinfo| types.get(sinfo.type_name.as_str()).unwrap() as *const _ == type_ as *const _)
@@ -124,7 +131,7 @@ fn process() -> Result<(), Error> {
         for item in &structs {
             try!(f.write(
                 gpx::Generator::struct_def(&item.name, &item.tags,
-                    types.get(item.type_name.as_str()).unwrap(),
+                    types.get(item.type_name.as_str()).expect(&format!("No type {}", item.type_name)),
                     &attr_convs).as_bytes()
             ).map_err(Error::Io));
         }

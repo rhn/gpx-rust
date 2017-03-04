@@ -6,7 +6,7 @@ pub struct Bounds {}
 pub struct Version {}
 
 pub struct Rte {}
-
+pub struct Link {}
 pub struct Metadata {}
 pub struct Trk {}
 pub struct Trkseg {}

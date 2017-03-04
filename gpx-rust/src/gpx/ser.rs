@@ -30,7 +30,8 @@ pub enum AttributeValueError {
     LatitudeOutOfBounds(f64)
 }
 
-trait ToAttributeVia<Data> {
+// FIXME: move to general ser
+pub trait ToAttributeVia<Data> {
     fn to_attribute(&Data) -> Result<String, AttributeValueError>;
 }
 
@@ -171,7 +172,7 @@ impl Serialize for Waypoint {
         set_optional!(sink, self.description, "desc");
         set_optional!(sink, self.source, "src");
         for item in &self.links {
-            try!(item.serialize_with(sink, "link"));
+            try!(conv::Link::serialize_via(item, sink, "link"));
         }
         set_optional!(sink, self.symbol, "symbol");
         set_optional!(sink, self.type_, "type");

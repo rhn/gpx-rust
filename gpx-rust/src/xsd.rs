@@ -5,7 +5,7 @@ pub type Time = chrono::DateTime<chrono::FixedOffset>;
 pub type DateTime = chrono::DateTime<chrono::FixedOffset>;
 pub type NonNegativeInteger = u64;
 pub type Decimal = String; // FIXME
-pub type Degrees = String; // FIXME
+pub type Uri = String;
 
 pub mod par {
     extern crate xml as _xml;
@@ -71,21 +71,38 @@ pub mod par {
             Ok(String::from(attr))
         }
     }
+    
+    impl FromAttribute<xsd::Uri> for conv::Uri {
+        fn from_attr(attr: &str) -> Result<xsd::Uri, AttributeValueError> {
+            Ok(xsd::Uri::from(attr))
+        }
+    }
 }
 
 pub mod conv {
     use std;
     pub type String = std::string::String;
+    pub struct Uri {}
 }
 
 mod ser {
     use xsd;
+    use xsd::conv;
     use ser::SerializeCharElem;
+    
+    use gpx::ser::{ ToAttributeVia, AttributeValueError };
+    
     impl SerializeCharElem for xsd::NonNegativeInteger {
         fn to_characters(&self) -> String { self.to_string() }
     }
 
     impl SerializeCharElem for xsd::DateTime {
         fn to_characters(&self) -> String { self.to_rfc3339() }
+    }
+    
+    impl ToAttributeVia<xsd::Uri> for conv::Uri {
+        fn to_attribute(data: &xsd::Uri) -> Result<String, AttributeValueError> {
+            Ok(data.to_string())
+        }
     }
 }
