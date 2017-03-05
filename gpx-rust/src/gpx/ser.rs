@@ -181,7 +181,7 @@ impl Serialize for Waypoint {
         for item in &self.links {
             try!(conv::Link::serialize_via(item, sink, "link"));
         }
-        set_optional!(sink, self.symbol, "symbol");
+        set_optional!(sink, self.symbol, "sym");
         set_optional!(sink, self.type_, "type");
         set_optional!(sink, self.fix, "fix");
         set_optional!(sink, self.satellites, "sat");
