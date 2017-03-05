@@ -11,3 +11,4 @@ pub struct Metadata {}
 pub struct Trk {}
 pub struct Trkseg {}
 pub struct Gpx {}
+pub type Extensions = ::conv::XmlElement;

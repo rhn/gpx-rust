@@ -230,7 +230,8 @@ pub struct Gpx {
     metadata: Option!(Metadata),
     waypoints: Vec!(Waypoint),
     routes: Vec<Route>,
-    tracks: Vec!(Track),
+    tracks: Vec<Track>,
+    extensions: Option<XmlElement>,
 }
 
 #[derive(Debug)]

@@ -129,7 +129,9 @@ impl SerializeVia<Gpx> for conv::Gpx {
         for item in &data.tracks {
             try!(::gpx::conv::Trk::serialize_via(item, sink, "trk"));
         }
-        
+        if let Some(ref ext) = data.extensions {
+            try!(::gpx::conv::Extensions::serialize_via(ext, sink, "extensions"));
+        }
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
     }

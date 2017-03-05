@@ -248,16 +248,3 @@ impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
         Ok(TrackSegment { waypoints: self.trkpt })
     }
 }
-
-impl<'a, T: Read> ElementBuild for GpxElemParser<'a, T> {
-    type Element = Gpx;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
-        Ok(Gpx { version: self.version.expect("Version uninitialized"),
-                 creator: self.creator.expect("Creator uninitialized"),
-                 metadata: self.metadata,
-                 waypoints: self.wpt,
-                 routes: self.rte,
-                 tracks: self.trk })
-    }
-}

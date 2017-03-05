@@ -49,6 +49,7 @@ fn process() -> Result<(), Error> {
 
     let types = gpx::get_types();
     let attr_convs: TypeMap = map!{
+        "gpxType".into() => ("Gpx".into(), TypeConverter::UniversalClass("::gpx::conv::Gpx".into())),
         "boundsType".into() => ("Bounds".into(), TypeConverter::UniversalClass("::gpx::conv::Bounds".into())),
         "copyrightType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
         "latitudeType".into() => ("f64".into(), TypeConverter::AttributeFun("gpx::conv::Latitude::from_attr".into())),
@@ -116,15 +117,31 @@ fn process() -> Result<(), Error> {
         StructInfo { name: "Link".into(),
                      type_name: "linkType".into(),
                      tags: HashMap::new() },
+        StructInfo { name: "Gpx".into(),
+                     type_name: "gpxType".into(),
+                     tags: map! {
+                         "wpt" => "waypoints",
+                         "rte" => "routes",
+                         "trk" => "tracks" } },
     ];
-    let builder_impls = ["RteParser", "TrkParser", "LinkParser"].iter().map(|name: &&'static str| {
-        let type_ = parser_impls.iter().find(|pinfo| pinfo.name.as_str() == *name).unwrap().type_;
+    let builder_impls = ["RteParser", "TrkParser", "LinkParser", "GpxElemParser"]
+                        .iter().map(|name: &&'static str| {
+        let type_ = parser_impls.iter()
+                                .find(|pinfo| pinfo.name.as_str() == *name)
+                                .expect(&format!("{} not in parser impls", *name))
+                                .type_;
         let sinfo = structs.iter()
                            .find(|sinfo| types.get(sinfo.type_name.as_str()).unwrap() as *const _ == type_ as *const _)
-                           .unwrap();
+                           .expect(&format!("type of {} not in structs", *name));
         (*name,
          type_,
          sinfo)
+    }).collect::<Vec<_>>();
+    let serializers = ["Metadata", "Track", "TrackSegment", "Route", "Link"]
+                      .iter().map(|name: &&'static str| {
+        structs.iter()
+               .find(|sinfo| sinfo.name == *name)
+               .expect(&format!("Structure {} not defined", *name))
     }).collect::<Vec<_>>();
 
     try!(write_file(&out_dir.join("gpx_auto.rs"), |f| {
@@ -157,7 +174,7 @@ fn process() -> Result<(), Error> {
     }));
     try!(write_file(&out_dir.join("gpx_ser_auto.rs"), |f| {
         try!(f.write(gpx::Generator::header().as_bytes()).map_err(Error::Io));
-        for item in &structs {
+        for item in &serializers {
             try!(f.write(
                 gpx::Generator::serializer_impl(&item.name, &item.tags,
                                                 &item.type_name,
