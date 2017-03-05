@@ -1,13 +1,19 @@
+//! Types defined in XSD spec.
+//! Number types are not converted precisely to save on complexity and speed.
+//! XSD defines numbers to have arbitrary precision and to save trailing zeroes, which is not required for basic purposes.
+
 extern crate chrono;
 extern crate std;
 
 pub type Time = chrono::DateTime<chrono::FixedOffset>;
 pub type DateTime = chrono::DateTime<chrono::FixedOffset>;
+
 pub type NonNegativeInteger = u64;
 pub type Decimal = f64;
 pub type Uri = String;
 
 pub mod par {
+    //! Parsing impls
     extern crate xml as _xml;
 
     use std;
@@ -80,6 +86,7 @@ pub mod par {
 }
 
 pub mod conv {
+    //! conversion markers
     use std;
     pub type String = std::string::String;
     pub type Decimal = f64;
@@ -87,6 +94,7 @@ pub mod conv {
 }
 
 mod ser {
+    //! Serialization impls
     use xsd;
     use xsd::conv;
     use ser::SerializeCharElem;
