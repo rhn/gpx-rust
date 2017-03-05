@@ -213,6 +213,7 @@ impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
     }
 }
 
+/// Waypoints need custom building because of the "location" field being composed of attributes and an element.
 impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
     type Element = Waypoint;
     type Error = Error;

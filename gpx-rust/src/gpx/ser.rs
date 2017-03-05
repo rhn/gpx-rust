@@ -98,6 +98,7 @@ impl SerializeDocument for Gpx {
     }
 }
 
+/// Gpx needs custom serialization because it needs to carry the GPX namespace and version number
 impl SerializeVia<Gpx> for conv::Gpx {
     fn serialize_via<W: io::Write>(data: &Gpx, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), SerError> {
@@ -147,6 +148,7 @@ impl GpxVersion {
     }
 }
 
+/// Custom serialization beeded because of the location field
 impl Serialize for Waypoint {
     fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), SerError> {
