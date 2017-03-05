@@ -8,6 +8,8 @@ use self::_xml::name::Name;
 use self::_xml::namespace::{ Namespace, NS_NO_PREFIX };
 use self::_xml::attribute::Attribute;
 use self::_xml::writer::{ XmlEvent, EventWriter };
+
+use xsd;
 use gpx::{ Gpx, GpxVersion, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
@@ -167,7 +169,7 @@ impl Serialize for Waypoint {
             namespace: Cow::Owned(Namespace::empty()),
         }));
         if let Some(ref item) = self.location.elevation {
-            try!(item.serialize_with(sink, "ele"));
+            try!(xsd::conv::Decimal::serialize_via(item, sink, "ele"));
         }
         if let Some(ref item) = self.time {
             try!(item.serialize_with(sink, "time"));

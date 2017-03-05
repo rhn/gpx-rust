@@ -30,6 +30,7 @@ pub enum _ElementError {
     Str(&'static str),
     XmlEvent(_xml::reader::Error),
     BadInt(std::num::ParseIntError),
+    BadFloat(std::num::ParseFloatError),
     BadString(std::string::ParseError),
     BadTime(chrono::ParseError),
     UnknownElement(OwnedName),
@@ -56,6 +57,12 @@ impl From<std::num::ParseIntError> for _ElementError {
 impl From<std::string::ParseError> for _ElementError {
     fn from(err: std::string::ParseError) -> _ElementError {
         _ElementError::BadString(err)
+    }
+}
+
+impl From<std::num::ParseFloatError> for _ElementError {
+    fn from(err: std::num::ParseFloatError) -> _ElementError {
+        _ElementError::BadFloat(err)
     }
 }
 
@@ -95,6 +102,7 @@ impl ErrorTrait for _ElementError {
             _ElementError::Str(_) => "Str (FIXME)",
             _ElementError::XmlEvent(_) => "XmlEvent",
             _ElementError::BadInt(_) => "Bad int",
+            _ElementError::BadFloat(_) => "Bad float",
             _ElementError::BadString(_) => "Bad string",
             _ElementError::BadTime(_) => "Bad time",
             _ElementError::UnknownElement(_) => "Unknown element",

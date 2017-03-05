@@ -4,7 +4,7 @@ extern crate std;
 pub type Time = chrono::DateTime<chrono::FixedOffset>;
 pub type DateTime = chrono::DateTime<chrono::FixedOffset>;
 pub type NonNegativeInteger = u64;
-pub type Decimal = String; // FIXME
+pub type Decimal = f64;
 pub type Uri = String;
 
 pub mod par {
@@ -82,6 +82,7 @@ pub mod par {
 pub mod conv {
     use std;
     pub type String = std::string::String;
+    pub type Decimal = f64;
     pub struct Uri {}
 }
 
@@ -93,6 +94,10 @@ mod ser {
     use gpx::ser::{ ToAttributeVia, AttributeValueError };
     
     impl SerializeCharElem for xsd::NonNegativeInteger {
+        fn to_characters(&self) -> String { self.to_string() }
+    }
+    
+    impl SerializeCharElem for xsd::Decimal {
         fn to_characters(&self) -> String { self.to_string() }
     }
 

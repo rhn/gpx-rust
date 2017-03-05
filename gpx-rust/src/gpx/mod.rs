@@ -290,10 +290,8 @@ pub struct Waypoint {
 struct Point {
     latitude: f64,
     longitude: f64,
-    elevation: Option<XmlDecimal>,
+    elevation: Option<f64>,
 }
-
-type XmlDecimal = String;
 
 #[derive(Debug)]
 enum Fix {
