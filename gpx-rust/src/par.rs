@@ -51,22 +51,20 @@ pub fn parse_chars<R: std::io::Read, F, Res, E: ElementError, EInner>
     -> Result<Res, E>
         where F: Fn(&str) -> Result<Res, EInner>,
               E::Free: From<EInner> {
-    let mut ret = None;
+    let mut ret = String::new();
     loop {
         match parser.next() {
             Ok(XmlEvent::Characters(data)) => {
-                ret = Some(try!(decode(&data).map_err(|e| {
-                    E::from_free(e.into(), parser.position())
-                })));
+                ret = data;
             }
             Ok(XmlEvent::EndElement { name }) => {
-                if name == elem_start.name {
-                    return match ret {
-                        Some(c) => Ok(c),
-                        None => Err(E::from_free("Missing data".into(), parser.position()))
-                    }
+                return if name == elem_start.name {
+                    decode(&ret).map_err(|e| {
+                        E::from_free(e.into(), parser.position())
+                    })
+                } else {
+                    Err(E::from_free("Unexpected end".into(), parser.position()))
                 }
-                return Err(E::from_free("Unexpected end".into(), parser.position()));
             }
             Ok(XmlEvent::Whitespace(s)) => {
                 println!("{:?}", s);
