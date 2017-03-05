@@ -74,8 +74,9 @@ pub struct DocInfo {
 
 pub trait ElementBuild {
     type Element;
-    type Error : From<Error> + From<&'static str> + Into<::gpx::par::_ElementError>;
-    fn build(self) -> Result<Self::Element, Self::Error>;
+    type Error;
+    type BuildError;
+    fn build(self) -> Result<Self::Element, Self::BuildError>;
 }
 
 pub trait ElementParse<'a, T: Read> where Self: Sized + ElementBuild {
@@ -132,6 +133,7 @@ pub trait ElementParse<'a, T: Read> where Self: Sized + ElementBuild {
 impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
     type Element = XmlElement;
     type Error = Error;
+    type BuildError = ();
     fn build(self) -> Result<XmlElement, Error> {
         let elem_start = self.info.unwrap(); // this is a programming error if info is not present here
         Ok(XmlElement {

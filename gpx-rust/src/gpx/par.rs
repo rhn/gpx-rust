@@ -72,15 +72,6 @@ impl From<chrono::ParseError> for _ElementError {
     }
 }
 
-/// FIXME: Remove this once gpx::Error figured out
-impl From<gpx::Error> for _ElementError {
-    #[allow(unused_variables)]
-    fn from(err: gpx::Error) -> _ElementError {
-        println!("{:?}", err);
-        _ElementError::Str("BUG: gpx::Error")
-    }
-}
-
 /// FIXME: Remove this once xml::Error figured out
 impl From<xml::Error> for _ElementError {
     #[allow(unused_variables)]
