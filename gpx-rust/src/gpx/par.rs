@@ -11,7 +11,7 @@ use std::io;
 use std::io::Read;
 use std::str::FromStr;
 use std::error::Error as ErrorTrait;
-use self::_xml::common::Position;
+use self::_xml::common::{ Position, TextPosition };
 use self::_xml::name::OwnedName;
 use self::_xml::reader::{ XmlEvent, EventReader };
 
@@ -20,13 +20,43 @@ use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse
 use xsd;
 use xsd::par::{ parse_time, parse_decimal };
 use gpx;
-use gpx::{ ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
+use gpx::{ Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem };
 use ::par::{ ElementError as ElementErrorTrait, ElementErrorFree, AttributeValueError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
+
+
+#[derive(Debug)]
+pub struct ElementError {
+    pub error: _ElementError,
+    pub position: TextPosition,
+}
+
+impl fmt::Display for ElementError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "Position {}: {}", self.position, self.error)
+    }
+}
+
+impl ErrorTrait for ElementError {
+    fn description(&self) -> &str {
+        ""
+    }
+    fn cause(&self) -> Option<&std::error::Error> {
+        Some(&self.error)
+    }
+}
+
+impl ElementErrorTrait for ElementError {
+    type Free = _ElementError;
+    fn with_position(err: Self::Free, position: TextPosition) -> Self {
+        ElementError { error: err, position: position }
+    }
+}
+
 
 
 #[derive(Debug)]
@@ -297,10 +327,10 @@ impl<T: Read> ParseXml<T> for DocumentParser<T> {
         let _ = info;
     }
     
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::ElementError> {
+    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ElementError> {
         if let Some(_) = self.gpx {
-            return Err(::gpx::ElementError::with_position("Duplicate GPX".into(),
-                                                          self.reader.position()));
+            return Err(ElementError::with_position("Duplicate GPX".into(),
+                                                   self.reader.position()));
         }
         let gpx = try!(GpxElemParser::new(&mut self.reader).parse(elem_start));
         self.gpx = Some(gpx);
@@ -309,8 +339,8 @@ impl<T: Read> ParseXml<T> for DocumentParser<T> {
     fn build(self) -> Result<Gpx, Self::Error> {
         match self.gpx {
             Some(gpx) => Ok(gpx),
-            None => Err(::gpx::ElementError::with_position("Missing GPX".into(),
-                                                           self.reader.position()).into())
+            None => Err(ElementError::with_position("Missing GPX".into(),
+                                                    self.reader.position()).into())
         }
     }
 }

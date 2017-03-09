@@ -435,7 +435,7 @@ struct {{{ name }}} {
                                         .insert("body", body),
                       r#"
 impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
-    type Error = ::gpx::ElementError;
+    type Error = ::gpx::par::ElementError;
     ParserStart!( {{{ macro_attrs }}} );
     {{{ body }}}
     fn parse_element(&mut self, elem_start: ElemStart)

@@ -13,7 +13,7 @@ use par::ElementError as ElementErrorTrait;
 pub enum DocumentError {
     ParserError(xml::reader::Error),
     DocumentParserError(DocumentParserError),
-    BadData(::gpx::ElementError)
+    BadData(::gpx::par::ElementError)
 }
 
 impl From<xml::reader::Error> for DocumentError {
@@ -22,8 +22,8 @@ impl From<xml::reader::Error> for DocumentError {
     }
 }
 
-impl From<::gpx::ElementError> for DocumentError {
-    fn from(err: ::gpx::ElementError) -> DocumentError {
+impl From<::gpx::par::ElementError> for DocumentError {
+    fn from(err: ::gpx::par::ElementError) -> DocumentError {
         DocumentError::BadData(err)
     }
 }
@@ -221,7 +221,7 @@ impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
 }
 
 impl<'a, T: Read> ElementParse<'a, T> for ElementParser<'a, T> {
-    type Error = ::gpx::ElementError;
+    type Error = ::gpx::par::ElementError;
     fn new(reader: &'a mut EventReader<T>)
             -> ElementParser<'a, T> {
         ElementParser { reader: reader,
@@ -259,7 +259,7 @@ impl<'a, T: Read> ElementParse<'a, T> for ElementParser<'a, T> {
 
 pub trait ParseXml<T: Read> where Self: Sized {
     type Document;
-    type Error: From<xml::reader::Error> + From<DocumentParserError> + From<::gpx::ElementError>;
+    type Error: From<xml::reader::Error> + From<DocumentParserError> + From<::gpx::par::ElementError>;
     // public iface
     fn new(source: T) -> Self;
     fn parse(mut self) -> Result<Self::Document, Self::Error> {
@@ -295,7 +295,7 @@ pub trait ParseXml<T: Read> where Self: Sized {
     // internal
     fn next(&mut self) -> Result<XmlEvent, xml::reader::Error>;
     fn handle_info(&mut self, info: DocInfo) -> ();
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::ElementError>;
+    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::par::ElementError>;
     fn build(self) -> Result<Self::Document, Self::Error>;
 }
 
@@ -313,8 +313,7 @@ impl<T: Read> ParseXml<T> for XmlParser<T> {
     fn handle_info(&mut self, info: DocInfo) -> () {
         self.info = Some(info)
     }
-    fn parse_element(&mut self, elem_start: ElemStart)
-            -> Result<(), ::gpx::ElementError> {
+    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::par::ElementError> {
         let elem = try!(ElementParser::new(&mut self.reader).parse(elem_start));
         self.nodes.push(XmlNode::Element(elem));
         Ok(())

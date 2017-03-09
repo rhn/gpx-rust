@@ -10,7 +10,7 @@ use self::_xml::reader::{ EventReader, XmlEvent };
 
 use xml::{ ElementParse, ElementParser, XmlElement, ElemStart };
 use gpx::par::_ElementError;
-use gpx::ElementError as ElementErrorE;
+use gpx::par::ElementError as ElementErrorE;
 use conv;
 
 

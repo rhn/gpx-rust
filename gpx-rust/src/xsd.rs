@@ -25,7 +25,7 @@ pub mod par {
     use par::ParseVia;
     use par::parse_chars;
     use par::AttributeValueError;
-    use gpx::ElementError; // FIXME: move to par and concretize these types
+    use gpx::par::ElementError; // FIXME: move to par and concretize these types
     use xsd;
     use xsd::NonNegativeInteger;
     use gpx::par::{ _ElementError, FromAttribute }; // FIXME: move to par

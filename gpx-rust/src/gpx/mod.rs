@@ -7,17 +7,14 @@ extern crate geo;
 
 use std;
 use std::io;
-use std::error::Error as ErrorTrait;
 use std::str::FromStr;
 use std::fmt;
 
 use self::geo::Bbox;
-use self::_xml::common::TextPosition;
 use self::_xml::name::OwnedName;
 
 use xml;
 use xml::XmlElement;
-use par::ElementError as ElementErrorTrait;
 use xsd;
 use xsd::*;
 use par::{ ParserMessage, AttributeValueError };
@@ -27,7 +24,7 @@ mod ser_auto;
 pub mod ser;
 pub mod par;
 
-use self::par::{ _ElementError };
+use self::par::_ElementError;
 
 
 pub type Parser<T> = par::DocumentParser<T>;
@@ -46,34 +43,6 @@ impl<T> EmptyInit for Vec<T> {
 }
 
 #[derive(Debug)]
-pub struct ElementError {
-    pub error: par::_ElementError,
-    pub position: TextPosition,
-}
-
-impl fmt::Display for ElementError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "Position {}: {}", self.position, self.error)
-    }
-}
-
-impl ErrorTrait for ElementError {
-    fn description(&self) -> &str {
-        ""
-    }
-    fn cause(&self) -> Option<&std::error::Error> {
-        Some(&self.error)
-    }
-}
-
-impl ElementErrorTrait for ElementError {
-    type Free = par::_ElementError;
-    fn with_position(err: Self::Free, position: TextPosition) -> Self {
-        ElementError { error: err, position: position }
-    }
-}
-
-#[derive(Debug)]
 pub enum Error {
     Str(&'static str),
     Chrono(chrono::format::ParseError),
@@ -83,7 +52,7 @@ pub enum Error {
     BadAttributeValue(AttributeValueError), // use when value out of XML spec for any attribute
     BadAttribute(OwnedName, OwnedName),
     MalformedData(String),
-    BadElement(ElementError),
+    BadElement(par::ElementError),
 }
 
 impl fmt::Display for Error {
@@ -133,8 +102,8 @@ impl ParserMessage for Error {
     }
 }
 
-impl From<ElementError> for Error {
-    fn from(err: ElementError) -> Error {
+impl From<par::ElementError> for Error {
+    fn from(err: par::ElementError) -> Error {
         Error::BadElement(err)
     }
 }
