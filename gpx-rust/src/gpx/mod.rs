@@ -1,3 +1,5 @@
+//! GPX types
+
 extern crate xml as _xml;
 extern crate chrono;
 extern crate geo;
@@ -22,7 +24,7 @@ use xsd;
 use xsd::*;
 use par::{ ParserMessage, parse_string, AttributeValueError };
 
-pub mod conv;
+mod conv;
 mod ser_auto;
 pub mod ser;
 pub mod par;
