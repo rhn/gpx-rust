@@ -11,7 +11,7 @@ use std::io;
 use std::io::Read;
 use std::str::FromStr;
 use std::error::Error as ErrorTrait;
-use self::_xml::common::{ Position, TextPosition };
+use self::_xml::common::Position;
 use self::_xml::name::OwnedName;
 use self::_xml::reader::{ XmlEvent, EventReader };
 
@@ -24,7 +24,7 @@ use gpx::{ Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem };
-use ::par::{ PositionedError, ElementError as PositionedErrorTrait, ElementErrorFree, AttributeValueError };
+use ::par::{ PositionedError, ElementErrorFree, AttributeValueError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 

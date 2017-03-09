@@ -8,7 +8,7 @@ use self::xml::namespace::Namespace;
 use self::xml::reader::{ EventReader, XmlEvent };
 use self::xml::common::{ XmlVersion, TextPosition, Position };
 
-use par::{ ElementError as ElementErrorTrait, PositionedError };
+use par::PositionedError;
 
 #[derive(Debug)]
 pub enum DocumentError {
