@@ -9,7 +9,7 @@ use clap::{ App, Arg };
 
 use gpx_rust::xml::{ ParseXml, DocumentError };
 use gpx_rust::ser::{ SerializeDocument, SerError };
-use gpx_rust::gpx::{ Gpx, Parser, Error };
+use gpx_rust::gpx::{ Gpx, Parser };
 
 
 #[derive(Debug)]
