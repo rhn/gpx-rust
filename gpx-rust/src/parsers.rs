@@ -4,7 +4,7 @@ extern crate chrono;
 
 macro_rules! _parser_attr {
     ( $self_:ident, $value:ident, { $field:ident, $func:expr } ) => {
-        $self_.$field = Some(try!($func($value).map_err(Self::Error::from_bad_attr_val)));
+        $self_.$field = Some(try!($func($value)));
     };
     ( $self_:ident, $value:ident, { $field:ident, $func:path } ) => {
         $self_.$field = Some(try!($func($value).map_err(Self::Error::from_bad_attr_val)));
@@ -15,7 +15,7 @@ macro_rules! _parser_attr {
 macro_rules! ParserStart {
     ( $( $name:pat => $attr:tt ),* $(,)* ) => {
         fn parse_start(&mut self, elem_start: ElemStart)
-                -> Result<(), Self::Error> {
+                -> Result<(), ::xml::AttributeError> {
             for attr in elem_start.attributes {
                 let name = attr.name;
 
@@ -38,7 +38,7 @@ macro_rules! ParserStart {
                         _parser_attr! { self, v, $attr }
                     } ),*
                     _ => {
-                        return Err(Self::Error::from_unexp_attr(elem_start.name, name));
+                        return Err(::xml::AttributeError::Unexpected(name));
                     }
                 }
             }
@@ -97,9 +97,8 @@ macro_rules! _ParserImplBody {
                 }),*
                 _ => {
                     // TODO: add config and handler
-                    return Err(Error::from(
-                        ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
-                                                self.reader.position())));
+                    return Err(ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
+                                                self.reader.position()));
                 }
             };
             Ok(())
@@ -111,8 +110,8 @@ macro_rules! _ParserImplBody {
                 &None => panic!("Name was not set while parsing"),
             }
         }
-        fn next(&mut self) -> Result<XmlEvent, xml::Error> {
-            self.reader.next().map_err(xml::Error::Xml)
+        fn next(&mut self) -> Result<XmlEvent, _xml::reader::Error> {
+            self.reader.next()
         }
     }
 }
@@ -139,6 +138,7 @@ macro_rules! Parser {
         }
 
         impl<'a, T: Read> ElementParse<'a, T> for $parser<'a, T> {
+            type Error = ::gpx::ElementError;
             fn new(reader: &'a mut EventReader<T>) -> Self {
                 $parser { reader: reader,
                           elem_name: None,
@@ -146,6 +146,9 @@ macro_rules! Parser {
             }
             ParserStart!( $( $attr => $attrdata ),* );
             _ParserImplBody!( tags: { $( $tag => $tagdata, )* } );
+            fn get_parser_position(&self) -> TextPosition {
+                self.reader.position()
+            }
         }
     }
 }
@@ -160,8 +163,8 @@ macro_rules! ElementBuild {
     ) => {
         impl<'a, T: Read> ElementBuild for $parsername<'a, T> {
             type Element = $name;
-            type Error = $error;
-            fn build(self) -> Result<Self::Element, Self::Error> {
+            type BuildError = xml::BuildError;
+            fn build(self) -> Result<Self::Element, Self::BuildError> {
                 Ok($name { $( $i: self.$i ),* })
             }
         }

@@ -9,16 +9,20 @@ use self::_xml::common::{ Position, TextPosition };
 use self::_xml::reader::{ EventReader, XmlEvent };
 
 use xml::{ ElementParse, ElementParser, XmlElement, ElemStart };
-use gpx::par::{ AttributeValueError, _ElementError };
+use gpx::par::_ElementError;
 use gpx::ElementError as ElementErrorE;
 use conv;
 
 
 pub trait ElementErrorFree where Self: From<&'static str> + From<_xml::reader::Error> {}
 
-pub trait ElementError {
+pub trait ElementError where Self: Sized {
     type Free: ElementErrorFree;
-    fn from_free(err: Self::Free, position: TextPosition) -> Self;
+    // TODO: remove
+    fn from_free(err: Self::Free, position: TextPosition) -> Self {
+        Self::with_position(err, position)
+    }
+    fn with_position(err: Self::Free, position: TextPosition) -> Self;
 }
 
 /// Error classes in ElementParser must implement this
@@ -38,12 +42,19 @@ pub trait ParseVia<Data> {
 impl ParseVia<XmlElement> for conv::XmlElement {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<XmlElement, ElementErrorE> {
-        ElementParser::new(parser).parse_self(elem_start)
+        ElementParser::new(parser).parse(elem_start)
     }
 }
 
 pub trait FromAttributeVia<Data> {
     fn from_attribute(&str) -> Result<Data, AttributeValueError>;
+}
+
+/// Raise whenever attribute value is out of bounds
+#[derive(Debug)]
+pub enum AttributeValueError {
+    Str(&'static str),
+    Error(Box<std::error::Error>),
 }
 
 pub fn parse_chars<R: std::io::Read, F, Res, E: ElementError, EInner>
@@ -96,5 +107,5 @@ pub fn parse_u64<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start:
 // unused
 pub fn parse_elem<T: std::io::Read>(parser: &mut EventReader<T>, elem_start: ElemStart)
         -> Result<XmlElement, ElementErrorE> {
-    ElementParser::new(parser).parse_self(elem_start)
+    ElementParser::new(parser).parse(elem_start)
 }

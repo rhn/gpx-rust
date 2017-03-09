@@ -410,16 +410,15 @@ struct {{{ name }}} {
                 {{{ match_elems }}}
                 _ => {
                     // TODO: add config and handler
-                    return Err(Error::from(
-                        ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
-                                                self.reader.position())));
+                    return Err(ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
+                                                       self.reader.position()));
                 }
             };
             Ok(())"#)
         } else {
             String::from(r#"
-            Err(Error::from(ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
-                                                    self.reader.position())))"#)
+            Err(ElementError::from_free(_ElementError::UnknownElement(elem_start.name),
+                                                    self.reader.position()))"#)
         };
 
         let body = quote!(
@@ -436,11 +435,15 @@ struct {{{ name }}} {
                                         .insert("body", body),
                       r#"
 impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
+    type Error = ::gpx::ElementError;
     ParserStart!( {{{ macro_attrs }}} );
     {{{ body }}}
     fn parse_element(&mut self, elem_start: ElemStart)
             -> Result<(), Self::Error> {
         {{{ parse_element_body }}}
+    }
+    fn get_parser_position(&self) -> _xml::common::TextPosition {
+        self.reader.position()
     }
     fn get_name(&self) -> &OwnedName {
         match &self.elem_name {
@@ -448,8 +451,8 @@ impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
             &None => panic!("Name was not set while parsing"),
         }
     }
-    fn next(&mut self) -> Result<XmlEvent, xml::Error> {
-        self.reader.next().map_err(xml::Error::Xml)
+    fn next(&mut self) -> Result<XmlEvent, _xml::reader::Error> {
+        self.reader.next()
     }
 }"#)
     }
@@ -480,8 +483,8 @@ impl<'a, T: Read> ElementParse<'a, T> for {{{ cls_name }}}<'a, T> {
                       r#"
 impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
     type Element = {{{ struct_name }}};
-    type Error = {{{ error_name }}};
-    fn build(self) -> Result<Self::Element, Self::Error> {
+    type BuildError = xml::BuildError;
+    fn build(self) -> Result<Self::Element, Self::BuildError> {
         Ok({{{ struct_name }}} {
             {{{ inits }}}
         })

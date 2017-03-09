@@ -24,10 +24,11 @@ pub mod par {
     use par;
     use par::ParseVia;
     use par::parse_chars;
+    use par::AttributeValueError;
     use gpx::ElementError; // FIXME: move to par and concretize these types
     use xsd;
     use xsd::NonNegativeInteger;
-    use gpx::par::{ _ElementError, AttributeValueError, FromAttribute }; // FIXME: move to par
+    use gpx::par::{ _ElementError, FromAttribute }; // FIXME: move to par
     use xsd::conv;
     
     pub fn parse_int<T: std::io::Read, Error, EFree>

@@ -19,8 +19,8 @@ use gpx;
 use gpx::{ Error, ElementError, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
-use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem, ParserMessage };
-use ::par::{ ElementError as ElementErrorTrait, ElementErrorFree };
+use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem };
+use ::par::{ ElementError as ElementErrorTrait, ElementErrorFree, AttributeValueError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
@@ -33,7 +33,28 @@ pub enum _ElementError {
     BadFloat(std::num::ParseFloatError),
     BadString(std::string::ParseError),
     BadTime(chrono::ParseError),
+    BadAttribute(xml::AttributeError),
+    BadElement(xml::ElementError),
+    BadShape(xml::BuildError),
     UnknownElement(OwnedName),
+}
+
+impl From<xml::AttributeError> for _ElementError {
+    fn from(err: xml::AttributeError) -> _ElementError {
+        _ElementError::BadAttribute(err)
+    }
+}
+
+impl From<xml::ElementError> for _ElementError {
+    fn from(err: xml::ElementError) -> _ElementError {
+        _ElementError::BadElement(err)
+    }
+}
+
+impl From<xml::BuildError> for _ElementError {
+    fn from(err: xml::BuildError) -> _ElementError {
+        _ElementError::BadShape(err)
+    }
 }
 
 impl From<_xml::reader::Error> for _ElementError {
@@ -97,17 +118,14 @@ impl ErrorTrait for _ElementError {
             _ElementError::BadFloat(_) => "Bad float",
             _ElementError::BadString(_) => "Bad string",
             _ElementError::BadTime(_) => "Bad time",
+            _ElementError::BadShape(_) => "Wrong elements number",
+            _ElementError::BadAttribute(_) => "Bad attribute",
+            _ElementError::BadElement(_) => "Bad element",
             _ElementError::UnknownElement(_) => "Unknown element",
         }
     }
 }
 
-/// Raise whenever attribute value is out of bounds
-#[derive(Debug)]
-pub enum AttributeValueError {
-    Str(&'static str),
-    Error(Box<std::error::Error>),
-}
 /// FIXME: move to general par.rs
 pub trait FromAttribute<T> {
     fn from_attr(&str) -> Result<T, AttributeValueError>;
@@ -137,8 +155,8 @@ impl FromAttribute<GpxVersion> for conv::Version {
 
 impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
     type Element = Bounds;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
+    type BuildError = xml::BuildError;
+    fn build(self) -> Result<Self::Element, Self::BuildError> {
         Ok(Bounds { xmin: self.minlat.unwrap(),
                     ymin: self.minlon.unwrap(),
                     xmax: self.maxlat.unwrap(),
@@ -149,42 +167,42 @@ impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
 impl ParseVia<Bounds> for conv::Bounds {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<Bounds, ElementError> {
-        BoundsParser::new(parser).parse_self(elem_start)
+        BoundsParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<Metadata> for conv::Metadata {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<Metadata, ElementError> {
-        MetadataParser::new(parser).parse_self(elem_start)
+        MetadataParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<Route> for conv::Rte {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<Route, ElementError> {
-        RteParser::new(parser).parse_self(elem_start)
+        RteParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<Track> for conv::Trk {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<Track, ElementError> {
-        TrkParser::new(parser).parse_self(elem_start)
+        TrkParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<TrackSegment> for conv::Trkseg {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<TrackSegment, ElementError> {
-        TrackSegmentParser::new(parser).parse_self(elem_start)
+        TrackSegmentParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<Link> for conv::Link {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<Link, ElementError> {
-        LinkParser::new(parser).parse_self(elem_start)
+        LinkParser::new(parser).parse(elem_start)
     }
 }
 
@@ -199,8 +217,8 @@ pub fn copy(value: &str) -> Result<String, AttributeValueError> {
 
 impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
     type Element = Metadata;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
+    type BuildError = xml::BuildError;
+    fn build(self) -> Result<Self::Element, Self::BuildError> {
         Ok(Metadata { name: self.name,
                       description: self.desc,
                       author: self.author,
@@ -216,8 +234,8 @@ impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
 /// Waypoints need custom building because of the "location" field being composed of attributes and an element.
 impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
     type Element = Waypoint;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
+    type BuildError = xml::BuildError;
+    fn build(self) -> Result<Self::Element, Self::BuildError> {
         Ok(Waypoint { location: Point { latitude: self.lat.unwrap(),
                                         longitude: self.lon.unwrap(),
                                         elevation: self.ele },
@@ -244,8 +262,8 @@ impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
 
 impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
     type Element = TrackSegment;
-    type Error = Error;
-    fn build(self) -> Result<Self::Element, Self::Error> {
+    type BuildError = xml::BuildError;
+    fn build(self) -> Result<Self::Element, Self::BuildError> {
         Ok(TrackSegment { waypoints: self.trkpt })
     }
 }
