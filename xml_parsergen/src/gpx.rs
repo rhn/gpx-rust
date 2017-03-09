@@ -308,7 +308,7 @@ struct {{{ name }}} {
                                       elem_type.as_user_type()))
         });
         quote!(
-            pub struct #cls_name<'a, T: 'a + Read> {
+            struct #cls_name<'a, T: 'a + Read> {
                 reader: &'a mut EventReader<T>,
                 elem_name: Option<OwnedName>,
                 #( #attrs, )*

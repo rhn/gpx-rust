@@ -1,3 +1,7 @@
+//! Parsing of GPX files.
+//!
+//! Parses elements of XML files into Rust types
+
 extern crate xml as _xml;
 extern crate chrono;
 
@@ -268,17 +272,23 @@ impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
     }
 }
 
-pub struct Parser<T: Read> {
+/// Takes in GPX stream and returns an instance of `Gpx`.
+///
+/// ```
+/// let f = File::open("foo").unwrap();
+/// let gpx = DocumentParser::new(f).parse().unwrap();
+/// ```
+pub struct DocumentParser<T: Read> {
     reader: EventReader<T>,
     gpx: Option<Gpx>,
 }
 
-impl<T: Read> ParseXml<T> for Parser<T> {
+impl<T: Read> ParseXml<T> for DocumentParser<T> {
     type Document = Gpx;
     type Error = xml::DocumentError;
     fn new(source: T) -> Self {
-        Parser { reader: EventReader::new(source),
-                    gpx: None }
+        DocumentParser { reader: EventReader::new(source),
+                         gpx: None }
     }
     fn next(&mut self) -> Result<XmlEvent, _xml::reader::Error> {
         self.reader.next()
@@ -289,17 +299,18 @@ impl<T: Read> ParseXml<T> for Parser<T> {
     
     fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::ElementError> {
         if let Some(_) = self.gpx {
-            return Err(::gpx::ElementError::with_position("Duplicate GPX".into(), self.reader.position()));
+            return Err(::gpx::ElementError::with_position("Duplicate GPX".into(),
+                                                          self.reader.position()));
         }
-        let gpx = try!(GpxElemParser::new(&mut self.reader)
-                           .parse(elem_start));
+        let gpx = try!(GpxElemParser::new(&mut self.reader).parse(elem_start));
         self.gpx = Some(gpx);
         Ok(())
     }
     fn build(self) -> Result<Gpx, Self::Error> {
         match self.gpx {
             Some(gpx) => Ok(gpx),
-            None => Err(::gpx::ElementError::with_position("Missing GPX".into(), self.reader.position()).into())
+            None => Err(::gpx::ElementError::with_position("Missing GPX".into(),
+                                                           self.reader.position()).into())
         }
     }
 }

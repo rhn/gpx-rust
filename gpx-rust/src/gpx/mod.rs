@@ -30,7 +30,7 @@ pub mod par;
 use self::par::{ _ElementError };
 
 
-pub type Parser<T> = par::Parser<T>;
+pub type Parser<T> = par::DocumentParser<T>;
 
 
 trait EmptyInit {
