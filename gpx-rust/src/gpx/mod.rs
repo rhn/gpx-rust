@@ -29,7 +29,7 @@ mod ser_auto;
 pub mod ser;
 pub mod par;
 
-use self::par::{ TrackSegmentParser, GpxElemParser, LinkParser, _ElementError };
+use self::par::{ GpxElemParser, LinkParser, _ElementError };
 
 
 trait EmptyInit {
@@ -318,34 +318,17 @@ impl FromStr for Fix {
     }
 }
 
-macro_attr! {
-    #[derive(Parser!(
-        TrkParser {
-            attrs: {},
-            tags: {
-                "name" => { name = Some, fn, parse_string },
-                "cmt" => { comment = Some, fn, parse_string },
-                "desc" => { description = Some, fn, parse_string },
-                "src" => { source = Some, fn, parse_string },
-                "link" => { links = Vec, ElementParse, LinkParser },
-                "number" => { number = Some, fn, parse_int },
-                "type" => { type_ = Some, fn, parse_string },
-                "extensions" => { extensions = Some, ElementParse, ElementParser },
-                "trkseg" => { segments = Vec, ElementParse, TrackSegmentParser }
-            }
-        }
-    ), ElementBuild!(TrkParser, Error), XmlDebug)]
-    pub struct Track {
-        name: Option<String>,
-        comment: Option<String>,
-        description: Option<String>,
-        source: Option<String>,
-        links: Vec<Link>,
-        number: Option<xsd::NonNegativeInteger>,
-        type_: Option<String>,
-        extensions: Option<XmlElement>,
-        segments: Vec<TrackSegment>,
-    }
+#[derive(XmlDebug)]
+pub struct Track {
+    name: Option<String>,
+    comment: Option<String>,
+    description: Option<String>,
+    source: Option<String>,
+    links: Vec<Link>,
+    number: Option<xsd::NonNegativeInteger>,
+    type_: Option<String>,
+    extensions: Option<XmlElement>,
+    segments: Vec<TrackSegment>,
 }
 
 fn parse_int<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
