@@ -20,33 +20,33 @@ pub mod par {
     use std::io;
     use std::str::FromStr;
     
+    use xml;
     use xml::ElemStart;
     use par;
     use par::ParseVia;
     use par::parse_chars;
-    use par::AttributeValueError;
+    use par::{ PositionedError, AttributeValueError };
     use gpx::par::ElementError; // FIXME: move to par and concretize these types
     use xsd;
     use xsd::NonNegativeInteger;
     use gpx::par::{ _ElementError, FromAttribute }; // FIXME: move to par
     use xsd::conv;
     
-    pub fn parse_int<T: std::io::Read, Error, EFree>
+    pub fn parse_int<T: std::io::Read, Error>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<NonNegativeInteger, Error>
-            where Error: par::ElementError<Free=EFree>,
-                  EFree: par::ElementErrorFree + From<std::num::ParseIntError> {
+            -> Result<NonNegativeInteger, PositionedError<Error>>
+            where Error: From<std::num::ParseIntError> + From<xml::ElementError>
+                         + From<_xml::reader::Error>{
         par::parse_chars(parser, elem_start,
                          |chars| NonNegativeInteger::from_str(chars))
     }
 
-    pub fn parse_string<T: std::io::Read, Error, EFree>
+    pub fn parse_string<T: std::io::Read, Error>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<String, Error>
-            where Error: par::ElementError<Free=EFree>,
-                  EFree: par::ElementErrorFree + From<std::num::ParseIntError> {
+            -> Result<String, PositionedError<Error>>
+            where Error: From<xml::ElementError> + From<_xml::reader::Error> {
         par::parse_chars(parser, elem_start,
-                         |chars| Ok::<_, EFree>(chars.into()))
+                         |chars| Ok::<_, xml::ElementError>(chars.into()))
     }
     
     pub fn parse_time<T: std::io::Read>

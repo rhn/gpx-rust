@@ -24,22 +24,14 @@ use gpx::{ Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem };
-use ::par::{ PositionedError, ElementError as ElementErrorTrait, ElementErrorFree, AttributeValueError };
+use ::par::{ PositionedError, ElementError as PositionedErrorTrait, ElementErrorFree, AttributeValueError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
 
-pub type ElementError = PositionedError<_ElementError>;
+pub type Error = PositionedError<_ElementError>;
 
-
-impl ElementErrorTrait for ElementError {
-    type Free = _ElementError;
-    fn with_position(kind: Self::Free, position: TextPosition) -> Self {
-        ElementError { kind: kind, position: position }
-    }
-}
-
-
+pub type ElementError = Error;
 
 #[derive(Debug)]
 pub enum _ElementError {

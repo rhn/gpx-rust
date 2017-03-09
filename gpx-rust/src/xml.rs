@@ -7,7 +7,8 @@ use self::xml::attribute::OwnedAttribute;
 use self::xml::namespace::Namespace;
 use self::xml::reader::{ EventReader, XmlEvent };
 use self::xml::common::{ XmlVersion, TextPosition, Position };
-use par::ElementError as ElementErrorTrait;
+
+use par::{ ElementError as ElementErrorTrait, PositionedError };
 
 #[derive(Debug)]
 pub enum DocumentError {
@@ -130,18 +131,15 @@ pub trait ElementBuild {
     fn build(self) -> Result<Self::Element, Self::BuildError>;
 }
 
-pub trait ElementParse<'a, R: Read>
+pub trait ElementParse<'a, R: Read, E>
     where Self: Sized + ElementBuild,
-          <Self::Error as ::par::ElementError>::Free: From<AttributeError>
-                                                      + From<ElementError>
-                                                      + From<Self::BuildError> {
+          E: From<AttributeError> + From<ElementError> + From<Self::BuildError>
+             + From<xml::reader::Error> {
     // public iface
-    type Error: ::par::ElementError;
-    
     fn new(reader: &'a mut EventReader<R>) -> Self;
     
     /// Parses the element and its subelements, returning ElementBuild::Element instance.
-    fn parse(mut self, elem_start: ElemStart) -> Result<Self::Element, Self::Error> {
+    fn parse(mut self, elem_start: ElemStart) -> Result<Self::Element, PositionedError<E>> {
         try!(self.parse_start(elem_start).map_err(|e| self._with_pos(e)));
         loop {
             match try!(self.next().map_err(|e| self._with_pos(e))) {
@@ -166,13 +164,11 @@ pub trait ElementParse<'a, R: Read>
             }
         }
         let pos = self.get_parser_position();
-        self.build().map_err(|e| Self::Error::with_position(e.into(), pos))
+        self.build().map_err(|e| PositionedError::with_position(e.into(), pos))
     }
     /// Helper, converts any parse error to the positioned error type. Not a closure to hopefully save performance
-    fn _with_pos<E>(&self, err: E) -> Self::Error
-            where E: Into<<Self::Error as ::par::ElementError>::Free>
-    {
-        Self::Error::with_position(err.into(), self.get_parser_position())
+    fn _with_pos<Kind: Into<E>>(&self, kind: Kind) -> PositionedError<E> {
+        PositionedError::with_position(kind.into(), self.get_parser_position())
     }
     /// Helper, equivalent to self.reader.position()
     fn get_parser_position(&self) -> TextPosition;
@@ -186,17 +182,15 @@ pub trait ElementParse<'a, R: Read>
         Ok(())
     }
     /// Parses sub-element.
-    fn parse_element(&mut self, elem_start: ElemStart)
-            -> Result<(), Self::Error>;
+    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), PositionedError<E>>;
     /// Parses characters. By default ignores.
-    fn parse_characters(&mut self, data: String)
-            -> Result<(), <Self::Error as ::par::ElementError>::Free> {
+    fn parse_characters(&mut self, data: String) -> Result<(), E> {
         let _ = data;
         Ok(())
     }
     /// Parses whitespace (as defined by xml-rs Whitespace event). By Default ignores.
     fn parse_whitespace(&mut self, space: String)
-            -> Result<(), <Self::Error as ::par::ElementError>::Free> {
+            -> Result<(), E> {
         let _ = space;
         Ok(())
     }
@@ -220,8 +214,7 @@ impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
     }
 }
 
-impl<'a, T: Read> ElementParse<'a, T> for ElementParser<'a, T> {
-    type Error = ::gpx::par::ElementError;
+impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::_ElementError> for ElementParser<'a, T> {
     fn new(reader: &'a mut EventReader<T>)
             -> ElementParser<'a, T> {
         ElementParser { reader: reader,
@@ -232,14 +225,12 @@ impl<'a, T: Read> ElementParse<'a, T> for ElementParser<'a, T> {
         self.info = Some(elem_start);
         Ok(())
     }
-    fn parse_element(&mut self, elem_start: ElemStart)
-            -> Result<(), Self::Error> {
+    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::par::Error> {
         let elem = try!(ElementParser::new(self.reader).parse(elem_start));
         self.nodes.push(XmlNode::Element(elem));
         Ok(())
     }
-    fn parse_characters(&mut self, data: String)
-            -> Result<(), <Self::Error as ::par::ElementError>::Free> {
+    fn parse_characters(&mut self, data: String) -> Result<(), ::gpx::par::_ElementError> {
         self.nodes.push(XmlNode::Text(data));
         Ok(())
     }

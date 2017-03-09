@@ -10,6 +10,7 @@ use self::_xml::name::OwnedName;
 use self::_xml::common::{ Position, TextPosition };
 use self::_xml::reader::{ EventReader, XmlEvent };
 
+use xml;
 use xml::{ ElementParse, ElementParser, XmlElement, ElemStart };
 use gpx::par::_ElementError;
 use gpx::par::ElementError as ElementErrorE;
@@ -20,6 +21,13 @@ pub struct PositionedError<Kind> {
     pub kind: Kind,
     pub position: TextPosition,
 }
+
+impl<Kind> PositionedError<Kind> {
+    pub fn with_position(kind: Kind, position: TextPosition) -> Self {
+        PositionedError { kind: kind, position: position }
+    }
+}
+
 
 impl<Kind: fmt::Debug + fmt::Display> fmt::Display for PositionedError<Kind> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -79,11 +87,11 @@ pub enum AttributeValueError {
     Error(Box<std::error::Error>),
 }
 
-pub fn parse_chars<R: std::io::Read, F, Res, E: ElementError, EInner>
+pub fn parse_chars<R: std::io::Read, F, Res, E, EInner>
     (mut parser: &mut EventReader<R>, elem_start: ElemStart, decode: F)
-    -> Result<Res, E>
+    -> Result<Res, PositionedError<E>>
         where F: Fn(&str) -> Result<Res, EInner>,
-              E::Free: From<EInner> {
+              E: From<xml::ElementError> + From<EInner> + From<_xml::reader::Error> {
     let mut ret = String::new();
     loop {
         match parser.next() {
@@ -93,21 +101,22 @@ pub fn parse_chars<R: std::io::Read, F, Res, E: ElementError, EInner>
             Ok(XmlEvent::EndElement { name }) => {
                 return if name == elem_start.name {
                     decode(&ret).map_err(|e| {
-                        E::from_free(e.into(), parser.position())
+                        PositionedError::with_position(e.into(), parser.position())
                     })
                 } else {
-                    Err(E::from_free("Unexpected end".into(), parser.position()))
+                    Err(PositionedError::with_position(xml::ElementError::UnexpectedEnd.into(),
+                                                       parser.position()))
                 }
             }
             Ok(XmlEvent::Whitespace(s)) => {
                 println!("{:?}", s);
             }
             Ok(ev) => {
-                println!("{:?}", ev);
-                return Err(E::from_free("Unexpected event".into(), parser.position()));
+                return Err(PositionedError::with_position(xml::ElementError::UnexpectedEvent(ev).into(),
+                                                          parser.position()));
             }
             Err(error) => {
-                return Err(E::from_free(error.into(), parser.position()));
+                return Err(PositionedError::with_position(error.into(), parser.position()));
             }
         }
     }
