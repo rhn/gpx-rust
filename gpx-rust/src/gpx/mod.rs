@@ -7,29 +7,27 @@ extern crate geo;
 
 use std;
 use std::io;
-use std::io::{ Read };
 use std::error::Error as ErrorTrait;
 use std::str::FromStr;
 use std::fmt;
 
 use self::geo::Bbox;
-use self::_xml::common::{ Position, TextPosition };
-use self::_xml::reader::{ EventReader, XmlEvent };
+use self::_xml::common::TextPosition;
 use self::_xml::name::OwnedName;
 
 use xml;
-use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
+use xml::XmlElement;
 use par::ElementError as ElementErrorTrait;
 use xsd;
 use xsd::*;
-use par::{ ParserMessage, parse_string, AttributeValueError };
+use par::{ ParserMessage, AttributeValueError };
 
 mod conv;
 mod ser_auto;
 pub mod ser;
 pub mod par;
 
-use self::par::{ LinkParser, _ElementError };
+use self::par::{ _ElementError };
 
 
 pub type Parser<T> = par::Parser<T>;
@@ -332,11 +330,6 @@ pub struct Track {
     type_: Option<String>,
     extensions: Option<XmlElement>,
     segments: Vec<TrackSegment>,
-}
-
-fn parse_int<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<NonNegativeInteger, ElementError> {
-    xsd::par::parse_int(parser, elem_start)
 }
 
 #[derive(Debug)]
