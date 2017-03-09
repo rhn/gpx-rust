@@ -12,7 +12,7 @@ use self::_xml::name::OwnedName;
 use self::_xml::reader::{ XmlEvent, EventReader };
 
 use xml;
-use xml::{ XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
+use xml::{ ParseXml, DocInfo, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use xsd;
 use xsd::par::{ parse_time, parse_decimal };
 use gpx;
@@ -265,5 +265,41 @@ impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
     type BuildError = xml::BuildError;
     fn build(self) -> Result<Self::Element, Self::BuildError> {
         Ok(TrackSegment { waypoints: self.trkpt })
+    }
+}
+
+pub struct Parser<T: Read> {
+    reader: EventReader<T>,
+    gpx: Option<Gpx>,
+}
+
+impl<T: Read> ParseXml<T> for Parser<T> {
+    type Document = Gpx;
+    type Error = xml::DocumentError;
+    fn new(source: T) -> Self {
+        Parser { reader: EventReader::new(source),
+                    gpx: None }
+    }
+    fn next(&mut self) -> Result<XmlEvent, _xml::reader::Error> {
+        self.reader.next()
+    }
+    fn handle_info(&mut self, info: DocInfo) -> () {
+        let _ = info;
+    }
+    
+    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::ElementError> {
+        if let Some(_) = self.gpx {
+            return Err(::gpx::ElementError::with_position("Duplicate GPX".into(), self.reader.position()));
+        }
+        let gpx = try!(GpxElemParser::new(&mut self.reader)
+                           .parse(elem_start));
+        self.gpx = Some(gpx);
+        Ok(())
+    }
+    fn build(self) -> Result<Gpx, Self::Error> {
+        match self.gpx {
+            Some(gpx) => Ok(gpx),
+            None => Err(::gpx::ElementError::with_position("Missing GPX".into(), self.reader.position()).into())
+        }
     }
 }
