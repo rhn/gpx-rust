@@ -24,36 +24,18 @@ use gpx::{ Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem };
-use ::par::{ ElementError as ElementErrorTrait, ElementErrorFree, AttributeValueError };
+use ::par::{ PositionedError, ElementError as ElementErrorTrait, ElementErrorFree, AttributeValueError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
 
-#[derive(Debug)]
-pub struct ElementError {
-    pub error: _ElementError,
-    pub position: TextPosition,
-}
+pub type ElementError = PositionedError<_ElementError>;
 
-impl fmt::Display for ElementError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "Position {}: {}", self.position, self.error)
-    }
-}
-
-impl ErrorTrait for ElementError {
-    fn description(&self) -> &str {
-        ""
-    }
-    fn cause(&self) -> Option<&std::error::Error> {
-        Some(&self.error)
-    }
-}
 
 impl ElementErrorTrait for ElementError {
     type Free = _ElementError;
-    fn with_position(err: Self::Free, position: TextPosition) -> Self {
-        ElementError { error: err, position: position }
+    fn with_position(kind: Self::Free, position: TextPosition) -> Self {
+        ElementError { kind: kind, position: position }
     }
 }
 

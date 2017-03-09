@@ -3,6 +3,8 @@ extern crate xml as _xml;
 use std;
 use std::io;
 use std::str::FromStr;
+use std::fmt;
+use std::error::Error as ErrorTrait;
 
 use self::_xml::name::OwnedName;
 use self::_xml::common::{ Position, TextPosition };
@@ -13,6 +15,26 @@ use gpx::par::_ElementError;
 use gpx::par::ElementError as ElementErrorE;
 use conv;
 
+#[derive(Debug)]
+pub struct PositionedError<Kind> {
+    pub kind: Kind,
+    pub position: TextPosition,
+}
+
+impl<Kind: fmt::Debug + fmt::Display> fmt::Display for PositionedError<Kind> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "Position {}: {}", self.position, self.kind)
+    }
+}
+
+impl<Kind: ErrorTrait> ErrorTrait for PositionedError<Kind> {
+    fn description(&self) -> &str {
+        ""
+    }
+    fn cause(&self) -> Option<&ErrorTrait> {
+        Some(&self.kind)
+    }
+}
 
 pub trait ElementErrorFree where Self: From<&'static str> + From<_xml::reader::Error> {}
 
