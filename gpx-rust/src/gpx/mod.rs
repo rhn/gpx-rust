@@ -28,18 +28,6 @@ pub use self::par::parse;
 
 pub type Document = xml::Document<Gpx>;
 
-trait EmptyInit {
-    fn empty() -> Self;
-}
-
-impl<T> EmptyInit for Option<T> {
-    fn empty() -> Self { None }
-}
-
-impl<T> EmptyInit for Vec<T> {
-    fn empty() -> Self { Vec::new() }
-}
-
 #[derive(XmlDebug)]
 pub struct Gpx {
     pub version: Version,
