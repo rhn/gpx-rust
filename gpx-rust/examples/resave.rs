@@ -7,9 +7,9 @@ use std::io::{ BufReader, BufWriter };
 use std::fs::File;
 use clap::{ App, Arg };
 
-use gpx_rust::xml::{ ParseXml, DocumentError };
 use gpx_rust::ser::{ SerializeDocument, SerError };
-use gpx_rust::gpx::{ Gpx, Parser };
+use gpx_rust::gpx;
+use gpx_rust::gpx::{ Gpx, Document };
 
 
 #[derive(Debug)]
@@ -21,13 +21,13 @@ enum ResaveError {
 #[derive(Debug)]
 enum ParseError {
     Io(std::io::Error),
-    Parse(DocumentError),
+    Parse(gpx::par::DocumentError),
 }
 
-fn parse(filename: &str) -> Result<Gpx, ParseError> {
+fn parse(filename: &str) -> Result<Document, ParseError> {
     let f = try!(File::open(filename).map_err(ParseError::Io));
     let f = BufReader::new(f);
-    Parser::new(f).parse().map_err(ParseError::Parse)
+    gpx::parse(f).map_err(ParseError::Parse)
 }
 
 fn save(filename: &str, data: Gpx) -> Result<(), ResaveError> {
@@ -48,7 +48,7 @@ fn main() {
             println!("Failed to load\n{:?}", e);
             exit(1);
         }
-        Ok(d) => d
+        Ok(doc) => doc.data
     };
     save(matches.value_of("destination").unwrap(), data).expect("Failed to save");
 }

@@ -26,9 +26,9 @@ pub mod par;
 
 use self::par::_ElementError;
 
+pub use self::par::parse;
 
-pub type Parser<T> = par::DocumentParser<T>;
-
+pub type Document = xml::Document<Gpx>;
 
 trait EmptyInit {
     fn empty() -> Self;

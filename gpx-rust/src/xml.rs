@@ -87,14 +87,6 @@ pub struct XmlElement {
     pub nodes: Vec<XmlNode>,
 }
 
-#[derive(Debug)]
-pub struct XmlDocument {
-    pub version: XmlVersion,
-    pub encoding: String,
-    pub standalone: Option<bool>,
-    pub nodes: Vec<XmlNode>,
-}
-
 enum ParserState {
     PreStart,
     Inside,
@@ -111,18 +103,6 @@ pub struct ElemStart {
     pub name: OwnedName,
     pub attributes: Vec<OwnedAttribute>,
     pub namespace: Namespace,
-}
-
-pub struct XmlParser<T: Read> {
-    reader: EventReader<T>,
-    info: Option<DocInfo>,
-    nodes: Vec<XmlNode>,
-}
-
-pub struct DocInfo {
-    version: XmlVersion,
-    encoding: String,
-    standalone: Option<bool>,
 }
 
 pub trait ElementBuild {
@@ -248,72 +228,82 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::_ElementError> for ElementPars
     }
 }
 
-pub trait ParseXml<T: Read> where Self: Sized {
-    type Document;
-    type Error: From<xml::reader::Error> + From<DocumentParserError> + From<::gpx::par::ElementError>;
-    // public iface
-    fn new(source: T) -> Self;
-    fn parse(mut self) -> Result<Self::Document, Self::Error> {
-        let mut state = ParserState::PreStart;
-        loop {
-            let next = try!(self.next());
-            state = match state {
-                ParserState::PreStart => match next {
-                    XmlEvent::StartDocument { version, encoding, standalone } => {
-                        self.handle_info(DocInfo { version: version, encoding: encoding, standalone: standalone });
-                        ParserState::Inside
-                    }
-                    ev => return Err(DocumentParserError::UnexpectedEventPreStart(ev).into())
-                },
-                ParserState::Inside => match next {
-                    XmlEvent::StartElement { name, attributes, namespace } => {
-                        let start = ElemStart { name: name,
-                                                attributes: attributes,
-                                                namespace: namespace };
-                        try!(self.parse_element(start));
-                        ParserState::Inside
-                    }
-                    // TODO: more events
-                    XmlEvent::EndDocument => ParserState::PostEnd,
-                    ev => return Err(DocumentParserError::UnexpectedEventInside(ev).into())
-                },
-                ParserState::PostEnd => { break; }
-            }
-        }
-        self.build()
-    }
-    
-    // internal
-    fn next(&mut self) -> Result<XmlEvent, xml::reader::Error>;
-    fn handle_info(&mut self, info: DocInfo) -> ();
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::par::ElementError>;
-    fn build(self) -> Result<Self::Document, Self::Error>;
+pub struct Document<T> {
+    pub info: DocInfo,
+    pub data: T,
 }
 
-impl<T: Read> ParseXml<T> for XmlParser<T> {
-    type Document = XmlDocument;
+pub struct DocInfo {
+    pub version: XmlVersion,
+    pub encoding: String,
+    pub standalone: Option<bool>,
+}
+
+pub fn parse_document<R: Read, D: DocumentParserData>(source: R)
+        -> Result<Document<D::Contents>, D::Error> {
+    let mut reader = EventReader::new(source);
+    let mut info = None;
+    let mut contents = D::default();
+    let mut state = ParserState::PreStart;
+    loop {
+        let next = try!(reader.next());
+        state = match state {
+            ParserState::PreStart => match next {
+                XmlEvent::StartDocument { version, encoding, standalone } => {
+                    info = Some(DocInfo { version: version,
+                                          encoding: encoding,
+                                          standalone: standalone });
+                    ParserState::Inside
+                }
+                ev => return Err(DocumentParserError::UnexpectedEventPreStart(ev).into())
+            },
+            ParserState::Inside => match next {
+                XmlEvent::StartElement { name, attributes, namespace } => {
+                    let start = ElemStart { name: name,
+                                            attributes: attributes,
+                                            namespace: namespace };
+                    try!(contents.parse_element(&mut reader, start));
+                    ParserState::Inside
+                }
+                // TODO: more events
+                XmlEvent::EndDocument => ParserState::PostEnd,
+                ev => return Err(DocumentParserError::UnexpectedEventInside(ev).into())
+            },
+            ParserState::PostEnd => { break; }
+        }
+    }
+    Ok(Document {
+        info: info.unwrap(),
+        data: try!(contents.build())
+    })
+}
+
+pub trait DocumentParserData where Self: Sized + Default {
+    type Contents;
+    type Error: From<xml::reader::Error> + From<DocumentParserError> + From<::gpx::par::ElementError>;
+    // public iface
+    fn parse_element<R: Read>(&mut self, reader: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<(), ::gpx::par::ElementError>;
+    fn build(self) -> Result<Self::Contents, Self::Error>;
+}
+
+#[derive(Default)]
+struct ParserData(Vec<XmlNode>);
+
+impl DocumentParserData for ParserData {
+    type Contents = Vec<XmlNode>;
     type Error = DocumentError;
-    fn new(source: T) -> Self {
-        XmlParser { reader: EventReader::new(source),
-                    info: None,
-                    nodes: Vec::new() }
-    }
-    fn next(&mut self) -> Result<XmlEvent, xml::reader::Error> {
-        self.reader.next()
-    }
-    fn handle_info(&mut self, info: DocInfo) -> () {
-        self.info = Some(info)
-    }
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::par::ElementError> {
-        let elem = try!(ElementParser::new(&mut self.reader).parse(elem_start));
-        self.nodes.push(XmlNode::Element(elem));
+    fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<(), ::gpx::par::ElementError> {
+        let elem = try!(ElementParser::new(&mut reader).parse(elem_start));
+        self.0.push(XmlNode::Element(elem));
         Ok(())
     }
-    fn build(self) -> Result<XmlDocument, Self::Error> {
-        let info = self.info.unwrap();
-        Ok(XmlDocument { version: info.version,
-                         encoding: info.encoding,
-                         standalone: info.standalone,
-                         nodes: self.nodes })
+    fn build(self) -> Result<Self::Contents, Self::Error> {
+        Ok(self.0)
     }
+}
+
+pub fn parse<R: Read>(source: R) -> Result<Document<Vec<XmlNode>>, DocumentError> {
+    parse_document::<R, ParserData>(source)
 }
