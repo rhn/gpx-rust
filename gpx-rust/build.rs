@@ -64,7 +64,7 @@ fn process() -> Result<(), Error> {
         "trkType".into() => ("Track".into(), TypeConverter::UniversalClass("::gpx::conv::Trk".into())),
         "rteType".into() => ("Route".into(), TypeConverter::UniversalClass("::gpx::conv::Rte".into())),
         "trksegType".into() => ("TrackSegment".into(), TypeConverter::UniversalClass("::gpx::conv::Trkseg".into())),
-        "_gpx:version".into() => ("GpxVersion".into(), TypeConverter::UniversalClass("::gpx::conv::Version".into())),
+        "_gpx:version".into() => ("Version".into(), TypeConverter::UniversalClass("::gpx::conv::Version".into())),
         "xsd:decimal".into() => ("xsd::Decimal".into(), "parse_decimal".into()),
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
         "xsd:string".into() => ("String".into(), TypeConverter::UniversalClass("::xsd::conv::String".into())),

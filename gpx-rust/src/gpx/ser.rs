@@ -10,7 +10,7 @@ use self::_xml::attribute::Attribute;
 use self::_xml::writer::{ XmlEvent, EventWriter };
 
 use xsd;
-use gpx::{ Gpx, GpxVersion, Waypoint, Fix, Bounds };
+use gpx::{ Gpx, Version, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
 use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem, ToAttributeVia };
@@ -109,7 +109,7 @@ impl SerializeVia<Gpx> for conv::Gpx {
                 name: elemname.clone(),
                 attributes: Cow::Owned(
                     vec![Attribute { name: Name::local("version"),
-                                     value: GpxVersion::V1_1.to_attribute() },
+                                     value: Version::V1_1.to_attribute() },
                          Attribute { name: Name::local("creator"),
                                      value: &data.creator }]
                 ),
@@ -137,11 +137,11 @@ impl SerializeVia<Gpx> for conv::Gpx {
 }
 
 
-impl GpxVersion {
+impl Version {
     fn to_attribute(&self) -> &'static str {
         match self {
-            &GpxVersion::V1_0 => "1.0",//String::from("1.0"),
-            &GpxVersion::V1_1 => "1.1",//String::from("1.1")
+            &Version::V1_0 => "1.0",
+            &Version::V1_1 => "1.1",
         }
     }
 }

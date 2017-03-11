@@ -20,7 +20,7 @@ use xml::{ DocumentParserData, XmlElement, ElemStart, ElementParser, ElementPars
 use xsd;
 use xsd::par::{ parse_time, parse_decimal };
 use gpx;
-use gpx::{ Document, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
+use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ FromAttribute, ParseVia, ParseViaChar, parse_string, parse_u64, parse_elem };
@@ -142,11 +142,11 @@ impl FromAttribute<f64> for Longitude {
     }
 }
 
-impl FromAttribute<GpxVersion> for conv::Version {
-    fn from_attr(attr: &str) -> Result<GpxVersion, AttributeValueError> {
+impl FromAttribute<Version> for conv::Version {
+    fn from_attr(attr: &str) -> Result<Version, AttributeValueError> {
         match attr {
-            "1.0" => Ok(GpxVersion::V1_0),
-            "1.1" => Ok(GpxVersion::V1_1),
+            "1.0" => Ok(Version::V1_0),
+            "1.1" => Ok(Version::V1_1),
             _ => Err(AttributeValueError::Str("Unknown GPX version"))
         }
     }

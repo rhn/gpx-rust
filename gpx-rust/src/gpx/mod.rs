@@ -195,7 +195,7 @@ macro_rules! ElemParser {
 
 #[derive(Debug)]
 pub struct Gpx {
-    pub version: One!(GpxVersion),
+    pub version: One!(Version),
     pub creator: One!(String),
     pub metadata: Option!(Metadata),
     pub waypoints: Vec!(Waypoint),
@@ -206,7 +206,7 @@ pub struct Gpx {
 
 #[derive(Debug)]
 #[allow(non_camel_case_types)]
-pub enum GpxVersion {
+pub enum Version {
     V1_0,
     V1_1,
 }
