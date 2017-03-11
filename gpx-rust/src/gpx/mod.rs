@@ -134,65 +134,6 @@ impl From<&'static str> for Error {
     }
 }
 
-impl From<std::string::ParseError> for Error {
-    fn from(err: std::string::ParseError) -> Error {
-        Error::ParseValue(err)
-    }
-}
-
-#[macro_export]
-macro_rules! ElemParser {
-    ( struct $name:ident {
-        $( $i:ident : $t:ty, )*
-      },
-      $parser:ident {
-        $( $tag:pat => $tagdata:tt, )*
-      }
-    ) => {
-        #[derive(XmlDebug)]
-        struct $name { $( $i: $t, )* }
-
-        struct $parser<'a, T: 'a + Read> {
-            reader: &'a mut EventReader<T>,
-            elem_name: Option<OwnedName>,
-            $( $i: $t, )*
-        }
-        
-        impl<'a, T: Read> ElementParse<'a, T> for $parser<'a, T> {
-            fn new(reader: &'a mut EventReader<T>) -> Self {
-                $parser { reader: reader,
-                          elem_name: None,
-                          $( $i : <$t>::empty(), )* }
-            }
-
-            ParserStart!();
-
-            fn parse_element(&mut self, elem_start: ElemStart)
-                    -> Result<(), Self::Error> {
-                match &elem_start.name.local_name as &str {
-                    $( $tag => {
-                        make_tag!(T, self, elem_start, $tagdata);
-                    }),*
-                    _ => {
-                        try!(ElementParser::new(self.reader).parse(elem_start));
-                    }
-                };
-                Ok(())
-            }
-            
-            fn get_name(&self) -> &OwnedName {
-                match &self.elem_name {
-                    &Some(ref i) => i,
-                    &None => panic!("Name was not set while parsing"),
-                }
-            }
-            fn next(&mut self) -> Result<XmlEvent, xml::Error> {
-                self.reader.next().map_err(xml::Error::Xml)
-            }
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct Gpx {
     pub version: One!(Version),
