@@ -26,9 +26,10 @@ macro_rules! set_optional(
     }
 );
 
+/// Attribute value not serializable
 #[derive(Debug)]
 pub enum AttributeValueError {
-    LatitudeOutOfBounds(f64)
+    DecimalOutOfBounds(f64)
 }
 
 // FIXME: move to general ser
@@ -39,7 +40,7 @@ pub trait ToAttributeVia<Data> {
 impl ToAttributeVia<f64> for Latitude {
     fn to_attribute(data: &f64) -> Result<String, AttributeValueError> {
         if *data >= 90.0 || *data < -90.0 {
-            Err(AttributeValueError::LatitudeOutOfBounds(*data))
+            Err(AttributeValueError::DecimalOutOfBounds(*data))
         } else {
             Ok(data.to_string())
         }
@@ -49,7 +50,7 @@ impl ToAttributeVia<f64> for Latitude {
 impl ToAttributeVia<f64> for Longitude {
     fn to_attribute(data: &f64) -> Result<String, AttributeValueError> {
         if *data >= 180.0 || *data < -180.0 {
-            Err(AttributeValueError::LatitudeOutOfBounds(*data))
+            Err(AttributeValueError::DecimalOutOfBounds(*data))
         } else {
             Ok(data.to_string())
         }
