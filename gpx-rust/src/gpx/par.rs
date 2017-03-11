@@ -23,12 +23,12 @@ use gpx;
 use gpx::{ Document, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
-use ::par::{ ParseVia, ParseViaChar, parse_string, parse_u64, parse_elem };
+use ::par::{ FromAttribute, ParseVia, ParseViaChar, parse_string, parse_u64, parse_elem };
 use ::par::{ Positioned, ElementErrorFree, AttributeValueError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
-
+/// Describes a failure while parsing data
 #[derive(Debug)]
 pub enum Error {
     Str(&'static str),
@@ -128,11 +128,6 @@ impl ErrorTrait for Error {
             Error::UnknownElement(_) => "Unknown element",
         }
     }
-}
-
-/// FIXME: move to general par.rs
-pub trait FromAttribute<T> {
-    fn from_attr(&str) -> Result<T, AttributeValueError>;
 }
 
 impl FromAttribute<f64> for Latitude {

@@ -28,7 +28,6 @@ impl<Data> Positioned<Data> {
     }
 }
 
-
 impl<Data: fmt::Debug + fmt::Display> fmt::Display for Positioned<Data> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(fmt, "Position {}: {}", self.position, self.data)
@@ -43,6 +42,12 @@ impl<Data: ErrorTrait> ErrorTrait for Positioned<Data> {
         Some(&self.data)
     }
 }
+
+/// FIXME: move to general par.rs
+pub trait FromAttribute<T> {
+    fn from_attr(&str) -> Result<T, AttributeValueError>;
+}
+
 
 pub trait ElementErrorFree where Self: From<&'static str> + From<_xml::reader::Error> {}
 

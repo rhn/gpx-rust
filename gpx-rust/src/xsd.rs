@@ -23,12 +23,12 @@ pub mod par {
     use xml;
     use xml::ElemStart;
     use par;
-    use par::ParseVia;
+    use par::{ FromAttribute, ParseVia };
     use par::parse_chars;
     use par::{ Positioned, AttributeValueError };
     use xsd;
     use xsd::NonNegativeInteger;
-    use gpx::par::{ Error, FromAttribute }; // FIXME: move to par
+    use gpx::par::Error; // FIXME: move to par
     use xsd::conv;
     
     // todo: move to par
