@@ -195,13 +195,13 @@ macro_rules! ElemParser {
 
 #[derive(Debug)]
 pub struct Gpx {
-    version: One!(GpxVersion),
-    creator: One!(String),
-    metadata: Option!(Metadata),
-    waypoints: Vec!(Waypoint),
-    routes: Vec<Route>,
-    tracks: Vec<Track>,
-    extensions: Option<XmlElement>,
+    pub version: One!(GpxVersion),
+    pub creator: One!(String),
+    pub metadata: Option!(Metadata),
+    pub waypoints: Vec!(Waypoint),
+    pub routes: Vec<Route>,
+    pub tracks: Vec<Track>,
+    pub extensions: Option<XmlElement>,
 }
 
 #[derive(Debug)]
@@ -233,6 +233,7 @@ pub struct Link {
 
 type Bounds = Bbox<f64>;
 
+/// `<wpt>`, `<rtept>`, `<trkpt>` elements and `wptType`
 #[derive(XmlDebug)]
 pub struct Waypoint {
     location: Point,
@@ -264,7 +265,7 @@ struct Point {
 }
 
 #[derive(Debug)]
-enum Fix {
+pub enum Fix {
     None,
     _2D,
     _3D,
@@ -272,6 +273,7 @@ enum Fix {
     PPS
 }
 
+/// `<trk>` and `trkType`
 #[derive(XmlDebug)]
 pub struct Track {
     name: Option<String>,
@@ -285,11 +287,13 @@ pub struct Track {
     segments: Vec<TrackSegment>,
 }
 
+/// `<trkseg>` and `trksegType`
 #[derive(Debug)]
 pub struct TrackSegment {
     waypoints: Vec<Waypoint>,
 }
 
+/// `<rte>` and `rteType`
 #[derive(Debug)]
 pub struct Route {
     name: Option<String>,
