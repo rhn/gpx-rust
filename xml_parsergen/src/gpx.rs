@@ -138,6 +138,7 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                 Element { name: "trkpt".into(),
                           type_: "wptType".into(),
                           max_occurs: ElementMaxOccurs::Unbounded },
+                ElementSingle!("extensions", "extensionsType"),
             ],
             attributes: vec![],
         },

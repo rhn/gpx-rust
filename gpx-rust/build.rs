@@ -124,7 +124,7 @@ fn process() -> Result<(), Error> {
                          "rte" => "routes",
                          "trk" => "tracks" } },
     ];
-    let builder_impls = ["RteParser", "TrkParser", "LinkParser", "GpxElemParser"]
+    let builder_impls = ["RteParser", "TrkParser", "LinkParser", "GpxElemParser", "TrackSegmentParser"]
                         .iter().map(|name: &&'static str| {
         let type_ = parser_impls.iter()
                                 .find(|pinfo| pinfo.name.as_str() == *name)

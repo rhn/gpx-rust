@@ -291,7 +291,7 @@ pub struct Track {
 #[derive(Debug)]
 pub struct TrackSegment {
     pub waypoints: Vec<Waypoint>,
-    //pub extensions: Option<XmlElement>,
+    pub extensions: Option<XmlElement>,
 }
 
 /// `<rte>` and `rteType`

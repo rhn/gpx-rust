@@ -263,14 +263,6 @@ impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
     }
 }
 
-impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
-    type Element = TrackSegment;
-    type BuildError = xml::BuildError;
-    fn build(self) -> Result<Self::Element, Self::BuildError> {
-        Ok(TrackSegment { waypoints: self.trkpt })
-    }
-}
-
 /// Error describing a failure while parsing an XML stream
 #[derive(Debug)]
 pub enum DocumentError {
