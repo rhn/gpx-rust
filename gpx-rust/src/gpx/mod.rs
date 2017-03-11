@@ -41,7 +41,7 @@ impl<T> EmptyInit for Vec<T> {
 }
 
 #[derive(Debug)]
-pub enum Error {
+enum Error {
     Str(&'static str),
     Chrono(chrono::format::ParseError),
     Io(io::Error),
@@ -236,32 +236,33 @@ type Bounds = Bbox<f64>;
 /// `<wpt>`, `<rtept>`, `<trkpt>` elements and `wptType`
 #[derive(XmlDebug)]
 pub struct Waypoint {
-    location: Point,
-    time: Option<xsd::DateTime>,
-    mag_variation: Option<Degrees>,
-    geoid_height: Option<xsd::Decimal>,
-    name: Option<String>,
-    comment: Option<String>,
-    description: Option<String>,
-    source: Option<String>,
-    links: Vec<Link>,
-    symbol: Option<String>,
-    type_: Option<String>,
-    fix: Option<Fix>,
-    satellites: Option<xsd::NonNegativeInteger>,
-    hdop: Option<xsd::Decimal>,
-    pdop: Option<xsd::Decimal>,
-    vdop: Option<xsd::Decimal>,
-    dgps_age: Option<xsd::Decimal>,
-    dgps_id: Option<String>,
-    extensions: Option<XmlElement>,
+    pub location: Point,
+    pub time: Option<xsd::DateTime>,
+    pub mag_variation: Option<Degrees>,
+    pub geoid_height: Option<xsd::Decimal>,
+    pub name: Option<String>,
+    pub comment: Option<String>,
+    pub description: Option<String>,
+    pub source: Option<String>,
+    pub links: Vec<Link>,
+    pub symbol: Option<String>,
+    pub type_: Option<String>,
+    pub fix: Option<Fix>,
+    pub satellites: Option<xsd::NonNegativeInteger>,
+    pub hdop: Option<xsd::Decimal>,
+    pub pdop: Option<xsd::Decimal>,
+    pub vdop: Option<xsd::Decimal>,
+    pub dgps_age: Option<xsd::Decimal>,
+    pub dgps_id: Option<String>,
+    pub extensions: Option<XmlElement>,
 }
 
+/// WGS84 geographical coordinates
 #[derive(XmlDebug)]
-struct Point {
-    latitude: f64,
-    longitude: f64,
-    elevation: Option<f64>,
+pub struct Point {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub elevation: Option<f64>,
 }
 
 #[derive(Debug)]
