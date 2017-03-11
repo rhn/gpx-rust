@@ -4,7 +4,6 @@ extern crate xml as _xml;
 extern crate chrono;
 extern crate geo;
 
-
 use std;
 use std::io;
 use std::fmt;
@@ -39,6 +38,7 @@ pub struct Gpx {
     pub extensions: Option<XmlElement>,
 }
 
+/// `<gpx version=...>` attribute values
 #[derive(Debug)]
 #[allow(non_camel_case_types)]
 pub enum Version {
@@ -59,14 +59,14 @@ pub struct Metadata {
     pub extensions: Option<XmlElement>,
 }
 
-#[derive(Debug)]
+#[derive(XmlDebug)]
 pub struct Link {
     pub href: xsd::Uri,
     pub text: Option<String>,
     pub type_: Option<String>,
 }
 
-type Bounds = Bbox<f64>;
+pub type Bounds = Bbox<f64>;
 
 /// `<wpt>`, `<rtept>`, `<trkpt>` elements and `wptType`
 #[derive(XmlDebug)]
@@ -100,6 +100,7 @@ pub struct Point {
     pub elevation: Option<f64>,
 }
 
+/// `<fix>` and `fixType`
 #[derive(Debug)]
 pub enum Fix {
     None,
@@ -124,14 +125,14 @@ pub struct Track {
 }
 
 /// `<trkseg>` and `trksegType`
-#[derive(Debug)]
+#[derive(XmlDebug)]
 pub struct TrackSegment {
     pub waypoints: Vec<Waypoint>,
     pub extensions: Option<XmlElement>,
 }
 
 /// `<rte>` and `rteType`
-#[derive(Debug)]
+#[derive(XmlDebug)]
 pub struct Route {
     pub name: Option<String>,
     pub comment: Option<String>,
