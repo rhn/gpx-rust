@@ -24,9 +24,11 @@ use gpx::{ Document, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, Tr
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ FromAttribute, ParseVia, ParseViaChar, parse_string, parse_u64, parse_elem };
-use ::par::{ Positioned, ElementErrorFree, AttributeValueError };
+use ::par::{ Positioned, AttributeValueError };
+
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
+
 
 /// Describes a failure while parsing data
 #[derive(Debug)]
@@ -104,8 +106,6 @@ impl From<xml::Error> for Error {
         Error::Str("BUG: xml::Error")
     }
 }
-
-impl ElementErrorFree for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -216,10 +216,6 @@ impl ParseViaChar<Fix> for conv::Fix {
             _ => return Err(Error::Str("Unknown fix kind")),
         })
     }
-}
-
-pub fn copy(value: &str) -> Result<String, AttributeValueError> {
-    Ok(value.into())
 }
 
 impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {

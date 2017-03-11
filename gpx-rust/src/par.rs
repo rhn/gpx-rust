@@ -43,22 +43,10 @@ impl<Data: ErrorTrait> ErrorTrait for Positioned<Data> {
     }
 }
 
-/// FIXME: move to general par.rs
 pub trait FromAttribute<T> {
     fn from_attr(&str) -> Result<T, AttributeValueError>;
 }
 
-
-pub trait ElementErrorFree where Self: From<&'static str> + From<_xml::reader::Error> {}
-
-pub trait ElementError where Self: Sized {
-    type Free: ElementErrorFree;
-    // TODO: remove
-    fn from_free(err: Self::Free, position: TextPosition) -> Self {
-        Self::with_position(err, position)
-    }
-    fn with_position(err: Self::Free, position: TextPosition) -> Self;
-}
 
 /// Error classes in ElementParser must implement this
 pub trait ParserMessage
