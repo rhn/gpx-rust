@@ -40,12 +40,12 @@ impl<T> EmptyInit for Vec<T> {
     fn empty() -> Self { Vec::new() }
 }
 
-#[derive(Debug)]
+#[derive(XmlDebug)]
 pub struct Gpx {
-    pub version: One!(Version),
-    pub creator: One!(String),
-    pub metadata: Option!(Metadata),
-    pub waypoints: Vec!(Waypoint),
+    pub version: Version,
+    pub creator: String,
+    pub metadata: Option<Metadata>,
+    pub waypoints: Vec<Waypoint>,
     pub routes: Vec<Route>,
     pub tracks: Vec<Track>,
     pub extensions: Option<XmlElement>,
