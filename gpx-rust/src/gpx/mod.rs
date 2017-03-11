@@ -213,22 +213,22 @@ pub enum Version {
 
 #[derive(XmlDebug)]
 pub struct Metadata {
-    name: Option<String>,
-    description: Option<String>,
-    author: Option<XmlElement>,
-    copyright: Option<XmlElement>,
-    links: Vec<Link>,
-    time: Option<Time>,
-    keywords: Option<String>,
-    bounds: Option<Bounds>,
-    extensions: Option<XmlElement>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub author: Option<XmlElement>,
+    pub copyright: Option<XmlElement>,
+    pub links: Vec<Link>,
+    pub time: Option<Time>,
+    pub keywords: Option<String>,
+    pub bounds: Option<Bounds>,
+    pub extensions: Option<XmlElement>,
 }
 
 #[derive(Debug)]
 pub struct Link {
-    href: xsd::Uri,
-    text: Option<String>,
-    type_: Option<String>,
+    pub href: xsd::Uri,
+    pub text: Option<String>,
+    pub type_: Option<String>,
 }
 
 type Bounds = Bbox<f64>;
@@ -276,35 +276,36 @@ pub enum Fix {
 /// `<trk>` and `trkType`
 #[derive(XmlDebug)]
 pub struct Track {
-    name: Option<String>,
-    comment: Option<String>,
-    description: Option<String>,
-    source: Option<String>,
-    links: Vec<Link>,
-    number: Option<xsd::NonNegativeInteger>,
-    type_: Option<String>,
-    extensions: Option<XmlElement>,
-    segments: Vec<TrackSegment>,
+    pub name: Option<String>,
+    pub comment: Option<String>,
+    pub description: Option<String>,
+    pub source: Option<String>,
+    pub links: Vec<Link>,
+    pub number: Option<xsd::NonNegativeInteger>,
+    pub type_: Option<String>,
+    pub extensions: Option<XmlElement>,
+    pub segments: Vec<TrackSegment>,
 }
 
 /// `<trkseg>` and `trksegType`
 #[derive(Debug)]
 pub struct TrackSegment {
-    waypoints: Vec<Waypoint>,
+    pub waypoints: Vec<Waypoint>,
+    //pub extensions: Option<XmlElement>,
 }
 
 /// `<rte>` and `rteType`
 #[derive(Debug)]
 pub struct Route {
-    name: Option<String>,
-    comment: Option<String>,
-    description: Option<String>,
-    source: Option<String>,
-    links: Vec<Link>,
-    number: Option<xsd::NonNegativeInteger>,
-    type_: Option<String>,
-    extensions: Option<XmlElement>,
-    waypoints: Vec<Waypoint>,
+    pub name: Option<String>,
+    pub comment: Option<String>,
+    pub description: Option<String>,
+    pub source: Option<String>,
+    pub links: Vec<Link>,
+    pub number: Option<xsd::NonNegativeInteger>,
+    pub type_: Option<String>,
+    pub extensions: Option<XmlElement>,
+    pub waypoints: Vec<Waypoint>,
 }
 
 pub type Degrees = String; // FIXME
