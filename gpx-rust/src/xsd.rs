@@ -25,7 +25,7 @@ pub mod par {
     use par;
     use par::ParseVia;
     use par::parse_chars;
-    use par::{ PositionedError, AttributeValueError };
+    use par::{ Positioned, AttributeValueError };
     use gpx::par::ElementError; // FIXME: move to par and concretize these types
     use xsd;
     use xsd::NonNegativeInteger;
@@ -34,7 +34,7 @@ pub mod par {
     
     pub fn parse_int<T: std::io::Read, Error>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<NonNegativeInteger, PositionedError<Error>>
+            -> Result<NonNegativeInteger, Positioned<Error>>
             where Error: From<std::num::ParseIntError> + From<xml::ElementError>
                          + From<_xml::reader::Error>{
         par::parse_chars(parser, elem_start,
@@ -43,7 +43,7 @@ pub mod par {
 
     pub fn parse_string<T: std::io::Read, Error>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<String, PositionedError<Error>>
+            -> Result<String, Positioned<Error>>
             where Error: From<xml::ElementError> + From<_xml::reader::Error> {
         par::parse_chars(parser, elem_start,
                          |chars| Ok::<_, xml::ElementError>(chars.into()))

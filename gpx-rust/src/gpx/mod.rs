@@ -26,6 +26,7 @@ pub mod par;
 
 use self::par::_ElementError;
 
+/// Parses XML stream containing GPX data
 pub use self::par::parse;
 
 pub type Document = xml::Document<Gpx>;

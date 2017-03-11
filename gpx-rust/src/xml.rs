@@ -8,7 +8,8 @@ use self::xml::namespace::Namespace;
 use self::xml::reader::{ EventReader, XmlEvent };
 use self::xml::common::{ XmlVersion, TextPosition, Position };
 
-use par::PositionedError;
+use par::Positioned;
+
 
 #[derive(Debug)]
 pub enum DocumentError {
@@ -119,7 +120,7 @@ pub trait ElementParse<'a, R: Read, E>
     fn new(reader: &'a mut EventReader<R>) -> Self;
     
     /// Parses the element and its subelements, returning ElementBuild::Element instance.
-    fn parse(mut self, elem_start: ElemStart) -> Result<Self::Element, PositionedError<E>> {
+    fn parse(mut self, elem_start: ElemStart) -> Result<Self::Element, Positioned<E>> {
         try!(self.parse_start(elem_start).map_err(|e| self._with_pos(e)));
         loop {
             match try!(self.next().map_err(|e| self._with_pos(e))) {
@@ -144,11 +145,11 @@ pub trait ElementParse<'a, R: Read, E>
             }
         }
         let pos = self.get_parser_position();
-        self.build().map_err(|e| PositionedError::with_position(e.into(), pos))
+        self.build().map_err(|e| Positioned::with_position(e.into(), pos))
     }
     /// Helper, converts any parse error to the positioned error type. Not a closure to hopefully save performance
-    fn _with_pos<Kind: Into<E>>(&self, kind: Kind) -> PositionedError<E> {
-        PositionedError::with_position(kind.into(), self.get_parser_position())
+    fn _with_pos<Kind: Into<E>>(&self, kind: Kind) -> Positioned<E> {
+        Positioned::with_position(kind.into(), self.get_parser_position())
     }
     /// Helper, equivalent to self.reader.position()
     fn get_parser_position(&self) -> TextPosition;
@@ -162,7 +163,7 @@ pub trait ElementParse<'a, R: Read, E>
         Ok(())
     }
     /// Parses sub-element.
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), PositionedError<E>>;
+    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), Positioned<E>>;
     /// Parses characters. By default ignores.
     fn parse_characters(&mut self, data: String) -> Result<(), E> {
         let _ = data;

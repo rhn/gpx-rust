@@ -24,12 +24,12 @@ use gpx::{ Document, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, Tr
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem };
-use ::par::{ PositionedError, ElementErrorFree, AttributeValueError };
+use ::par::{ Positioned, ElementErrorFree, AttributeValueError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
 
-pub type Error = PositionedError<_ElementError>;
+pub type Error = Positioned<_ElementError>;
 
 pub type ElementError = Error;
 
@@ -276,11 +276,12 @@ impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
     }
 }
 
+/// Error describing a failure while parsing an XML stream
 #[derive(Debug)]
 pub enum DocumentError {
     ParserError(_xml::reader::Error),
     DocumentParserError(xml::DocumentParserError),
-    BadData(::gpx::par::ElementError),
+    BadData(ElementError),
     MissingGpx,
 }
 
@@ -325,7 +326,7 @@ impl DocumentParserData for ParserData {
     }
 }
 
-/// Takes in GPX stream and returns an instance of `Gpx`.
+/// Takes in GPX stream and returns an instance of `gpx::Document`.
 ///
 /// ```
 /// let f = File::open("foo").unwrap();

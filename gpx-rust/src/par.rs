@@ -17,30 +17,30 @@ use gpx::par::ElementError as ElementErrorE;
 use conv;
 
 #[derive(Debug)]
-pub struct PositionedError<Kind> {
-    pub kind: Kind,
+pub struct Positioned<Data> {
+    pub data: Data,
     pub position: TextPosition,
 }
 
-impl<Kind> PositionedError<Kind> {
-    pub fn with_position(kind: Kind, position: TextPosition) -> Self {
-        PositionedError { kind: kind, position: position }
+impl<Data> Positioned<Data> {
+    pub fn with_position(data: Data, position: TextPosition) -> Self {
+        Positioned { data: data, position: position }
     }
 }
 
 
-impl<Kind: fmt::Debug + fmt::Display> fmt::Display for PositionedError<Kind> {
+impl<Data: fmt::Debug + fmt::Display> fmt::Display for Positioned<Data> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "Position {}: {}", self.position, self.kind)
+        write!(fmt, "Position {}: {}", self.position, self.data)
     }
 }
 
-impl<Kind: ErrorTrait> ErrorTrait for PositionedError<Kind> {
+impl<Data: ErrorTrait> ErrorTrait for Positioned<Data> {
     fn description(&self) -> &str {
         ""
     }
     fn cause(&self) -> Option<&ErrorTrait> {
-        Some(&self.kind)
+        Some(&self.data)
     }
 }
 
@@ -89,7 +89,7 @@ pub enum AttributeValueError {
 
 pub fn parse_chars<R: std::io::Read, F, Res, E, EInner>
     (mut parser: &mut EventReader<R>, elem_start: ElemStart, decode: F)
-    -> Result<Res, PositionedError<E>>
+    -> Result<Res, Positioned<E>>
         where F: Fn(&str) -> Result<Res, EInner>,
               E: From<xml::ElementError> + From<EInner> + From<_xml::reader::Error> {
     let mut ret = String::new();
@@ -101,22 +101,22 @@ pub fn parse_chars<R: std::io::Read, F, Res, E, EInner>
             Ok(XmlEvent::EndElement { name }) => {
                 return if name == elem_start.name {
                     decode(&ret).map_err(|e| {
-                        PositionedError::with_position(e.into(), parser.position())
+                        Positioned::with_position(e.into(), parser.position())
                     })
                 } else {
-                    Err(PositionedError::with_position(xml::ElementError::UnexpectedEnd.into(),
-                                                       parser.position()))
+                    Err(Positioned::with_position(xml::ElementError::UnexpectedEnd.into(),
+                                                  parser.position()))
                 }
             }
             Ok(XmlEvent::Whitespace(s)) => {
                 println!("{:?}", s);
             }
             Ok(ev) => {
-                return Err(PositionedError::with_position(xml::ElementError::UnexpectedEvent(ev).into(),
-                                                          parser.position()));
+                return Err(Positioned::with_position(xml::ElementError::UnexpectedEvent(ev).into(),
+                                                     parser.position()));
             }
             Err(error) => {
-                return Err(PositionedError::with_position(error.into(), parser.position()));
+                return Err(Positioned::with_position(error.into(), parser.position()));
             }
         }
     }
