@@ -99,9 +99,9 @@ mod ser {
     //! Serialization impls
     use xsd;
     use xsd::conv;
-    use ser::SerializeCharElem;
+    use ser::{ ToAttributeVia, SerializeCharElem };
     
-    use gpx::ser::{ ToAttributeVia, AttributeValueError };
+    use gpx::ser::AttributeValueError;
     
     impl SerializeCharElem for xsd::NonNegativeInteger {
         fn to_characters(&self) -> String { self.to_string() }

@@ -147,6 +147,10 @@ impl SerializeVia<xml::XmlElement> for xml::XmlElement {
     }
 }
 
+pub trait ToAttributeVia<Data> {
+    fn to_attribute(&Data) -> Result<String, AttributeValueError>;
+}
+
 /// TODO: drop
 impl Serialize for xml::XmlElement {
     fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) 

@@ -13,7 +13,7 @@ use xsd;
 use gpx::{ Gpx, GpxVersion, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem };
+use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem, ToAttributeVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -26,15 +26,10 @@ macro_rules! set_optional(
     }
 );
 
-/// Attribute value not serializable
+/// Error raised when value is not serializable as XML attribute
 #[derive(Debug)]
 pub enum AttributeValueError {
     DecimalOutOfBounds(f64)
-}
-
-// FIXME: move to general ser
-pub trait ToAttributeVia<Data> {
-    fn to_attribute(&Data) -> Result<String, AttributeValueError>;
 }
 
 impl ToAttributeVia<f64> for Latitude {
