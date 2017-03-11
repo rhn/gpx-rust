@@ -29,12 +29,8 @@ use ::par::{ Positioned, ElementErrorFree, AttributeValueError };
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
 
-pub type Error = Positioned<_ElementError>;
-
-pub type ElementError = Error;
-
 #[derive(Debug)]
-pub enum _ElementError {
+pub enum Error {
     Str(&'static str),
     XmlEvent(_xml::reader::Error),
     BadInt(std::num::ParseIntError),
@@ -47,89 +43,89 @@ pub enum _ElementError {
     UnknownElement(OwnedName),
 }
 
-impl From<xml::AttributeError> for _ElementError {
-    fn from(err: xml::AttributeError) -> _ElementError {
-        _ElementError::BadAttribute(err)
+impl From<xml::AttributeError> for Error {
+    fn from(err: xml::AttributeError) -> Error {
+        Error::BadAttribute(err)
     }
 }
 
-impl From<xml::ElementError> for _ElementError {
-    fn from(err: xml::ElementError) -> _ElementError {
-        _ElementError::BadElement(err)
+impl From<xml::ElementError> for Error {
+    fn from(err: xml::ElementError) -> Error {
+        Error::BadElement(err)
     }
 }
 
-impl From<xml::BuildError> for _ElementError {
-    fn from(err: xml::BuildError) -> _ElementError {
-        _ElementError::BadShape(err)
+impl From<xml::BuildError> for Error {
+    fn from(err: xml::BuildError) -> Error {
+        Error::BadShape(err)
     }
 }
 
-impl From<_xml::reader::Error> for _ElementError {
-    fn from(err: _xml::reader::Error) -> _ElementError {
-        _ElementError::XmlEvent(err)
+impl From<_xml::reader::Error> for Error {
+    fn from(err: _xml::reader::Error) -> Error {
+        Error::XmlEvent(err)
     }
 }
 
-impl From<&'static str> for _ElementError {
-    fn from(msg: &'static str) -> _ElementError {
-        _ElementError::Str(msg)
+impl From<&'static str> for Error {
+    fn from(msg: &'static str) -> Error {
+        Error::Str(msg)
     }
 }
 
-impl From<std::num::ParseIntError> for _ElementError {
-    fn from(err: std::num::ParseIntError) -> _ElementError {
-        _ElementError::BadInt(err)
+impl From<std::num::ParseIntError> for Error {
+    fn from(err: std::num::ParseIntError) -> Error {
+        Error::BadInt(err)
     }
 }
 
-impl From<std::string::ParseError> for _ElementError {
-    fn from(err: std::string::ParseError) -> _ElementError {
-        _ElementError::BadString(err)
+impl From<std::string::ParseError> for Error {
+    fn from(err: std::string::ParseError) -> Error {
+        Error::BadString(err)
     }
 }
 
-impl From<std::num::ParseFloatError> for _ElementError {
-    fn from(err: std::num::ParseFloatError) -> _ElementError {
-        _ElementError::BadFloat(err)
+impl From<std::num::ParseFloatError> for Error {
+    fn from(err: std::num::ParseFloatError) -> Error {
+        Error::BadFloat(err)
     }
 }
 
-impl From<chrono::ParseError> for _ElementError {
-    fn from(err: chrono::ParseError) -> _ElementError {
-        _ElementError::BadTime(err)
+impl From<chrono::ParseError> for Error {
+    fn from(err: chrono::ParseError) -> Error {
+        Error::BadTime(err)
     }
 }
 
 /// FIXME: Remove this once xml::Error figured out
-impl From<xml::Error> for _ElementError {
+impl From<xml::Error> for Error {
     #[allow(unused_variables)]
-    fn from(err: xml::Error) -> _ElementError {
-        _ElementError::Str("BUG: xml::Error")
+    fn from(err: xml::Error) -> Error {
+        Error::Str("BUG: xml::Error")
     }
 }
 
-impl ElementErrorFree for _ElementError {}
+impl ElementErrorFree for Error {}
 
-impl fmt::Display for _ElementError {
+impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         fmt::Debug::fmt(self, fmt)
     }
 }
 
-impl ErrorTrait for _ElementError {
+impl ErrorTrait for Error {
     fn description(&self) -> &str {
         match *self {
-            _ElementError::Str(_) => "Str (FIXME)",
-            _ElementError::XmlEvent(_) => "XmlEvent",
-            _ElementError::BadInt(_) => "Bad int",
-            _ElementError::BadFloat(_) => "Bad float",
-            _ElementError::BadString(_) => "Bad string",
-            _ElementError::BadTime(_) => "Bad time",
-            _ElementError::BadShape(_) => "Wrong elements number",
-            _ElementError::BadAttribute(_) => "Bad attribute",
-            _ElementError::BadElement(_) => "Bad element",
-            _ElementError::UnknownElement(_) => "Unknown element",
+            Error::Str(_) => "Str (FIXME)",
+            Error::XmlEvent(_) => "XmlEvent",
+            Error::BadInt(_) => "Bad int",
+            Error::BadFloat(_) => "Bad float",
+            Error::BadString(_) => "Bad string",
+            Error::BadTime(_) => "Bad time",
+            Error::BadShape(_) => "Wrong elements number",
+            Error::BadAttribute(_) => "Bad attribute",
+            Error::BadElement(_) => "Bad element",
+            Error::UnknownElement(_) => "Unknown element",
         }
     }
 }
@@ -174,48 +170,48 @@ impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
 
 impl ParseVia<Bounds> for conv::Bounds {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<Bounds, ElementError> {
+            -> Result<Bounds, Positioned<Error>> {
         BoundsParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<Metadata> for conv::Metadata {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<Metadata, ElementError> {
+            -> Result<Metadata, Positioned<Error>> {
         MetadataParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<Route> for conv::Rte {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<Route, ElementError> {
+            -> Result<Route, Positioned<Error>> {
         RteParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<Track> for conv::Trk {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<Track, ElementError> {
+            -> Result<Track, Positioned<Error>> {
         TrkParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<TrackSegment> for conv::Trkseg {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<TrackSegment, ElementError> {
+            -> Result<TrackSegment, Positioned<Error>> {
         TrackSegmentParser::new(parser).parse(elem_start)
     }
 }
 
 impl ParseVia<Link> for conv::Link {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<Link, ElementError> {
+            -> Result<Link, Positioned<Error>> {
         LinkParser::new(parser).parse(elem_start)
     }
 }
 
 fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<Fix, ElementError> {
+        -> Result<Fix, Positioned<Error>> {
     parse_chars(parser, elem_start, Fix::from_str)
 }
 
@@ -281,7 +277,7 @@ impl<'a, T: Read> ElementBuild for TrackSegmentParser<'a, T> {
 pub enum DocumentError {
     ParserError(_xml::reader::Error),
     DocumentParserError(xml::DocumentParserError),
-    BadData(ElementError),
+    BadData(Positioned<Error>),
     MissingGpx,
 }
 
@@ -291,8 +287,8 @@ impl From<_xml::reader::Error> for DocumentError {
     }
 }
 
-impl From<::gpx::par::ElementError> for DocumentError {
-    fn from(err: ::gpx::par::ElementError) -> DocumentError {
+impl From<Positioned<Error>> for DocumentError {
+    fn from(err: Positioned<Error>) -> DocumentError {
         DocumentError::BadData(err)
     }
 }
@@ -310,10 +306,10 @@ impl DocumentParserData for ParserData {
     type Contents = Gpx;
     type Error = DocumentError;
     fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<(), ElementError> {
+            -> Result<(), Positioned<Error>> {
         if let &mut ParserData(Some(_)) = self {
-            return Err(ElementError::with_position("Duplicate GPX element".into(),
-                                                   reader.position()));
+            return Err(Positioned::with_position("Duplicate GPX element".into(),
+                                                 reader.position()));
         }
         self.0 = Some(try!(GpxElemParser::new(&mut reader).parse(elem_start)));
         Ok(())

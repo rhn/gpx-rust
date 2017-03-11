@@ -26,12 +26,12 @@ pub mod par {
     use par::ParseVia;
     use par::parse_chars;
     use par::{ Positioned, AttributeValueError };
-    use gpx::par::ElementError; // FIXME: move to par and concretize these types
     use xsd;
     use xsd::NonNegativeInteger;
-    use gpx::par::{ _ElementError, FromAttribute }; // FIXME: move to par
+    use gpx::par::{ Error, FromAttribute }; // FIXME: move to par
     use xsd::conv;
     
+    // todo: move to par
     pub fn parse_int<T: std::io::Read, Error>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
             -> Result<NonNegativeInteger, Positioned<Error>>
@@ -41,6 +41,7 @@ pub mod par {
                          |chars| NonNegativeInteger::from_str(chars))
     }
 
+    // TODO: move to par
     pub fn parse_string<T: std::io::Read, Error>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
             -> Result<String, Positioned<Error>>
@@ -51,25 +52,25 @@ pub mod par {
     
     pub fn parse_time<T: std::io::Read>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<xsd::Time, ElementError> {
+            -> Result<xsd::Time, Positioned<Error>> {
         parse_chars(parser, elem_start,
-                    |chars| xsd::Time::parse_from_rfc3339(chars).map_err(_ElementError::from))
+                    |chars| xsd::Time::parse_from_rfc3339(chars).map_err(Error::from))
     }
     
     pub fn parse_decimal<T: std::io::Read>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<xsd::Decimal, ElementError> {
+            -> Result<xsd::Decimal, Positioned<Error>> {
         parse_chars(parser,
                     elem_start,
-                    |chars| xsd::Decimal::from_str(chars).map_err(_ElementError::from))
+                    |chars| xsd::Decimal::from_str(chars).map_err(Error::from))
     }
     
     impl ParseVia<String> for conv::String {
         fn parse_via<R: io::Read>(parser: &mut _xml::EventReader<R>, elem_start: ElemStart)
-                -> Result<String, ElementError> {
+                -> Result<String, Positioned<Error>> {
             parse_chars(parser,
                         elem_start,
-                        |chars| Ok::<_, _ElementError>(String::from(chars)))
+                        |chars| Ok::<_, Error>(String::from(chars)))
         }
     }
     

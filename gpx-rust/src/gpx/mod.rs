@@ -17,14 +17,12 @@ use xml;
 use xml::XmlElement;
 use xsd;
 use xsd::*;
-use par::{ ParserMessage, AttributeValueError };
+use par::{ Positioned, ParserMessage, AttributeValueError };
 
 mod conv;
 mod ser_auto;
 pub mod ser;
 pub mod par;
-
-use self::par::_ElementError;
 
 /// Parses XML stream containing GPX data
 pub use self::par::parse;
@@ -53,7 +51,7 @@ pub enum Error {
     BadAttributeValue(AttributeValueError), // use when value out of XML spec for any attribute
     BadAttribute(OwnedName, OwnedName),
     MalformedData(String),
-    BadElement(par::ElementError),
+    BadElement(Positioned<par::Error>),
 }
 
 impl fmt::Display for Error {
@@ -103,8 +101,8 @@ impl ParserMessage for Error {
     }
 }
 
-impl From<par::ElementError> for Error {
-    fn from(err: par::ElementError) -> Error {
+impl From<Positioned<par::Error>> for Error {
+    fn from(err: Positioned<par::Error>) -> Error {
         Error::BadElement(err)
     }
 }
@@ -276,7 +274,7 @@ enum Fix {
 }
 
 impl FromStr for Fix {
-    type Err = _ElementError;
+    type Err = self::par::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "none" => Fix::None,
@@ -284,7 +282,7 @@ impl FromStr for Fix {
             "3d" => Fix::_3D,
             "dgps" => Fix::DGPS,
             "pps" => Fix::PPS,
-            _ => { return Err(_ElementError::Str("Unknown fix kind")); }
+            _ => { return Err(self::par::Error::Str("Unknown fix kind")); }
         })
     }
 }

@@ -10,12 +10,13 @@ use self::xml::common::{ XmlVersion, TextPosition, Position };
 
 use par::Positioned;
 
+type DataError = Positioned<::gpx::par::Error>;
 
 #[derive(Debug)]
 pub enum DocumentError {
     ParserError(xml::reader::Error),
     DocumentParserError(DocumentParserError),
-    BadData(::gpx::par::ElementError)
+    BadData(DataError)
 }
 
 impl From<xml::reader::Error> for DocumentError {
@@ -24,8 +25,8 @@ impl From<xml::reader::Error> for DocumentError {
     }
 }
 
-impl From<::gpx::par::ElementError> for DocumentError {
-    fn from(err: ::gpx::par::ElementError) -> DocumentError {
+impl From<DataError> for DocumentError {
+    fn from(err: DataError) -> DocumentError {
         DocumentError::BadData(err)
     }
 }
@@ -195,7 +196,7 @@ impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
     }
 }
 
-impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::_ElementError> for ElementParser<'a, T> {
+impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T> {
     fn new(reader: &'a mut EventReader<T>)
             -> ElementParser<'a, T> {
         ElementParser { reader: reader,
@@ -206,12 +207,12 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::_ElementError> for ElementPars
         self.info = Some(elem_start);
         Ok(())
     }
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), ::gpx::par::Error> {
+    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), Positioned<::gpx::par::Error>> {
         let elem = try!(ElementParser::new(self.reader).parse(elem_start));
         self.nodes.push(XmlNode::Element(elem));
         Ok(())
     }
-    fn parse_characters(&mut self, data: String) -> Result<(), ::gpx::par::_ElementError> {
+    fn parse_characters(&mut self, data: String) -> Result<(), ::gpx::par::Error> {
         self.nodes.push(XmlNode::Text(data));
         Ok(())
     }
@@ -281,10 +282,10 @@ pub fn parse_document<R: Read, D: DocumentParserData>(source: R)
 
 pub trait DocumentParserData where Self: Sized + Default {
     type Contents;
-    type Error: From<xml::reader::Error> + From<DocumentParserError> + From<::gpx::par::ElementError>;
+    type Error: From<xml::reader::Error> + From<DocumentParserError> + From<DataError>;
     // public iface
     fn parse_element<R: Read>(&mut self, reader: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<(), ::gpx::par::ElementError>;
+            -> Result<(), DataError>;
     fn build(self) -> Result<Self::Contents, Self::Error>;
 }
 
@@ -295,7 +296,7 @@ impl DocumentParserData for ParserData {
     type Contents = Vec<XmlNode>;
     type Error = DocumentError;
     fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<(), ::gpx::par::ElementError> {
+            -> Result<(), DataError> {
         let elem = try!(ElementParser::new(&mut reader).parse(elem_start));
         self.0.push(XmlNode::Element(elem));
         Ok(())

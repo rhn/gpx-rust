@@ -12,9 +12,9 @@ use self::_xml::reader::{ EventReader, XmlEvent };
 
 use xml;
 use xml::{ ElementParse, ElementParser, XmlElement, ElemStart };
-use gpx::par::_ElementError;
-use gpx::par::ElementError as ElementErrorE;
+use gpx::par::Error;
 use conv;
+
 
 #[derive(Debug)]
 pub struct Positioned<Data> {
@@ -66,12 +66,12 @@ pub trait ParserMessage
 /// Implement on converters to do Par::parse_via(data, ...)
 pub trait ParseVia<Data> {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
-        -> Result<Data, ElementErrorE>;
+        -> Result<Data, Positioned<Error>>;
 }
 
 impl ParseVia<XmlElement> for conv::XmlElement {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
-            -> Result<XmlElement, ElementErrorE> {
+            -> Result<XmlElement, Positioned<Error>> {
         ElementParser::new(parser).parse(elem_start)
     }
 }
@@ -123,20 +123,20 @@ pub fn parse_chars<R: std::io::Read, F, Res, E, EInner>
 }
 
 pub fn parse_string<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<String, ElementErrorE> {
+        -> Result<String, Positioned<Error>> {
     parse_chars(parser,
                 elem_start,
-                |chars| Ok::<_, _ElementError>(chars.into()))
+                |chars| Ok::<_, Error>(chars.into()))
 }
 
 pub fn parse_u64<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<u64, ElementErrorE> {
+        -> Result<u64, Positioned<Error>> {
     parse_chars(parser, elem_start,
-                |chars| u64::from_str(chars).map_err(_ElementError::from))
+                |chars| u64::from_str(chars).map_err(Error::from))
 }
 
 // unused
 pub fn parse_elem<T: std::io::Read>(parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<XmlElement, ElementErrorE> {
+        -> Result<XmlElement, Positioned<Error>> {
     ElementParser::new(parser).parse(elem_start)
 }

@@ -410,8 +410,8 @@ struct {{{ name }}} {
                 {{{ match_elems }}}
                 _ => {
                     // TODO: add config and handler
-                    return Err(::gpx::par::ElementError::with_position(
-                        _ElementError::UnknownElement(elem_start.name),
+                    return Err(Positioned::with_position(
+                        ::gpx::par::Error::UnknownElement(elem_start.name),
                         self.reader.position()
                     ));
                 }
@@ -419,8 +419,8 @@ struct {{{ name }}} {
             Ok(())"#)
         } else {
             String::from(r#"
-            Err(::gpx::par::ElementError::with_position(
-                _ElementError::UnknownElement(elem_start.name),
+            Err(Positioned::with_position(
+                ::gpx::par::Error::UnknownElement(elem_start.name),
                 self.reader.position())
             )"#)
         };
@@ -438,11 +438,11 @@ struct {{{ name }}} {
                                         .insert("parse_element_body", parse_elem_body)
                                         .insert("body", body),
                       r#"
-impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::_ElementError> for {{{ cls_name }}}<'a, T> {
+impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ cls_name }}}<'a, T> {
     ParserStart!( {{{ macro_attrs }}} );
     {{{ body }}}
     fn parse_element(&mut self, elem_start: ElemStart)
-            -> Result<(), ::gpx::par::ElementError> {
+            -> Result<(), Positioned<::gpx::par::Error>> {
         {{{ parse_element_body }}}
     }
     fn get_parser_position(&self) -> _xml::common::TextPosition {
