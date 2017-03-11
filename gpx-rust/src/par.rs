@@ -76,6 +76,17 @@ impl ParseVia<XmlElement> for conv::XmlElement {
     }
 }
 
+pub trait ParseViaChar<Data> {
+    fn from_char(s: &str) -> Result<Data, ::gpx::par::Error>;
+}
+
+impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<Data, Positioned<Error>> {
+        parse_chars(parser, elem_start, |s| Self::from_char(s))
+    }
+}
+
 pub trait FromAttributeVia<Data> {
     fn from_attribute(&str) -> Result<Data, AttributeValueError>;
 }

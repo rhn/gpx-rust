@@ -23,7 +23,7 @@ use gpx;
 use gpx::{ Document, Gpx, Bounds, GpxVersion, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
-use ::par::{ ParseVia, parse_chars, parse_string, parse_u64, parse_elem };
+use ::par::{ ParseVia, ParseViaChar, parse_string, parse_u64, parse_elem };
 use ::par::{ Positioned, ElementErrorFree, AttributeValueError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
@@ -210,9 +210,17 @@ impl ParseVia<Link> for conv::Link {
     }
 }
 
-fn parse_fix<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<Fix, Positioned<Error>> {
-    parse_chars(parser, elem_start, Fix::from_str)
+impl ParseViaChar<Fix> for conv::Fix {
+    fn from_char(s: &str) -> Result<Fix, Error> {
+        Ok(match s {
+            "none" => Fix::None,
+            "2d" => Fix::_2D,
+            "3d" => Fix::_3D,
+            "dgps" => Fix::DGPS,
+            "pps" => Fix::PPS,
+            _ => return Err(Error::Str("Unknown fix kind")),
+        })
+    }
 }
 
 pub fn copy(value: &str) -> Result<String, AttributeValueError> {

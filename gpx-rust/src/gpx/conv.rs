@@ -30,5 +30,8 @@ pub struct Trkseg {}
 /// Defines conversions between gpx::Version type and GPX version attribute
 pub struct Version {}
 
+/// Defines conversions for GPX fixType
+pub struct Fix {}
+
 /// Defines conversions for GPX extensionsType
 pub type Extensions = ::conv::XmlElement;

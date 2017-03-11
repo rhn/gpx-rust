@@ -55,7 +55,7 @@ fn process() -> Result<(), Error> {
         "latitudeType".into() => ("f64".into(), TypeConverter::AttributeFun("gpx::conv::Latitude::from_attr".into())),
         "longitudeType".into() => ("f64".into(), TypeConverter::AttributeFun("gpx::conv::Longitude::from_attr".into())),
         "linkType".into() => ("Link".into(), TypeConverter::UniversalClass("::gpx::conv::Link".into())),
-        "fixType".into() => ("Fix".into(), "parse_fix".into()),
+        "fixType".into() => ("Fix".into(), TypeConverter::UniversalClass("::gpx::conv::Fix".into())),
         "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
         "extensionsType".into() => ("XmlElement".into(), "parse_elem".into()), // FIXME: dedicated type?
         "personType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME

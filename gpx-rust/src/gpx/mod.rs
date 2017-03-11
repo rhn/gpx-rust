@@ -7,7 +7,6 @@ extern crate geo;
 
 use std;
 use std::io;
-use std::str::FromStr;
 use std::fmt;
 
 use self::geo::Bbox;
@@ -271,20 +270,6 @@ enum Fix {
     _3D,
     DGPS,
     PPS
-}
-
-impl FromStr for Fix {
-    type Err = self::par::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "none" => Fix::None,
-            "2d" => Fix::_2D,
-            "3d" => Fix::_3D,
-            "dgps" => Fix::DGPS,
-            "pps" => Fix::PPS,
-            _ => { return Err(self::par::Error::Str("Unknown fix kind")); }
-        })
-    }
 }
 
 #[derive(XmlDebug)]
