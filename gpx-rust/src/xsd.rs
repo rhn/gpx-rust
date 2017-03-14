@@ -72,6 +72,11 @@ pub mod par {
         }
     }
     
+    impl ParseViaChar<u64> for conv::Integer {
+        fn from_char(s: &str) -> Result<u64, ::gpx::par::Error> {
+            u64::from_str(s).map_err(::gpx::par::Error::from)
+        }
+    }
     
     impl ParseViaChar<f64> for conv::Decimal {
         fn from_char(s: &str) -> Result<f64, ::gpx::par::Error> {
@@ -105,6 +110,7 @@ pub mod conv {
     pub struct Decimal {}
     pub struct Uri {}
     pub struct Integer {}
+    pub type NonNegativeInteger = Integer;
 }
 
 mod ser {
@@ -125,6 +131,10 @@ mod ser {
     
     impl SerializeCharElemVia<f32> for xsd::conv::Decimal {
         fn to_characters(data: &f32) -> String { data.to_string() }
+    }
+
+    impl SerializeCharElemVia<u64> for xsd::conv::Integer {
+        fn to_characters(data: &u64) -> String { data.to_string() }
     }
 
     impl SerializeCharElem for xsd::DateTime {

@@ -89,7 +89,7 @@ fn process() -> Result<(), Error> {
         "xsd:decimal".into() => ("xsd::Decimal".into(), TypeConverter::UniversalClass("::xsd::conv::Decimal".into())),
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
         "xsd:string".into() => ("String".into(), TypeConverter::UniversalClass("::xsd::conv::String".into())),
-        "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u64".into()),
+        "xsd:nonNegativeInteger".into() => ("u64".into(), TypeConverter::UniversalClass("::xsd::conv::NonNegativeInteger".into())),
         "degreesType".into() => ("f32".into(), TypeConverter::UniversalClass("::gpx::conv::Degrees".into())),
         "xsd:anyURI".into() => ("xsd::Uri".into(), TypeConverter::UniversalClass("::xsd::conv::Uri".into())),
         "xsd:integer".into() => ("i64".into(), TypeConverter::UniversalClass("::xsd::conv::Integer".into())),
