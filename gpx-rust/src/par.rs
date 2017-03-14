@@ -126,12 +126,6 @@ pub fn parse_chars<R: std::io::Read, F, Res, E, EInner>
     }
 }
 
-pub fn parse_u64<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<u64, Positioned<Error>> {
-    parse_chars(parser, elem_start,
-                |chars| u64::from_str(chars).map_err(Error::from))
-}
-
 // unused
 pub fn parse_elem<T: std::io::Read>(parser: &mut EventReader<T>, elem_start: ElemStart)
         -> Result<XmlElement, Positioned<Error>> {
