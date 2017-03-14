@@ -57,14 +57,6 @@ pub mod par {
                     |chars| xsd::Time::parse_from_rfc3339(chars).map_err(Error::from))
     }
     
-    pub fn parse_decimal<T: std::io::Read>
-            (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<xsd::Decimal, Positioned<Error>> {
-        parse_chars(parser,
-                    elem_start,
-                    |chars| xsd::Decimal::from_str(chars).map_err(Error::from))
-    }
-    
     impl ParseVia<String> for conv::String {
         fn parse_via<R: io::Read>(parser: &mut _xml::EventReader<R>, elem_start: ElemStart)
                 -> Result<String, Positioned<Error>> {
