@@ -499,10 +499,13 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ cls_name }}}<'a
         };
         let conv_name = get_univ(converter);
         let base_conv = get_univ(convs.get(data.base.as_str()).unwrap());
-        render_string(HashBuilder::new().insert("type", converter.0.as_user_type())
-                                        .insert("conv", conv_name.as_str())
-                                        .insert("base_conv", base_conv.as_str()),
-                      self.parse_via_char)
+        let mut values = HashBuilder::new().insert("type", converter.0.as_user_type())
+                                           .insert("conv", conv_name.as_str())
+                                           .insert("base_conv", base_conv.as_str());
+        // TODO: make optional
+        values = values.insert("lower", data.min_inclusive.to_string().as_str());
+        values = values.insert("upper", data.max_exclusive.to_string().as_str());
+        render_string(data, self.parse_via_char)
     }
 
     fn build_impl(parser_name: &str, data: &ComplexType, struct_info: &StructInfo,
