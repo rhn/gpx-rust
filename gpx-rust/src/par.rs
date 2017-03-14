@@ -46,15 +46,10 @@ impl<Data: ErrorTrait> ErrorTrait for Positioned<Data> {
     }
 }
 
-/// Error classes in ElementParser must implement this
-pub trait ParserMessage
-        where Self: From<&'static str> {
-    fn from_unexp_attr(elem_name: OwnedName, attr_name: OwnedName) -> Self;
-    fn from_xml_error(_xml::reader::Error) -> Self;
-    fn from_bad_attr_val(AttributeValueError) -> Self;
-}
-
-/// Implement on converters to do Par::parse_via(data, ...)
+/// Parses complex element in XML stream into `Data` type.
+///
+/// The element may take any form.
+/// Implement on converter types.
 pub trait ParseVia<Data> {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
         -> Result<Data, Positioned<Error>>;
@@ -67,6 +62,10 @@ impl ParseVia<XmlElement> for conv::XmlElement {
     }
 }
 
+/// Parses simple element in XML stream into `Data` type.
+///
+/// The element must contain only character data.
+/// `ParseVia` trait is automatically defined.
 pub trait ParseViaChar<Data> {
     fn from_char(s: &str) -> Result<Data, ::gpx::par::Error>;
 }
@@ -78,6 +77,9 @@ impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
     }
 }
 
+/// Parses attribute into `Data` type.
+///
+/// Implement for `conv` types.
 pub trait FromAttributeVia<Data> {
     fn from_attribute(&str) -> Result<Data, AttributeValueError>;
 }
