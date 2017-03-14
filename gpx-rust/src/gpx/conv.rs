@@ -33,5 +33,8 @@ pub struct Version {}
 /// Defines conversions for GPX fixType
 pub struct Fix {}
 
+/// Defines conversions for GPX degreesType
+pub struct Degrees {}
+
 /// Defines conversions for GPX extensionsType
 pub type Extensions = ::conv::XmlElement;

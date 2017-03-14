@@ -99,6 +99,11 @@ impl SerializeCharElem for String {
     fn to_characters(&self) -> String { self.clone() }
 }
 
+/// Character type can be converted into multiple data types, e.g. Decimal into f32 or f64
+pub trait SerializeCharElemVia<Data> {
+    fn to_characters(value: &Data) -> String;
+}
+
 /// Implement on converters to do Conv::serialize_via(data, ...)
 pub trait SerializeVia<Data> {
     fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
@@ -106,7 +111,14 @@ pub trait SerializeVia<Data> {
 }
 
 /// Trivial case: a type knows how to convert itself
-impl<Data: SerializeCharElem> SerializeVia<Data> for Data {
+impl<Data: SerializeCharElem> SerializeCharElemVia<Data> for Data {
+    fn to_characters(value: &Data) -> String {
+        value.to_characters()
+    }
+}
+
+/// Leverage char conversion capabilities
+impl<T, Data> SerializeVia<Data> for T where T: SerializeCharElemVia<Data> {
     fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), SerError> {
         let elemname = Name::local(name);
@@ -115,12 +127,13 @@ impl<Data: SerializeCharElem> SerializeVia<Data> for Data {
                                      attributes: Cow::Owned(Vec::new()),
                                      namespace: Cow::Owned(Namespace::empty()) }
         ));
-        try!(sink.write(XmlEvent::Characters(&data.to_characters())));
+        try!(sink.write(XmlEvent::Characters(&T::to_characters(data))));
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
     }
 }
 
+/// Special handling of namespaces
 impl SerializeVia<xml::XmlElement> for xml::XmlElement {
     fn serialize_via<W: io::Write>(data: &xml::XmlElement, sink: &mut EventWriter<W>, name: &str) 
             -> Result<(), SerError> {

@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use quote;
 use self::rustache::{ HashBuilder, Render };
 
-use xsd_types::{ Type, Element, ElementMaxOccurs, Attribute };
-use ::{ StructInfo, ParserGen, TagMap, TypeConverter, TypeMap, ident_safe, UserType };
+use xsd_types::{ Type, SimpleType, ComplexType, Element, ElementMaxOccurs, Attribute };
+use ::{ StructInfo, ParserGen, TagMap, TypeConverter, TypeMap, ConvMap, ident_safe, UserType };
 
 
 fn render_string(data: HashBuilder, template: &str) -> String {
@@ -58,7 +58,7 @@ macro_rules! ElementSingle (
 
 pub fn get_types<'a>() -> HashMap<&'a str, Type> {
     map!{
-        "gpxType".into() => Type {
+        "gpxType".into() => Type::Complex(ComplexType {
             sequence: vec![
                 ElementSingle!("metadata", "metadataType"),
                 Element { name: "wpt".into(),
@@ -76,8 +76,8 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                 Attribute { name: "version".into(), type_: "_gpx:version".into(), required: true },
                 Attribute { name: "creator".into(), type_: "xsd:string".into(), required: true },
             ],
-        },
-        "metadataType".into() => Type {
+        }),
+        "metadataType".into() => Type::Complex(ComplexType {
             sequence: vec![
                 Element { name: String::from("name"),
                           type_: "xsd:string".into(),
@@ -96,8 +96,8 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                 ElementSingle!("extensions", "extensionsType"),
             ],
             attributes: vec![],
-        },
-        "trkType".into() => Type {
+        }),
+        "trkType".into() => Type::Complex(ComplexType {
             sequence: vec![
                 ElementSingle!("name", "xsd:string"),
                 ElementSingle!("cmt", "xsd:string"),
@@ -114,8 +114,8 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                           max_occurs: ElementMaxOccurs::Unbounded },
             ],
             attributes: vec![],
-        },
-        "rteType".into() => Type {
+        }),
+        "rteType".into() => Type::Complex(ComplexType {
             sequence: vec![
                 ElementSingle!("name", "xsd:string"),
                 ElementSingle!("cmt", "xsd:string"),
@@ -132,8 +132,8 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                           max_occurs: ElementMaxOccurs::Unbounded },
             ],
             attributes: vec![],
-        },
-        "trksegType".into() => Type {
+        }),
+        "trksegType".into() => Type::Complex(ComplexType {
             sequence: vec![
                 Element { name: "trkpt".into(),
                           type_: "wptType".into(),
@@ -141,8 +141,8 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                 ElementSingle!("extensions", "extensionsType"),
             ],
             attributes: vec![],
-        },
-        "boundsType".into() => Type {
+        }),
+        "boundsType".into() => Type::Complex(ComplexType {
             sequence: vec![],
             attributes: vec![
                 Attribute { name: "minlat".into(), type_: "latitudeType".into(), required: true },
@@ -150,8 +150,8 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                 Attribute { name: "maxlat".into(), type_: "latitudeType".into(), required: true },
                 Attribute { name: "maxlon".into(), type_: "longitudeType".into(), required: true },
             ],
-        },
-        "wptType".into() => Type {
+        }),
+        "wptType".into() => Type::Complex(ComplexType {
             sequence: vec![
                 ElementSingle!("ele", "xsd:decimal"),
                 ElementSingle!("time", "xsd:dateTime"),
@@ -179,8 +179,8 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
                 Attribute { name: "lat".into(), type_: "latitudeType".into(), required: true },
                 Attribute { name: "lon".into(), type_: "longitudeType".into(), required: true }
             ],
-        },
-        "linkType".into() => Type {
+        }),
+        "linkType".into() => Type::Complex(ComplexType {
             sequence: vec![
                 ElementSingle!("text", "xsd:string"),
                 ElementSingle!("type", "xsd:string"),
@@ -188,12 +188,39 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
             attributes: vec![
                 Attribute { name: "href".into(), type_: "xsd:anyURI".into(), required: true },
             ],
-        }
+        }),
+        "degreesType".into() => Type::Simple(SimpleType {
+            base: "xsd:decimal".into(), min_inclusive: 0., max_exclusive: 360.,
+        })
     }
 }
 
 
-pub struct Generator {}
+pub struct Generator<'a> {
+    parse_via_char: &'a str,
+}
+
+pub static default_gen: Generator<'static> = Generator {
+    parse_via_char: r#"
+impl ParseViaChar<{{{ type }}}> for {{{ conv }}} {
+    fn from_char(s: &str) -> Result<{{{ type }}}, ::gpx::par::Error> {
+        let value = try!(<{{{ base_conv }}} as ParseViaChar<{{{ type }}}>>::from_char(s));
+{{# lower }}
+        if {{{ lower }}} >= value {
+            Err(::gpx::par::Error::TooSmall({{{ lower }}}, value))
+        } else
+{{/ lower }}
+{{# upper }}
+        if value > {{{ upper }}} {
+            Err(::gpx::par::Error::TooLarge({{{ upper }}}, value))
+        } else
+{{/ upper }}
+        {
+            Ok(value)
+        }
+    }
+}"#
+};
 
 trait GetOrElse<K, V> {
     fn get_or_else(&self, key: &K, f: &Fn(&K) -> V) -> V;
@@ -209,7 +236,7 @@ impl<'a, K: std::cmp::Eq + std::hash::Hash, V: Clone> GetOrElse<K, V> for HashMa
 }
 
 
-impl ParserGen for Generator {
+impl<'a> ParserGen for Generator<'a> {
     fn header() -> &'static str {
         "extern crate xml as _xml;
 
@@ -218,11 +245,11 @@ use self::_xml::name::Name;
 use self::_xml::namespace::Namespace;
 use self::_xml::writer::{ XmlEvent, EventWriter };
 
-use ser::{ Serialize, SerError, SerializeVia };
+use ser::{ Serialize, SerError, SerializeVia, SerializeCharElemVia };
 use gpx::*;
 "
     }
-    fn struct_def(name: &str, tags: &TagMap, data: &Type, type_convs: &TypeMap) -> String {
+    fn struct_def(name: &str, tags: &TagMap, data: &ComplexType, type_convs: &ConvMap) -> String {
         let get_elem_field_name = |elem: &Element| {
             match tags.get(elem.name.as_str()) {
                 Some(i) => String::from(*i),
@@ -272,11 +299,11 @@ struct {{{ name }}} {
 }"#)
     }
 
-    fn parser_cls(name: &str, data: &Type, types: &TypeMap) -> String {
+    fn parser_cls(name: &str, data: &ComplexType, convs: &ConvMap) -> String {
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
             let fallback = UserType("String".into());
-            let attr_type = match types.get(&attr.type_) {
+            let attr_type = match convs.get(&attr.type_) {
                 Some(&(ref type_, TypeConverter::AttributeFun(_))) => type_,
                 Some(&(ref type_, TypeConverter::UniversalClass(_))) => type_,
                 Some(_) => panic!("Type {} doesn't have converter appropriate for attribute", &attr.type_),
@@ -291,7 +318,7 @@ struct {{{ name }}} {
         });
         let elems = data.sequence.iter().map(|elem| {
             let fallback = UserType("XmlElement".into());
-            let elem_type = match types.get(&elem.type_) {
+            let elem_type = match convs.get(&elem.type_) {
                 Some(&(ref cls, _)) => cls,
                 None => {
                      println!("cargo:warning=\"Missing type for elem {}\"", &elem.type_);
@@ -318,7 +345,7 @@ struct {{{ name }}} {
         ).to_string()
     }
     
-    fn parser_impl(name: &str, data: &Type, types: &TypeMap) -> String {
+    fn parser_impl(name: &str, data: &ComplexType, convs: &ConvMap) -> String {
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
             quote::Ident::new(attr.name.clone())
@@ -326,7 +353,7 @@ struct {{{ name }}} {
         let macroattrs = data.attributes.iter().map(|attr| {
             let field = &attr.name;
             let attr_name = &attr.name;
-            let conv = match types.get(&attr.type_) {
+            let conv = match convs.get(&attr.type_) {
                 Some(&(_, TypeConverter::AttributeFun(ref foo))) => foo.clone(),
                 Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
                     format!("{}::from_attr", conv_name)
@@ -365,7 +392,7 @@ struct {{{ name }}} {
                 ElementMaxOccurs::Some(1) => format!("self.{} = Some", field),
                 _ => format!("self.{}.push", field),
             };
-            let conv = match types.get(&elem.type_) {
+            let conv = match convs.get(&elem.type_) {
                 Some(&(_, TypeConverter::ParseFun(ref fun))) => {
                     format!("{fun}(self.reader, elem_start)", fun=fun)
                 },
@@ -461,7 +488,25 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ cls_name }}}<'a
 }"#)
     }
     
-    fn build_impl(parser_name: &str, data: &Type, struct_info: &StructInfo, type_convs: &TypeMap)
+    fn parse_impl(&self, type_name: &str, data: &SimpleType, convs: &ConvMap, types_: &TypeMap)
+            -> String {
+        let converter = convs.get(type_name).unwrap();
+        let get_univ = |converter| {
+            match converter {
+                &(_, TypeConverter::UniversalClass(ref convname)) => convname,
+                x => panic!("Entry {:?} is not a universal converter", x),
+            }
+        };
+        let conv_name = get_univ(converter);
+        let base_conv = get_univ(convs.get(data.base.as_str()).unwrap());
+        render_string(HashBuilder::new().insert("type", converter.0.as_user_type())
+                                        .insert("conv", conv_name.as_str())
+                                        .insert("base_conv", base_conv.as_str()),
+                      self.parse_via_char)
+    }
+
+    fn build_impl(parser_name: &str, data: &ComplexType, struct_info: &StructInfo,
+                  type_convs: &ConvMap)
             -> String {
         let inits = data.attributes.iter().map(|attr| {
             let field_name = ident_safe(&attr.name);
@@ -497,7 +542,7 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
     }
 
     fn serializer_impl(cls_name: &str, tags: &TagMap,
-                       type_name: &str, data: &Type, type_convs: &TypeMap) -> String {
+                       type_name: &str, data: &ComplexType, type_convs: &ConvMap) -> String {
         let attributes = if data.attributes.is_empty() {
             String::from("Vec::new()")
         } else {

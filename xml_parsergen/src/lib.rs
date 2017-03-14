@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate quote;
 
-mod xsd_types;
+pub mod xsd_types;
 
 pub mod gpx;
 
@@ -11,9 +11,9 @@ use std::process::{ Command, ExitStatus };
 use std::collections::HashMap;
 use std::path::Path;
 
-use xsd_types::{ Type, Element, ElementMaxOccurs };
+use xsd_types::{ Type, SimpleType, ComplexType, Element, ElementMaxOccurs };
 
-
+pub type TypeMap<'a> = HashMap<&'a str, Type>;
 pub type TagMap<'a> = HashMap<&'a str, &'a str>;
 pub type AttrMap = HashMap<String, (String, String)>;
 
@@ -27,7 +27,7 @@ pub struct StructInfo<'a> {
 /// This is awful
 pub struct ParserInfo<'a> {
     pub name: String,
-    pub type_: &'a Type,
+    pub type_: &'a ComplexType,
 }
 
 #[derive(Debug)]
@@ -56,7 +56,7 @@ impl<'a> From<&'a str> for UserType {
     fn from(data: &'a str) -> UserType { UserType(data.into()) }
 }
 
-pub type TypeMap = HashMap<String, (UserType, TypeConverter)>;
+pub type ConvMap = HashMap<String, (UserType, TypeConverter)>;
 
 #[derive(Debug)]
 pub enum Error {
@@ -67,13 +67,16 @@ pub enum Error {
 
 pub trait ParserGen {
     fn header() -> &'static str;
-    fn struct_def(name: &str, tags: &TagMap, data: &Type,
-                  type_convs: &TypeMap) -> String;
-    fn parser_cls(name: &str, data: &Type, type_convs: &TypeMap) -> String;
-    fn parser_impl(name: &str, data: &Type, types: &TypeMap) -> String;
-    fn build_impl(cls_name: &str, data: &Type, struct_info: &StructInfo, types: &TypeMap) -> String;
+    fn struct_def(name: &str, tags: &TagMap, data: &ComplexType,
+                  type_convs: &ConvMap) -> String;
+    fn parser_cls(name: &str, data: &ComplexType, type_convs: &ConvMap) -> String;
+    fn parser_impl(name: &str, data: &ComplexType, convs: &ConvMap) -> String;
+    fn parse_impl(&self, type_name: &str, data: &SimpleType, convs: &ConvMap, types_: &TypeMap)
+        -> String;
+    fn build_impl(cls_name: &str, data: &ComplexType, struct_info: &StructInfo, convs: &ConvMap)
+        -> String;
     fn serializer_impl(cls_name: &str, tags: &TagMap,
-                       type_name: &str, data: &Type, type_convs: &TypeMap) -> String;
+                       type_name: &str, data: &ComplexType, type_convs: &ConvMap) -> String;
 }
 
 pub fn ident_safe(name: &str) -> &str {

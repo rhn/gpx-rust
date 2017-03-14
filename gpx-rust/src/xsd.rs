@@ -23,7 +23,7 @@ pub mod par {
     use xml;
     use xml::ElemStart;
     use par;
-    use par::{ FromAttribute, ParseVia };
+    use par::{ FromAttribute, ParseVia, ParseViaChar };
     use par::parse_chars;
     use par::{ Positioned, AttributeValueError };
     use xsd;
@@ -74,6 +74,18 @@ pub mod par {
         }
     }
     
+    impl ParseViaChar<f64> for conv::Decimal {
+        fn from_char(s: &str) -> Result<f64, ::gpx::par::Error> {
+            f64::from_str(s).map_err(::gpx::par::Error::from)
+        }
+    }
+    
+    impl ParseViaChar<f32> for conv::Decimal {
+        fn from_char(s: &str) -> Result<f32, ::gpx::par::Error> {
+            f32::from_str(s).map_err(::gpx::par::Error::from)
+        }
+    }
+    
     impl FromAttribute<String> for conv::String {
         fn from_attr(attr: &str) -> Result<String, AttributeValueError> {
             Ok(String::from(attr))
@@ -91,7 +103,7 @@ pub mod conv {
     //! conversion markers
     use std;
     pub type String = std::string::String;
-    pub type Decimal = f64;
+    pub struct Decimal {}
     pub struct Uri {}
 }
 
@@ -99,7 +111,7 @@ mod ser {
     //! Serialization impls
     use xsd;
     use xsd::conv;
-    use ser::{ ToAttributeVia, SerializeCharElem };
+    use ser::{ ToAttributeVia, SerializeCharElem, SerializeCharElemVia };
     
     use gpx::ser::AttributeValueError;
     
@@ -107,8 +119,12 @@ mod ser {
         fn to_characters(&self) -> String { self.to_string() }
     }
     
-    impl SerializeCharElem for xsd::Decimal {
-        fn to_characters(&self) -> String { self.to_string() }
+    impl SerializeCharElemVia<f64> for xsd::conv::Decimal {
+        fn to_characters(data: &f64) -> String { data.to_string() }
+    }
+    
+    impl SerializeCharElemVia<f32> for xsd::conv::Decimal {
+        fn to_characters(data: &f32) -> String { data.to_string() }
     }
 
     impl SerializeCharElem for xsd::DateTime {

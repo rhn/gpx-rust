@@ -132,13 +132,13 @@ impl ErrorTrait for Error {
 
 impl FromAttribute<f64> for Latitude {
     fn from_attr(attr: &str) -> Result<f64, AttributeValueError> {
-        f64::from_str(attr).map_err(|e| { AttributeValueError::Error(Box::new(e)) })
+        f64::from_str(attr).map_err(|e| AttributeValueError::Error(Box::new(e)))
     }
 }
 
 impl FromAttribute<f64> for Longitude {
     fn from_attr(attr: &str) -> Result<f64, AttributeValueError> {
-        f64::from_str(attr).map_err(|e| { AttributeValueError::Error(Box::new(e)) })
+        f64::from_str(attr).map_err(|e| AttributeValueError::Error(Box::new(e)))
     }
 }
 

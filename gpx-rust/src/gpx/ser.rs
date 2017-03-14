@@ -13,7 +13,7 @@ use xsd;
 use gpx::{ Gpx, Version, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem, ToAttributeVia };
+use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem, SerializeCharElemVia, ToAttributeVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -22,6 +22,14 @@ macro_rules! set_optional(
     ($sink:ident, $name:expr, $tag:expr) => {
         if let Some(ref item) = $name {
             try!(item.serialize_with($sink, $tag));
+        }
+    }
+);
+
+macro_rules! set_optional_typed(
+    ($sink:ident, $name:expr, $tag:expr, $type_:path) => {
+        if let Some(ref item) = $name {
+            try!(<$type_>::serialize_via(item, $sink, $tag));
         }
     }
 );
@@ -170,8 +178,12 @@ impl Serialize for Waypoint {
         if let Some(ref item) = self.time {
             try!(item.serialize_with(sink, "time"));
         }
-        set_optional!(sink, self.mag_variation, "magvar");
-        set_optional!(sink, self.geoid_height, "geoidheight");
+        if let Some(ref item) = self.mag_variation {
+            try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
+        }
+        if let Some(ref item) = self.geoid_height {
+            try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
+        }
         set_optional!(sink, self.name, "name");
         set_optional!(sink, self.comment, "cmt");
         set_optional!(sink, self.description, "desc");
@@ -183,10 +195,10 @@ impl Serialize for Waypoint {
         set_optional!(sink, self.type_, "type");
         set_optional!(sink, self.fix, "fix");
         set_optional!(sink, self.satellites, "sat");
-        set_optional!(sink, self.hdop, "hdop");
-        set_optional!(sink, self.vdop, "vdop");
-        set_optional!(sink, self.pdop, "pdop");
-        set_optional!(sink, self.dgps_age, "ageofdgpsdata");
+        set_optional_typed!(sink, self.hdop, "hdop", xsd::conv::Decimal);
+        set_optional_typed!(sink, self.vdop, "vdop", xsd::conv::Decimal);
+        set_optional_typed!(sink, self.pdop, "pdop", xsd::conv::Decimal);
+        set_optional_typed!(sink, self.dgps_age, "ageofdgpsdata", xsd::conv::Decimal);
         set_optional!(sink, self.dgps_id, "dgpsid");
         set_optional!(sink, self.extensions, "extensions");
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
