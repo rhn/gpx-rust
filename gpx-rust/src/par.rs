@@ -16,6 +16,9 @@ use gpx::par::Error;
 use conv;
 
 
+/// Describes the position in the input stream for some data.
+///
+/// Used most extendively for errors.
 #[derive(Debug)]
 pub struct Positioned<Data> {
     pub data: Data,
@@ -85,9 +88,10 @@ pub trait FromAttributeVia<Data> {
 }
 
 /// Raise whenever attribute value is out of bounds
+///
+/// TODO: follow this Box<> pattern to allow for carrying of namespace-specific errors
 #[derive(Debug)]
 pub enum AttributeValueError {
-    Str(&'static str),
     Error(Box<std::error::Error>),
 }
 

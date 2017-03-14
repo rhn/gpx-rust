@@ -29,6 +29,22 @@ use ::par::{ Positioned, AttributeValueError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
+#[derive(Debug)]
+pub struct VersionError {
+    version: String
+}
+
+impl fmt::Display for VersionError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        fmt::Debug::fmt(self, fmt)
+    }
+}
+
+impl ErrorTrait for VersionError {
+    fn description(&self) -> &str {
+        "Invalid GPX version"
+    }
+}
 
 /// Describes a failure while parsing data
 #[derive(Debug)]
@@ -153,7 +169,7 @@ impl FromAttribute<Version> for conv::Version {
         match attr {
             "1.0" => Ok(Version::V1_0),
             "1.1" => Ok(Version::V1_1),
-            _ => Err(AttributeValueError::Str("Unknown GPX version"))
+            v => Err(AttributeValueError::Error(Box::new(VersionError { version: v.into() })))
         }
     }
 }

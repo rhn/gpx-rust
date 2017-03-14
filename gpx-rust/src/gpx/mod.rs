@@ -20,6 +20,11 @@ pub mod par;
 /// Parses XML stream containing GPX data
 pub use self::par::parse;
 
+/// Xml document containing parsed GPX data
+///
+/// ```
+/// let gpx = document.data;
+/// ```
 pub type Document = xml::Document<Gpx>;
 
 #[derive(XmlDebug)]
