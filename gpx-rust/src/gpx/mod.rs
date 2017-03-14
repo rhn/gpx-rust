@@ -145,4 +145,4 @@ pub struct Route {
     pub waypoints: Vec<Waypoint>,
 }
 
-pub type Degrees = f32; // FIXME
+pub type Degrees = f32;

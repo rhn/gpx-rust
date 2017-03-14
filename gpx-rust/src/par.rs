@@ -126,13 +126,6 @@ pub fn parse_chars<R: std::io::Read, F, Res, E, EInner>
     }
 }
 
-pub fn parse_string<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<String, Positioned<Error>> {
-    parse_chars(parser,
-                elem_start,
-                |chars| Ok::<_, Error>(chars.into()))
-}
-
 pub fn parse_u64<T: std::io::Read> (mut parser: &mut EventReader<T>, elem_start: ElemStart)
         -> Result<u64, Positioned<Error>> {
     parse_chars(parser, elem_start,
