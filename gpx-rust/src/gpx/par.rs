@@ -23,12 +23,15 @@ use gpx;
 use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
-use ::par::{ FromAttribute, ParseVia, ParseViaChar, parse_string, parse_u64, parse_elem };
+use ::par::{ FromAttributeVia, ParseVia, ParseViaChar, parse_string, parse_u64, parse_elem };
 use ::par::{ Positioned, AttributeValueError };
 
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
+/// Marks unsupported GPX version
+///
+/// TODO: deprecate once other attribute failures become apparent
 #[derive(Debug)]
 pub struct VersionError {
     version: String
@@ -152,20 +155,20 @@ impl ErrorTrait for Error {
     }
 }
 
-impl FromAttribute<f64> for Latitude {
-    fn from_attr(attr: &str) -> Result<f64, AttributeValueError> {
+impl FromAttributeVia<f64> for Latitude {
+    fn from_attribute(attr: &str) -> Result<f64, AttributeValueError> {
         f64::from_str(attr).map_err(|e| AttributeValueError::Error(Box::new(e)))
     }
 }
 
-impl FromAttribute<f64> for Longitude {
-    fn from_attr(attr: &str) -> Result<f64, AttributeValueError> {
+impl FromAttributeVia<f64> for Longitude {
+    fn from_attribute(attr: &str) -> Result<f64, AttributeValueError> {
         f64::from_str(attr).map_err(|e| AttributeValueError::Error(Box::new(e)))
     }
 }
 
-impl FromAttribute<Version> for conv::Version {
-    fn from_attr(attr: &str) -> Result<Version, AttributeValueError> {
+impl FromAttributeVia<Version> for conv::Version {
+    fn from_attribute(attr: &str) -> Result<Version, AttributeValueError> {
         match attr {
             "1.0" => Ok(Version::V1_0),
             "1.1" => Ok(Version::V1_1),

@@ -23,7 +23,7 @@ pub mod par {
     use xml;
     use xml::ElemStart;
     use par;
-    use par::{ FromAttribute, ParseVia, ParseViaChar };
+    use par::{ FromAttributeVia, ParseVia, ParseViaChar };
     use par::parse_chars;
     use par::{ Positioned, AttributeValueError };
     use xsd;
@@ -78,14 +78,14 @@ pub mod par {
         }
     }
     
-    impl FromAttribute<String> for conv::String {
-        fn from_attr(attr: &str) -> Result<String, AttributeValueError> {
+    impl FromAttributeVia<String> for conv::String {
+        fn from_attribute(attr: &str) -> Result<String, AttributeValueError> {
             Ok(String::from(attr))
         }
     }
     
-    impl FromAttribute<xsd::Uri> for conv::Uri {
-        fn from_attr(attr: &str) -> Result<xsd::Uri, AttributeValueError> {
+    impl FromAttributeVia<xsd::Uri> for conv::Uri {
+        fn from_attribute(attr: &str) -> Result<xsd::Uri, AttributeValueError> {
             Ok(xsd::Uri::from(attr))
         }
     }

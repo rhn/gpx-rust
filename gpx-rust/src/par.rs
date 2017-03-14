@@ -46,11 +46,6 @@ impl<Data: ErrorTrait> ErrorTrait for Positioned<Data> {
     }
 }
 
-pub trait FromAttribute<T> {
-    fn from_attr(&str) -> Result<T, AttributeValueError>;
-}
-
-
 /// Error classes in ElementParser must implement this
 pub trait ParserMessage
         where Self: From<&'static str> {

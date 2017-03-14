@@ -356,7 +356,7 @@ struct {{{ name }}} {
             let conv = match convs.get(&attr.type_) {
                 Some(&(_, TypeConverter::AttributeFun(ref foo))) => foo.clone(),
                 Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
-                    format!("{}::from_attr", conv_name)
+                    format!("{}::from_attribute", conv_name)
                 },
                 Some(_) => panic!("Attribute {} must be parsed with a function", &attr.name),
                 None => {
