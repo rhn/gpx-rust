@@ -200,19 +200,19 @@ pub struct Generator<'a> {
     parse_via_char: &'a str,
 }
 
-pub static default_gen: Generator<'static> = Generator {
+pub static DEFAULT_GENERATOR: Generator<'static> = Generator {
     parse_via_char: r#"
 impl ParseViaChar<{{{ type }}}> for {{{ conv }}} {
     fn from_char(s: &str) -> Result<{{{ type }}}, ::gpx::par::Error> {
         let value = try!(<{{{ base_conv }}} as ParseViaChar<{{{ type }}}>>::from_char(s));
 {{# lower }}
         if {{{ lower }}} >= value {
-            Err(::gpx::par::Error::TooSmall({{{ lower }}}, value))
+            Err(::gpx::par::Error::TooSmall { limit: {{{ lower }}}, value: value.into() })
         } else
 {{/ lower }}
 {{# upper }}
         if value > {{{ upper }}} {
-            Err(::gpx::par::Error::TooLarge({{{ upper }}}, value))
+            Err(::gpx::par::Error::TooLarge { limit: {{{ upper }}}, value: value.into() })
         } else
 {{/ upper }}
         {
@@ -503,9 +503,10 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ cls_name }}}<'a
                                            .insert("conv", conv_name.as_str())
                                            .insert("base_conv", base_conv.as_str());
         // TODO: make optional
-        values = values.insert("lower", data.min_inclusive.to_string().as_str());
-        values = values.insert("upper", data.max_exclusive.to_string().as_str());
-        render_string(data, self.parse_via_char)
+        // TODO: format as float/int
+        values = values.insert("lower", format!("{:.1?}", data.min_inclusive));
+        values = values.insert("upper", format!("{:.1?}", data.max_exclusive));
+        render_string(values, self.parse_via_char)
     }
 
     fn build_impl(parser_name: &str, data: &ComplexType, struct_info: &StructInfo,

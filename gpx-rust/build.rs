@@ -10,7 +10,7 @@ use std::io::{ Write, BufWriter };
 
 use xml_parsergen::{ ParserGen, ParserInfo, StructInfo, TypeConverter, TypeMap, ConvMap, gpx, prettify };
 use xml_parsergen::xsd_types::{ Type, SimpleType, ComplexType };
-use xml_parsergen::gpx::default_gen;
+use xml_parsergen::gpx::DEFAULT_GENERATOR;
 
 
 struct SimpleImplInfo<'a> {
@@ -197,7 +197,8 @@ fn process() -> Result<(), Error> {
         }
         for item in &simple_impls {
             try!(f.write(
-                default_gen.parse_impl(&item.type_name, item.type_, &attr_convs, &types).as_bytes()
+                DEFAULT_GENERATOR.parse_impl(&item.type_name, item.type_,
+                                             &attr_convs, &types).as_bytes()
             ).map_err(Error::Io));
         }
         Ok(())

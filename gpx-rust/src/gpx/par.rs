@@ -42,6 +42,10 @@ pub enum Error {
     BadAttribute(xml::AttributeError),
     BadElement(xml::ElementError),
     BadShape(xml::BuildError),
+    TooSmall { limit: f64,
+               value: f64 },
+    TooLarge { limit: f64,
+               value: f64 },
     UnknownElement(OwnedName),
 }
 
@@ -125,6 +129,8 @@ impl ErrorTrait for Error {
             Error::BadShape(_) => "Wrong elements number",
             Error::BadAttribute(_) => "Bad attribute",
             Error::BadElement(_) => "Bad element",
+            Error::TooSmall { limit: _, value: _ } => "Too small",
+            Error::TooLarge { limit: _, value: _ } => "Too large",
             Error::UnknownElement(_) => "Unknown element",
         }
     }
