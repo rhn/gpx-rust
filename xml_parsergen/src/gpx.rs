@@ -190,8 +190,13 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
             ],
         }),
         "degreesType".into() => Type::Simple(SimpleType {
-            base: "xsd:decimal".into(), min_inclusive: 0., max_exclusive: 360.,
-        })
+            base: "xsd:decimal".into(),
+            min_inclusive: 0., max_inclusive: None, max_exclusive: Some(360.),
+        }),
+        "dgpsStationType".into() => Type::Simple(SimpleType {
+            base: "xsd:integer".into(),
+            min_inclusive: 0., max_inclusive: Some(1024.), max_exclusive: None,
+        }),
     }
 }
 
@@ -206,15 +211,20 @@ impl ParseViaChar<{{{ type }}}> for {{{ conv }}} {
     fn from_char(s: &str) -> Result<{{{ type }}}, ::gpx::par::Error> {
         let value = try!(<{{{ base_conv }}} as ParseViaChar<{{{ type }}}>>::from_char(s));
 {{# lower }}
-        if {{{ lower }}} >= value {
-            Err(::gpx::par::Error::TooSmall { limit: {{{ lower }}}, value: value.into() })
+        if {{{ lower }}} > value {
+            Err(::gpx::par::Error::TooSmall { limit: {{{ lower }}}.into(), value: value.into() })
         } else
 {{/ lower }}
-{{# upper }}
-        if value > {{{ upper }}} {
-            Err(::gpx::par::Error::TooLarge { limit: {{{ upper }}}, value: value.into() })
+{{# max_inclusive }}
+        if value > {{{ max_inclusive }}} {
+            Err(::gpx::par::Error::TooLarge { limit: {{{ max_inclusive }}}.into(), value: value.into() })
         } else
-{{/ upper }}
+{{/ max_inclusive }}
+{{# max_exclusive }}
+        if value >= {{{ max_exclusive }}} {
+            Err(::gpx::par::Error::TooLarge { limit: {{{ max_exclusive }}}.into(), value: value.into() })
+        } else
+{{/ max_exclusive }}
         {
             Ok(value)
         }
@@ -498,14 +508,26 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ cls_name }}}<'a
             }
         };
         let conv_name = get_univ(converter);
-        let base_conv = get_univ(convs.get(data.base.as_str()).unwrap());
+        let base_conv = get_univ(convs.get(data.base.as_str()).expect(format!("Base {} not found", data.base).as_str()));
+        let format_literal = |value| {
+            match converter.0.as_user_type() {
+                "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" => format!("{}", value),
+                "f32" | "f64" => format!("{:.1}", value),
+                other => panic!("Value {} is not a number", other)
+            }
+        };
         let mut values = HashBuilder::new().insert("type", converter.0.as_user_type())
                                            .insert("conv", conv_name.as_str())
                                            .insert("base_conv", base_conv.as_str());
         // TODO: make optional
         // TODO: format as float/int
-        values = values.insert("lower", format!("{:.1?}", data.min_inclusive));
-        values = values.insert("upper", format!("{:.1?}", data.max_exclusive));
+        values = values.insert("lower", format_literal(data.min_inclusive));
+        if let Some(val) = data.max_inclusive {
+            values = values.insert("max_inclusive", format_literal(val));
+        }
+        if let Some(val) = data.max_exclusive {
+            values = values.insert("max_exclusive", format_literal(val));
+        }
         render_string(values, self.parse_via_char)
     }
 

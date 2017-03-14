@@ -66,6 +66,13 @@ pub mod par {
         }
     }
     
+    impl ParseViaChar<u16> for conv::Integer {
+        fn from_char(s: &str) -> Result<u16, ::gpx::par::Error> {
+            u16::from_str(s).map_err(::gpx::par::Error::from)
+        }
+    }
+    
+    
     impl ParseViaChar<f64> for conv::Decimal {
         fn from_char(s: &str) -> Result<f64, ::gpx::par::Error> {
             f64::from_str(s).map_err(::gpx::par::Error::from)
@@ -97,6 +104,7 @@ pub mod conv {
     pub type String = std::string::String;
     pub struct Decimal {}
     pub struct Uri {}
+    pub struct Integer {}
 }
 
 mod ser {

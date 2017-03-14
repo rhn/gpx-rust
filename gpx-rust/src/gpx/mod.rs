@@ -88,7 +88,7 @@ pub struct Waypoint {
     pub pdop: Option<xsd::Decimal>,
     pub vdop: Option<xsd::Decimal>,
     pub dgps_age: Option<xsd::Decimal>,
-    pub dgps_id: Option<String>,
+    pub dgps_id: Option<u16>,
     pub extensions: Option<XmlElement>,
 }
 

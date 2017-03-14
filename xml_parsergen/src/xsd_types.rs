@@ -11,7 +11,8 @@ pub struct ComplexType {
 pub struct SimpleType {
     pub base: String,
     pub min_inclusive: f64,
-    pub max_exclusive: f64,
+    pub max_inclusive: Option<f64>,
+    pub max_exclusive: Option<f64>,
 }
 
 pub struct Element {

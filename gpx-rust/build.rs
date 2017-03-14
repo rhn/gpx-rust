@@ -77,7 +77,7 @@ fn process() -> Result<(), Error> {
         "longitudeType".into() => ("f64".into(), TypeConverter::UniversalClass("gpx::conv::Longitude".into())),
         "linkType".into() => ("Link".into(), TypeConverter::UniversalClass("::gpx::conv::Link".into())),
         "fixType".into() => ("Fix".into(), TypeConverter::UniversalClass("::gpx::conv::Fix".into())),
-        "dgpsStationType".into() => ("String".into(), "parse_string".into()), // FIXME
+        "dgpsStationType".into() => ("u16".into(), TypeConverter::UniversalClass("::gpx::conv::DgpsStation".into())),
         "extensionsType".into() => ("XmlElement".into(), "parse_elem".into()), // FIXME: dedicated type?
         "personType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
         "wptType".into() => ("Waypoint".into(), TypeConverter::ParserClass("WaypointParser".into())),
@@ -90,8 +90,9 @@ fn process() -> Result<(), Error> {
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
         "xsd:string".into() => ("String".into(), TypeConverter::UniversalClass("::xsd::conv::String".into())),
         "xsd:nonNegativeInteger".into() => ("xsd::NonNegativeInteger".into(), "parse_u64".into()),
-        "degreesType".into() => ("Degrees".into(), TypeConverter::UniversalClass("::gpx::conv::Degrees".into())),
+        "degreesType".into() => ("f32".into(), TypeConverter::UniversalClass("::gpx::conv::Degrees".into())),
         "xsd:anyURI".into() => ("xsd::Uri".into(), TypeConverter::UniversalClass("::xsd::conv::Uri".into())),
+        "xsd:integer".into() => ("i64".into(), TypeConverter::UniversalClass("::xsd::conv::Integer".into())),
     };
     let parsers = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: get_complex(&types, "trksegType") },
@@ -115,6 +116,8 @@ fn process() -> Result<(), Error> {
     ];
     let simple_impls = vec![
         SimpleImplInfo { type_name: "degreesType".into(), type_: get_simple(&types, "degreesType"),
+                         elem: true },
+        SimpleImplInfo { type_name: "dgpsStationType".into(), type_: get_simple(&types, "dgpsStationType"),
                          elem: true },
     ];
     let structs = vec![

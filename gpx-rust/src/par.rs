@@ -6,7 +6,6 @@ use std::str::FromStr;
 use std::fmt;
 use std::error::Error as ErrorTrait;
 
-use self::_xml::name::OwnedName;
 use self::_xml::common::{ Position, TextPosition };
 use self::_xml::reader::{ EventReader, XmlEvent };
 

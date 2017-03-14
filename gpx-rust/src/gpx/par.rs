@@ -20,10 +20,10 @@ use xml::{ DocumentParserData, XmlElement, ElemStart, ElementParser, ElementPars
 use xsd;
 use xsd::par::parse_time;
 use gpx;
-use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
+use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
-use ::par::{ FromAttributeVia, ParseVia, ParseViaChar, parse_string, parse_u64, parse_elem };
+use ::par::{ FromAttributeVia, ParseVia, ParseViaChar, parse_u64, parse_elem };
 use ::par::{ Positioned, AttributeValueError };
 
 
