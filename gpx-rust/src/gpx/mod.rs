@@ -4,18 +4,13 @@ extern crate xml as _xml;
 extern crate chrono;
 extern crate geo;
 
-use std;
 use std::io;
-use std::fmt;
-
 use self::geo::Bbox;
-use self::_xml::name::OwnedName;
 
 use xml;
 use xml::XmlElement;
 use xsd;
 use xsd::*;
-use par::{ Positioned, ParserMessage, AttributeValueError };
 
 mod conv;
 mod ser_auto;

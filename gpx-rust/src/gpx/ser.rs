@@ -13,7 +13,7 @@ use xsd;
 use gpx::{ Gpx, Version, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem, SerializeCharElemVia, ToAttributeVia };
+use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem, ToAttributeVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 

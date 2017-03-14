@@ -18,7 +18,7 @@ use self::_xml::reader::{ XmlEvent, EventReader };
 use xml;
 use xml::{ DocumentParserData, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
 use xsd;
-use xsd::par::{ parse_time, parse_decimal };
+use xsd::par::parse_time;
 use gpx;
 use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Degrees };
 use gpx::conv;
