@@ -39,5 +39,8 @@ pub struct Degrees {}
 /// Defines conversions for GPX extensionsType
 pub type Extensions = ::conv::XmlElement;
 
-/// Defines conversion for Gpx dgpsStationType
+/// Defines conversion for GPX dgpsStationType
 pub struct DgpsStation {}
+
+/// Defines conversion for GPX copyrightType
+pub struct Copyright {}

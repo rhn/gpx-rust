@@ -9,8 +9,11 @@ pub type Time = chrono::DateTime<chrono::FixedOffset>;
 pub type DateTime = chrono::DateTime<chrono::FixedOffset>;
 
 pub type NonNegativeInteger = u64;
+pub type Integer = i64;
+pub type GYear = i16;
 pub type Decimal = f64;
 pub type Uri = String;
+
 
 pub mod par {
     //! Parsing impls
@@ -78,6 +81,12 @@ pub mod par {
         }
     }
     
+    impl ParseViaChar<i16> for conv::Integer {
+        fn from_char(s: &str) -> Result<i16, ::gpx::par::Error> {
+            i16::from_str(s).map_err(::gpx::par::Error::from)
+        }
+    }
+    
     impl ParseViaChar<f64> for conv::Decimal {
         fn from_char(s: &str) -> Result<f64, ::gpx::par::Error> {
             f64::from_str(s).map_err(::gpx::par::Error::from)
@@ -95,22 +104,17 @@ pub mod par {
             Ok(String::from(attr))
         }
     }
-    
-    impl FromAttributeVia<xsd::Uri> for conv::Uri {
-        fn from_attribute(attr: &str) -> Result<xsd::Uri, AttributeValueError> {
-            Ok(xsd::Uri::from(attr))
-        }
-    }
 }
 
 pub mod conv {
     //! conversion markers
     use std;
-    pub type String = std::string::String;
+    pub struct String {}
     pub struct Decimal {}
-    pub struct Uri {}
+    pub type Uri = String;
     pub struct Integer {}
-    pub type NonNegativeInteger = Integer;
+    pub type NonNegativeInteger = Integer; // FIXME
+    pub type GYear = Integer;
 }
 
 mod ser {
@@ -137,12 +141,20 @@ mod ser {
         fn to_characters(data: &u64) -> String { data.to_string() }
     }
 
+    impl SerializeCharElemVia<i16> for xsd::conv::Integer {
+        fn to_characters(data: &i16) -> String { data.to_string() }
+    }
+
     impl SerializeCharElem for xsd::DateTime {
         fn to_characters(&self) -> String { self.to_rfc3339() }
     }
-    
-    impl ToAttributeVia<xsd::Uri> for conv::Uri {
-        fn to_attribute(data: &xsd::Uri) -> Result<String, AttributeValueError> {
+
+    impl SerializeCharElemVia<String> for conv::String {
+        fn to_characters(data: &String) -> String { data.clone() }
+    }
+
+    impl ToAttributeVia<String> for conv::String {
+        fn to_attribute(data: &String) -> Result<String, AttributeValueError> {
             Ok(data.to_string())
         }
     }

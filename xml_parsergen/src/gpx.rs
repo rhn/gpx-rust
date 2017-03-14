@@ -197,12 +197,26 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
             base: "xsd:integer".into(),
             min_inclusive: 0., max_inclusive: Some(1024.), max_exclusive: None,
         }),
+        "copyrightType".into() => Type::Complex(ComplexType {
+            sequence: vec![
+                Element { name: String::from("year"),
+                          type_: "xsd:gYear".into(),
+                          max_occurs: ElementMaxOccurs::Unbounded },
+                Element { name: String::from("license"),
+                          type_: "xsd:anyURI".into(),
+                          max_occurs: ElementMaxOccurs::Unbounded },
+            ],
+            attributes: vec![
+                Attribute { name: "author".into(), type_: "xsd:string".into(), required: true },
+            ],
+        }),
     }
 }
 
 
 pub struct Generator<'a> {
     parse_via_char: &'a str,
+    parse_via: &'a str,
 }
 
 pub static DEFAULT_GENERATOR: Generator<'static> = Generator {
@@ -229,7 +243,14 @@ impl ParseViaChar<{{{ type }}}> for {{{ conv }}} {
             Ok(value)
         }
     }
-}"#
+}"#,
+    parse_via: r#"
+impl ParseVia<{{{ data }}}> for {{{ conv }}} {
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+            -> Result<{{{ data }}}, Positioned<Error>> {
+        {{{ parser_type }}}::new(parser).parse(elem_start)
+    }
+}"#,
 };
 
 trait GetOrElse<K, V> {
@@ -255,7 +276,7 @@ use self::_xml::name::Name;
 use self::_xml::namespace::Namespace;
 use self::_xml::writer::{ XmlEvent, EventWriter };
 
-use ser::{ Serialize, SerError, SerializeVia };
+use ser::{ Serialize, SerError, SerializeVia, SerializeAttr };
 use gpx::*;
 "
     }
@@ -529,6 +550,17 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ cls_name }}}<'a
             values = values.insert("max_exclusive", format_literal(val));
         }
         render_string(values, self.parse_via_char)
+    }
+    
+    fn parse_impl_complex(&self, parser_name: &str, conv_entry: &(UserType, TypeConverter)) -> String {
+        let (type_name, converter) = match *conv_entry {
+            (ref type_name, TypeConverter::UniversalClass(ref conv_name)) => (type_name, conv_name),
+            _ => panic!("Converter for {} is not universal", parser_name),
+        };
+        render_string(HashBuilder::new().insert("data", type_name.as_user_type())
+                                        .insert("conv", converter.as_str())
+                                        .insert("parser_type", parser_name),
+                      self.parse_via)
     }
 
     fn build_impl(parser_name: &str, data: &ComplexType, struct_info: &StructInfo,

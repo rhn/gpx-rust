@@ -51,12 +51,19 @@ pub struct Metadata {
     pub name: Option<String>,
     pub description: Option<String>,
     pub author: Option<XmlElement>,
-    pub copyright: Option<XmlElement>,
+    pub copyright: Option<Copyright>,
     pub links: Vec<Link>,
     pub time: Option<Time>,
     pub keywords: Option<String>,
     pub bounds: Option<Bounds>,
     pub extensions: Option<XmlElement>,
+}
+
+#[derive(Debug)]
+pub struct Copyright {
+    pub author: String,
+    pub years: Vec<i16>,
+    pub licenses: Vec<xsd::Uri>,
 }
 
 #[derive(XmlDebug)]

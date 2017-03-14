@@ -72,7 +72,7 @@ fn process() -> Result<(), Error> {
     let attr_convs: ConvMap = map!{
         "gpxType".into() => ("Gpx".into(), TypeConverter::UniversalClass("::gpx::conv::Gpx".into())),
         "boundsType".into() => ("Bounds".into(), TypeConverter::UniversalClass("::gpx::conv::Bounds".into())),
-        "copyrightType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
+        "copyrightType".into() => ("Copyright".into(), TypeConverter::UniversalClass("::gpx::conv::Copyright".into())),
         "latitudeType".into() => ("f64".into(), TypeConverter::UniversalClass("gpx::conv::Latitude".into())),
         "longitudeType".into() => ("f64".into(), TypeConverter::UniversalClass("gpx::conv::Longitude".into())),
         "linkType".into() => ("Link".into(), TypeConverter::UniversalClass("::gpx::conv::Link".into())),
@@ -93,6 +93,7 @@ fn process() -> Result<(), Error> {
         "degreesType".into() => ("f32".into(), TypeConverter::UniversalClass("::gpx::conv::Degrees".into())),
         "xsd:anyURI".into() => ("xsd::Uri".into(), TypeConverter::UniversalClass("::xsd::conv::Uri".into())),
         "xsd:integer".into() => ("i64".into(), TypeConverter::UniversalClass("::xsd::conv::Integer".into())),
+        "xsd:gYear".into() => ("i16".into(), TypeConverter::UniversalClass("::xsd::conv::GYear".into())),
     };
     let parsers = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: get_complex(&types, "trksegType") },
@@ -103,6 +104,7 @@ fn process() -> Result<(), Error> {
         ParserInfo { name: "RteParser".into(), type_: get_complex(&types, "rteType") },
         ParserInfo { name: "TrkParser".into(), type_: get_complex(&types, "trkType") },
         ParserInfo { name: "LinkParser".into(), type_: get_complex(&types, "linkType") },
+        ParserInfo { name: "CopyrightParser".into(), type_: get_complex(&types, "copyrightType") },
     ];
     let parser_impls = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: get_complex(&types, "trksegType") },
@@ -113,6 +115,10 @@ fn process() -> Result<(), Error> {
         ParserInfo { name: "RteParser".into(), type_: get_complex(&types, "rteType") },
         ParserInfo { name: "TrkParser".into(), type_: get_complex(&types, "trkType") },
         ParserInfo { name: "LinkParser".into(), type_: get_complex(&types, "linkType") },
+        ParserInfo { name: "CopyrightParser".into(), type_: get_complex(&types, "copyrightType") },
+    ];
+    let parser_impls_via = vec![
+        ("CopyrightParser", attr_convs.get("copyrightType").expect("copyright")),
     ];
     let simple_impls = vec![
         SimpleImplInfo { type_name: "degreesType".into(), type_: get_simple(&types, "degreesType"),
@@ -151,8 +157,12 @@ fn process() -> Result<(), Error> {
                          "wpt" => "waypoints",
                          "rte" => "routes",
                          "trk" => "tracks" } },
+        StructInfo { name: "Copyright".into(),
+                     type_name: "copyrightType".into(),
+                     tags: HashMap::new() },
+        
     ];
-    let builder_impls = ["RteParser", "TrkParser", "LinkParser", "GpxElemParser", "TrackSegmentParser"]
+    let builder_impls = ["RteParser", "TrkParser", "LinkParser", "GpxElemParser", "TrackSegmentParser", "CopyrightParser"]
                         .iter().map(|name: &&'static str| {
         let type_ = parser_impls.iter()
                                 .find(|pinfo| pinfo.name.as_str() == *name)
@@ -165,7 +175,7 @@ fn process() -> Result<(), Error> {
          type_,
          sinfo)
     }).collect::<Vec<_>>();
-    let serializers = ["Metadata", "Track", "TrackSegment", "Route", "Link"]
+    let serializers = ["Metadata", "Track", "TrackSegment", "Route", "Link", "Copyright"]
                       .iter().map(|name: &&'static str| {
         structs.iter()
                .find(|sinfo| sinfo.name == *name)
@@ -191,6 +201,11 @@ fn process() -> Result<(), Error> {
         for item in &parser_impls {
             try!(f.write(
                 gpx::Generator::parser_impl(&item.name, item.type_, &attr_convs).as_bytes()
+            ).map_err(Error::Io));
+        }
+        for &(ref name, ref conv_) in &parser_impls_via {
+            try!(f.write(
+                DEFAULT_GENERATOR.parse_impl_complex(name, conv_).as_bytes()
             ).map_err(Error::Io));
         }
         for item in &builder_impls {

@@ -20,7 +20,7 @@ use xml::{ DocumentParserData, XmlElement, ElemStart, ElementParser, ElementPars
 use xsd;
 use xsd::par::parse_time;
 use gpx;
-use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link };
+use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Copyright };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ FromAttributeVia, ParseVia, ParseViaChar, parse_elem };
