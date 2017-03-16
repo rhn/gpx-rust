@@ -34,16 +34,6 @@ pub mod par {
     use gpx::par::Error; // FIXME: move to par
     use xsd::conv;
     
-    // todo: move to par
-    pub fn parse_int<T: std::io::Read, Error>
-            (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<NonNegativeInteger, Positioned<Error>>
-            where Error: From<std::num::ParseIntError> + From<xml::ElementError>
-                         + From<_xml::reader::Error>{
-        par::parse_chars(parser, elem_start,
-                         |chars| NonNegativeInteger::from_str(chars))
-    }
-
     pub fn parse_time<T: std::io::Read>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
             -> Result<xsd::Time, Positioned<Error>> {
