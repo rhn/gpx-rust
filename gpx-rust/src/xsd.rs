@@ -34,13 +34,6 @@ pub mod par {
     use gpx::par::Error; // FIXME: move to par
     use xsd::conv;
     
-    pub fn parse_time<T: std::io::Read>
-            (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<xsd::Time, Positioned<Error>> {
-        parse_chars(parser, elem_start,
-                    |chars| xsd::Time::parse_from_rfc3339(chars).map_err(Error::from))
-    }
-    
     impl ParseVia<String> for conv::String {
         fn parse_via<R: io::Read>(parser: &mut _xml::EventReader<R>, elem_start: ElemStart)
                 -> Result<String, Positioned<Error>> {
@@ -80,6 +73,12 @@ pub mod par {
         }
     }
     
+    impl ParseViaChar<xsd::DateTime> for conv::DateTime {
+        fn from_char(chars: &str) -> Result<xsd::DateTime, ::gpx::par::Error> {
+            xsd::DateTime::parse_from_rfc3339(chars).map_err(::gpx::par::Error::from)
+        }
+    }
+    
     impl FromAttributeVia<String> for conv::String {
         fn from_attribute(attr: &str) -> Result<String, AttributeValueError> {
             Ok(String::from(attr))
@@ -95,6 +94,7 @@ pub mod conv {
     pub struct Integer {}
     pub type NonNegativeInteger = Integer; // FIXME
     pub type GYear = Integer;
+    pub struct DateTime {}
 }
 
 mod ser {
@@ -125,8 +125,8 @@ mod ser {
         fn to_characters(data: &i16) -> String { data.to_string() }
     }
 
-    impl SerializeCharElem for xsd::DateTime {
-        fn to_characters(&self) -> String { self.to_rfc3339() }
+    impl SerializeCharElemVia<xsd::DateTime> for xsd::conv::DateTime {
+        fn to_characters(data: &xsd::DateTime) -> String { data.to_rfc3339() }
     }
 
     impl SerializeCharElemVia<String> for conv::String {

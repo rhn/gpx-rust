@@ -220,9 +220,7 @@ impl Serialize for Waypoint {
         if let Some(ref item) = self.location.elevation {
             try!(xsd::conv::Decimal::serialize_via(item, sink, "ele"));
         }
-        if let Some(ref item) = self.time {
-            try!(item.serialize_with(sink, "time"));
-        }
+        set_optional_typed!(sink, self.time, "time", xsd::conv::DateTime);
         if let Some(ref item) = self.mag_variation {
             try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
         }

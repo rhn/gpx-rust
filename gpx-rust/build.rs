@@ -88,7 +88,7 @@ fn process() -> Result<(), Error> {
         "emailType".into() => ("String".into(), TypeConverter::UniversalClass("::gpx::conv::Email".into())),
         "_gpx:version".into() => ("Version".into(), TypeConverter::UniversalClass("::gpx::conv::Version".into())),
         "xsd:decimal".into() => ("xsd::Decimal".into(), TypeConverter::UniversalClass("::xsd::conv::Decimal".into())),
-        "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
+        "xsd:dateTime".into() => ("xsd::DateTime".into(), TypeConverter::UniversalClass("::xsd::conv::DateTime".into())),
         "xsd:string".into() => ("String".into(), TypeConverter::UniversalClass("::xsd::conv::String".into())),
         "xsd:nonNegativeInteger".into() => ("u64".into(), TypeConverter::UniversalClass("::xsd::conv::NonNegativeInteger".into())),
         "degreesType".into() => ("f32".into(), TypeConverter::UniversalClass("::gpx::conv::Degrees".into())),
