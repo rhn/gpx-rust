@@ -44,3 +44,9 @@ pub struct DgpsStation {}
 
 /// Defines conversion for GPX copyrightType
 pub struct Copyright {}
+
+/// Defines conversion for GPX personType
+pub struct Person {}
+
+/// Defines conversion between String and GPX emailType
+pub struct Email {}

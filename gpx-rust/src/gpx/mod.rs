@@ -50,7 +50,7 @@ pub enum Version {
 pub struct Metadata {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub author: Option<XmlElement>,
+    pub author: Option<Person>,
     pub copyright: Option<Copyright>,
     pub links: Vec<Link>,
     pub time: Option<Time>,
@@ -59,11 +59,18 @@ pub struct Metadata {
     pub extensions: Option<XmlElement>,
 }
 
-#[derive(Debug)]
+#[derive(XmlDebug)]
+pub struct Person {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub link: Option<Link>,
+}
+
+#[derive(XmlDebug)]
 pub struct Copyright {
     pub author: String,
-    pub years: Vec<i16>,
-    pub licenses: Vec<xsd::Uri>,
+    pub year: Option<i16>,
+    pub license: Option<xsd::Uri>,
 }
 
 #[derive(XmlDebug)]

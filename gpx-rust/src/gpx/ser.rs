@@ -2,8 +2,10 @@
 
 extern crate xml as _xml;
 
+use std::fmt;
 use std::io;
 use std::borrow::Cow;
+use std::error::Error as ErrorTrait;
 use self::_xml::name::Name;
 use self::_xml::namespace::{ Namespace, NS_NO_PREFIX };
 use self::_xml::attribute::Attribute;
@@ -38,6 +40,25 @@ macro_rules! set_optional_typed(
 #[derive(Debug)]
 pub enum AttributeValueError {
     DecimalOutOfBounds(f64)
+}
+
+#[derive(Debug)]
+pub enum ValueError {
+    InvalidEmail,
+}
+
+impl fmt::Display for ValueError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        fmt::Debug::fmt(self, fmt)
+    }
+}
+
+impl ErrorTrait for ValueError {
+    fn description(&self) -> &str {
+        match *self {
+            ValueError::InvalidEmail => "Email must contain exactly one @ sign"
+        }
+    }
 }
 
 impl ToAttributeVia<f64> for Latitude {
@@ -139,6 +160,30 @@ impl SerializeVia<Gpx> for conv::Gpx {
         if let Some(ref ext) = data.extensions {
             try!(::gpx::conv::Extensions::serialize_via(ext, sink, "extensions"));
         }
+        try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
+        Ok(())
+    }
+}
+
+impl SerializeVia<String> for conv::Email {
+    fn serialize_via<W: io::Write>(data: &String, sink: &mut EventWriter<W>, name: &str)
+           -> Result<(), SerError> {
+        let split = data.split("@").collect::<Vec<_>>();
+        if split.len() != 2 {
+            return Err(SerError::Value(Box::new(ValueError::InvalidEmail)));
+        }
+        let (id, domain) = (split[0], split[1]);
+        
+        let elemname = Name::local(name);
+        try!(sink.write(XmlEvent::StartElement {
+            name: elemname.clone(),
+            attributes: Cow::Owned(Vec::new()),
+            namespace: Cow::Owned(Namespace::empty()),
+        }));
+
+        try!(::xsd::conv::String::serialize_via(id, sink, "id"));
+        try!(::xsd::conv::String::serialize_via(domain, sink, "domain"));
+
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
     }

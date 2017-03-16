@@ -199,15 +199,26 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
         }),
         "copyrightType".into() => Type::Complex(ComplexType {
             sequence: vec![
-                Element { name: String::from("year"),
-                          type_: "xsd:gYear".into(),
-                          max_occurs: ElementMaxOccurs::Unbounded },
-                Element { name: String::from("license"),
-                          type_: "xsd:anyURI".into(),
-                          max_occurs: ElementMaxOccurs::Unbounded },
+                ElementSingle!("year", "xsd:gYear"),
+                ElementSingle!("license", "xsd:anyURI"),
             ],
             attributes: vec![
                 Attribute { name: "author".into(), type_: "xsd:string".into(), required: true },
+            ],
+        }),
+        "personType".into() => Type::Complex(ComplexType {
+            sequence: vec![
+                ElementSingle!("name", "xsd:string"),
+                ElementSingle!("email", "emailType"),
+                ElementSingle!("link", "linkType"),
+            ],
+            attributes: vec![],
+        }),
+        "emailType".into() => Type::Complex(ComplexType {
+            sequence: vec![],
+            attributes: vec![
+                Attribute { name: "id".into(), type_: "xsd:string".into(), required: true },
+                Attribute { name: "domain".into(), type_: "xsd:string".into(), required: true }
             ],
         }),
     }
@@ -305,7 +316,7 @@ use gpx::*;
             data.sequence.iter().map(|elem| {
                 let data_type = match type_convs.get(elem.type_.as_str()) {
                     Some(&(ref type_, _)) => type_,
-                    None => panic!("No type found for field {} ({}) on {}", elem.name, elem.type_, name)
+                    None => panic!("No converter found for field {} ({}) on {}", elem.name, elem.type_, name)
                 };
                 let field_type = match elem.max_occurs {
                     ElementMaxOccurs::Some(0) => {

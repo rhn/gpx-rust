@@ -2,6 +2,7 @@ extern crate xml as _xml;
 
 use std::io;
 use std::borrow::Cow;
+use std::error::Error as ErrorTrait;
 use self::_xml::common::XmlVersion;
 use self::_xml::name::Name;
 use self::_xml::namespace::Namespace;
@@ -17,6 +18,8 @@ pub enum SerError {
     Writer(writer::Error),
     Attribute(AttributeValueError),
     ElementAttributeError(&'static str, AttributeValueError),
+    /// namespace-dependent
+    Value(Box<ErrorTrait>),
 }
 
 impl From<writer::Error> for SerError {
@@ -100,25 +103,25 @@ impl SerializeCharElem for String {
 }
 
 /// Character type can be converted into multiple data types, e.g. Decimal into f32 or f64
-pub trait SerializeCharElemVia<Data> {
+pub trait SerializeCharElemVia<Data: ?Sized> {
     fn to_characters(value: &Data) -> String;
 }
 
 /// Implement on converters to do Conv::serialize_via(data, ...)
-pub trait SerializeVia<Data> {
+pub trait SerializeVia<Data: ?Sized> {
     fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
         -> Result<(), SerError>;
 }
 
 /// Trivial case: a type knows how to convert itself
-impl<Data: SerializeCharElem> SerializeCharElemVia<Data> for Data {
+impl<Data: SerializeCharElem + ?Sized> SerializeCharElemVia<Data> for Data {
     fn to_characters(value: &Data) -> String {
         value.to_characters()
     }
 }
 
 /// Leverage char conversion capabilities
-impl<T, Data> SerializeVia<Data> for T where T: SerializeCharElemVia<Data> {
+impl<T, Data: ?Sized> SerializeVia<Data> for T where T: SerializeCharElemVia<Data> {
     fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), SerError> {
         let elemname = Name::local(name);

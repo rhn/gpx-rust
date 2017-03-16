@@ -79,12 +79,13 @@ fn process() -> Result<(), Error> {
         "fixType".into() => ("Fix".into(), TypeConverter::UniversalClass("::gpx::conv::Fix".into())),
         "dgpsStationType".into() => ("u16".into(), TypeConverter::UniversalClass("::gpx::conv::DgpsStation".into())),
         "extensionsType".into() => ("XmlElement".into(), TypeConverter::UniversalClass("::gpx::conv::Extensions".into())), // FIXME: dedicated type?
-        "personType".into() => ("XmlElement".into(), TypeConverter::ParseFun("parse_elem".into())), // FIXME
+        "personType".into() => ("Person".into(), TypeConverter::UniversalClass("::gpx::conv::Person".into())),
         "wptType".into() => ("Waypoint".into(), TypeConverter::ParserClass("WaypointParser".into())),
         "metadataType".into() => ("Metadata".into(), TypeConverter::UniversalClass("::gpx::conv::Metadata".into())),
         "trkType".into() => ("Track".into(), TypeConverter::UniversalClass("::gpx::conv::Trk".into())),
         "rteType".into() => ("Route".into(), TypeConverter::UniversalClass("::gpx::conv::Rte".into())),
         "trksegType".into() => ("TrackSegment".into(), TypeConverter::UniversalClass("::gpx::conv::Trkseg".into())),
+        "emailType".into() => ("String".into(), TypeConverter::UniversalClass("::gpx::conv::Email".into())),
         "_gpx:version".into() => ("Version".into(), TypeConverter::UniversalClass("::gpx::conv::Version".into())),
         "xsd:decimal".into() => ("xsd::Decimal".into(), TypeConverter::UniversalClass("::xsd::conv::Decimal".into())),
         "xsd:dateTime".into() => ("xsd::DateTime".into(), "parse_time".into()),
@@ -105,21 +106,10 @@ fn process() -> Result<(), Error> {
         ParserInfo { name: "TrkParser".into(), type_: get_complex(&types, "trkType") },
         ParserInfo { name: "LinkParser".into(), type_: get_complex(&types, "linkType") },
         ParserInfo { name: "CopyrightParser".into(), type_: get_complex(&types, "copyrightType") },
+        ParserInfo { name: "PersonParser".into(), type_: get_complex(&types, "personType") },
+        ParserInfo { name: "EmailParser".into(), type_: get_complex(&types, "emailType") },
     ];
-    let parser_impls = vec![
-        ParserInfo { name: "TrackSegmentParser".into(), type_: get_complex(&types, "trksegType") },
-        ParserInfo { name: "MetadataParser".into(), type_: get_complex(&types, "metadataType") },
-        ParserInfo { name: "WaypointParser".into(), type_: get_complex(&types, "wptType") },
-        ParserInfo { name: "BoundsParser".into(), type_: get_complex(&types, "boundsType") },
-        ParserInfo { name: "GpxElemParser".into(), type_: get_complex(&types, "gpxType") },
-        ParserInfo { name: "RteParser".into(), type_: get_complex(&types, "rteType") },
-        ParserInfo { name: "TrkParser".into(), type_: get_complex(&types, "trkType") },
-        ParserInfo { name: "LinkParser".into(), type_: get_complex(&types, "linkType") },
-        ParserInfo { name: "CopyrightParser".into(), type_: get_complex(&types, "copyrightType") },
-    ];
-    let parser_impls_via = vec![
-        ("CopyrightParser", attr_convs.get("copyrightType").expect("copyright")),
-    ];
+
     let simple_impls = vec![
         SimpleImplInfo { type_name: "degreesType".into(), type_: get_simple(&types, "degreesType"),
                          elem: true },
@@ -160,11 +150,13 @@ fn process() -> Result<(), Error> {
         StructInfo { name: "Copyright".into(),
                      type_name: "copyrightType".into(),
                      tags: HashMap::new() },
-        
+        StructInfo { name: "Person".into(),
+                     type_name: "personType".into(),
+                     tags: HashMap::new() },
     ];
-    let builder_impls = ["RteParser", "TrkParser", "LinkParser", "GpxElemParser", "TrackSegmentParser", "CopyrightParser"]
+    let builder_impls = ["RteParser", "TrkParser", "LinkParser", "GpxElemParser", "TrackSegmentParser", "CopyrightParser", "PersonParser"]
                         .iter().map(|name: &&'static str| {
-        let type_ = parser_impls.iter()
+        let type_ = parsers.iter()
                                 .find(|pinfo| pinfo.name.as_str() == *name)
                                 .expect(&format!("{} not in parser impls", *name))
                                 .type_;
@@ -175,13 +167,17 @@ fn process() -> Result<(), Error> {
          type_,
          sinfo)
     }).collect::<Vec<_>>();
-    let serializers = ["Metadata", "Track", "TrackSegment", "Route", "Link", "Copyright"]
+    let serializers = ["Metadata", "Track", "TrackSegment", "Route", "Link", "Copyright", "Person"]
                       .iter().map(|name: &&'static str| {
         structs.iter()
                .find(|sinfo| sinfo.name == *name)
                .expect(&format!("Structure {} not defined", *name))
     }).collect::<Vec<_>>();
-
+    let parser_impls_via = vec![
+        ("CopyrightParser", attr_convs.get("copyrightType").expect("copyrighterr")),
+        ("PersonParser", attr_convs.get("personType").expect("personerr")),
+        ("EmailParser", attr_convs.get("emailType").expect("emailerr")),
+    ];
     try!(write_file(&out_dir.join("gpx_auto.rs"), |f| {
         for item in &structs {
             try!(f.write(
@@ -197,8 +193,6 @@ fn process() -> Result<(), Error> {
             try!(f.write(
                 gpx::Generator::parser_cls(&item.name, item.type_, &attr_convs).as_bytes()
             ).map_err(Error::Io));
-        }
-        for item in &parser_impls {
             try!(f.write(
                 gpx::Generator::parser_impl(&item.name, item.type_, &attr_convs).as_bytes()
             ).map_err(Error::Io));

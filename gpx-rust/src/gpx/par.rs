@@ -20,7 +20,7 @@ use xml::{ DocumentParserData, XmlElement, ElemStart, ElementParser, ElementPars
 use xsd;
 use xsd::par::parse_time;
 use gpx;
-use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Copyright };
+use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Copyright, Person };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ FromAttributeVia, ParseVia, ParseViaChar, parse_elem };
@@ -65,6 +65,8 @@ pub enum Error {
                value: f64 },
     TooLarge { limit: f64,
                value: f64 },
+    BadEmailId(String),
+    InvalidEmailDomain(String),
     UnknownElement(OwnedName),
 }
 
@@ -150,6 +152,8 @@ impl ErrorTrait for Error {
             Error::BadElement(_) => "Bad element",
             Error::TooSmall { limit: _, value: _ } => "Too small",
             Error::TooLarge { limit: _, value: _ } => "Too large",
+            Error::BadEmailId(_) => "Bad email ID",
+            Error::InvalidEmailDomain(_) => "Invalid email domain",
             Error::UnknownElement(_) => "Unknown element",
         }
     }
@@ -287,6 +291,24 @@ impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
                       extensions: self.extensions })
     }
 }
+
+impl<'a, T: Read> ElementBuild for EmailParser<'a, T> {
+    type Element = String;
+    type BuildError = xml::BuildError;
+    fn build(self) -> Result<Self::Element, Self::BuildError> {
+        let id = self.id.expect("BUG: id not present");
+        let domain = self.domain.expect("BUG: domain not present");
+        // TODO: apply regexes
+        if let Some(_) = id.find("@") {
+            return Err(xml::BuildError::Custom(Box::new(Error::BadEmailId(id.into()))));
+        }
+        if let Some(_) = domain.find("@") {
+            return Err(xml::BuildError::Custom(Box::new(Error::InvalidEmailDomain(domain.into()))));
+        }
+        Ok(format!("{}@{}", id, domain))
+    }
+}
+
 
 /// Error describing a failure while parsing an XML stream
 #[derive(Debug)]

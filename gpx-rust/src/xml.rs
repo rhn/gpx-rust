@@ -2,6 +2,8 @@ extern crate xml;
 
 use std::io;
 use std::io::Read;
+use std::error::Error as ErrorTrait;
+
 use self::xml::name::OwnedName;
 use self::xml::attribute::OwnedAttribute;
 use self::xml::namespace::Namespace;
@@ -10,7 +12,9 @@ use self::xml::common::{ XmlVersion, TextPosition, Position };
 
 use par::Positioned;
 
+
 type DataError = Positioned<::gpx::par::Error>;
+
 
 #[derive(Debug)]
 pub enum DocumentError {
@@ -51,7 +55,9 @@ pub enum Error {
 }
 
 #[derive(Debug)]
-pub struct BuildError {}
+pub enum BuildError {
+    Custom(Box<ErrorTrait>)
+}
 
 #[derive(Debug)]
 pub enum AttributeError {

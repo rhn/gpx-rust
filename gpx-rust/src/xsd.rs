@@ -153,6 +153,10 @@ mod ser {
         fn to_characters(data: &String) -> String { data.clone() }
     }
 
+    impl SerializeCharElemVia<str> for conv::String {
+        fn to_characters(data: &str) -> String { data.into() }
+    }
+
     impl ToAttributeVia<String> for conv::String {
         fn to_attribute(data: &String) -> Result<String, AttributeValueError> {
             Ok(data.to_string())
