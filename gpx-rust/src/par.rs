@@ -125,9 +125,3 @@ pub fn parse_chars<R: std::io::Read, F, Res, E, EInner>
         }
     }
 }
-
-// unused
-pub fn parse_elem<T: std::io::Read>(parser: &mut EventReader<T>, elem_start: ElemStart)
-        -> Result<XmlElement, Positioned<Error>> {
-    ElementParser::new(parser).parse(elem_start)
-}
