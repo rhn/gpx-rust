@@ -108,7 +108,6 @@ pub mod par {
 
 pub mod conv {
     //! conversion markers
-    use std;
     pub struct String {}
     pub struct Decimal {}
     pub type Uri = String;
