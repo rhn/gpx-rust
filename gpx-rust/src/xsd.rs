@@ -44,15 +44,6 @@ pub mod par {
                          |chars| NonNegativeInteger::from_str(chars))
     }
 
-    // TODO: move to par
-    pub fn parse_string<T: std::io::Read, Error>
-            (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
-            -> Result<String, Positioned<Error>>
-            where Error: From<xml::ElementError> + From<_xml::reader::Error> {
-        par::parse_chars(parser, elem_start,
-                         |chars| Ok::<_, xml::ElementError>(chars.into()))
-    }
-    
     pub fn parse_time<T: std::io::Read>
             (mut parser: &mut _xml::EventReader<T>, elem_start: ElemStart)
             -> Result<xsd::Time, Positioned<Error>> {
