@@ -69,10 +69,38 @@ pub trait ParseViaChar<Data> {
     fn from_char(s: &str) -> Result<Data, ::gpx::par::Error>;
 }
 
+/// Implements basic event loop reading character data from inside
 impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<Data, Positioned<Error>> {
-        parse_chars(parser, elem_start, |s| Self::from_char(s))
+        let mut ret = String::new();
+        loop {
+            match parser.next() {
+                Ok(XmlEvent::Characters(data)) => {
+                    ret = data;
+                }
+                Ok(XmlEvent::EndElement { name }) => {
+                    return if name == elem_start.name {
+                        Self::from_char(&ret).map_err(|e| {
+                            Positioned::with_position(e.into(), parser.position())
+                        })
+                    } else {
+                        Err(Positioned::with_position(xml::ElementError::UnexpectedEnd.into(),
+                                                      parser.position()))
+                    }
+                }
+                Ok(XmlEvent::Whitespace(s)) => {
+                    println!("{:?}", s);
+                }
+                Ok(ev) => {
+                    return Err(Positioned::with_position(xml::ElementError::UnexpectedEvent(ev).into(),
+                                                         parser.position()));
+                }
+                Err(error) => {
+                    return Err(Positioned::with_position(error.into(), parser.position()));
+                }
+            }
+        }
     }
 }
 
@@ -89,39 +117,4 @@ pub trait FromAttributeVia<Data> {
 #[derive(Debug)]
 pub enum AttributeValueError {
     Error(Box<std::error::Error>),
-}
-
-pub fn parse_chars<R: std::io::Read, F, Res, E, EInner>
-    (mut parser: &mut EventReader<R>, elem_start: ElemStart, decode: F)
-    -> Result<Res, Positioned<E>>
-        where F: Fn(&str) -> Result<Res, EInner>,
-              E: From<xml::ElementError> + From<EInner> + From<_xml::reader::Error> {
-    let mut ret = String::new();
-    loop {
-        match parser.next() {
-            Ok(XmlEvent::Characters(data)) => {
-                ret = data;
-            }
-            Ok(XmlEvent::EndElement { name }) => {
-                return if name == elem_start.name {
-                    decode(&ret).map_err(|e| {
-                        Positioned::with_position(e.into(), parser.position())
-                    })
-                } else {
-                    Err(Positioned::with_position(xml::ElementError::UnexpectedEnd.into(),
-                                                  parser.position()))
-                }
-            }
-            Ok(XmlEvent::Whitespace(s)) => {
-                println!("{:?}", s);
-            }
-            Ok(ev) => {
-                return Err(Positioned::with_position(xml::ElementError::UnexpectedEvent(ev).into(),
-                                                     parser.position()));
-            }
-            Err(error) => {
-                return Err(Positioned::with_position(error.into(), parser.position()));
-            }
-        }
-    }
 }
