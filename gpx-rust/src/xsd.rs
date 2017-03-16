@@ -34,12 +34,9 @@ pub mod par {
     use gpx::par::Error; // FIXME: move to par
     use xsd::conv;
     
-    impl ParseVia<String> for conv::String {
-        fn parse_via<R: io::Read>(parser: &mut _xml::EventReader<R>, elem_start: ElemStart)
-                -> Result<String, Positioned<Error>> {
-            parse_chars(parser,
-                        elem_start,
-                        |chars| Ok::<_, Error>(String::from(chars)))
+    impl ParseViaChar<String> for conv::String {
+        fn from_char(chars: &str) -> Result<String, ::gpx::par::Error> {
+            Ok(String::from(chars))
         }
     }
     
