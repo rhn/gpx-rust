@@ -17,21 +17,11 @@ pub type Uri = String;
 
 pub mod par {
     //! Parsing impls
-    extern crate xml as _xml;
-
-    use std;
-    use std::io;
     use std::str::FromStr;
     
-    use xml;
-    use xml::ElemStart;
-    use par;
-    use par::{ FromAttributeVia, ParseVia, ParseViaChar };
-    use par::parse_chars;
-    use par::{ Positioned, AttributeValueError };
+    use par::{ FromAttributeVia, ParseViaChar };
+    use par::AttributeValueError;
     use xsd;
-    use xsd::NonNegativeInteger;
-    use gpx::par::Error; // FIXME: move to par
     use xsd::conv;
     
     impl ParseViaChar<String> for conv::String {
