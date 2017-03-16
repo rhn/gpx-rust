@@ -66,7 +66,6 @@ pub enum Error {
 
 
 pub trait ParserGen {
-    fn header() -> &'static str;
     fn struct_def(name: &str, tags: &TagMap, data: &ComplexType,
                   type_convs: &ConvMap) -> String;
     fn parser_cls(name: &str, data: &ComplexType, type_convs: &ConvMap) -> String;

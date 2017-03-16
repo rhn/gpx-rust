@@ -216,7 +216,6 @@ fn process() -> Result<(), Error> {
         Ok(())
     }));
     try!(write_file(&out_dir.join("gpx_ser_auto.rs"), |f| {
-        try!(f.write(gpx::Generator::header().as_bytes()).map_err(Error::Io));
         for item in &serializers {
             try!(f.write(
                 gpx::Generator::serializer_impl(&item.name, &item.tags,

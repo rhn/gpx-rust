@@ -280,18 +280,6 @@ impl<'a, K: std::cmp::Eq + std::hash::Hash, V: Clone> GetOrElse<K, V> for HashMa
 
 
 impl<'a> ParserGen for Generator<'a> {
-    fn header() -> &'static str {
-        "extern crate xml as _xml;
-
-use std::borrow::Cow;
-use self::_xml::name::Name;
-use self::_xml::namespace::Namespace;
-use self::_xml::writer::{ XmlEvent, EventWriter };
-
-use ser::{ Serialize, SerError, SerializeVia, SerializeAttr };
-use gpx::*;
-"
-    }
     fn struct_def(name: &str, tags: &TagMap, data: &ComplexType, type_convs: &ConvMap) -> String {
         let get_elem_field_name = |elem: &Element| {
             match tags.get(elem.name.as_str()) {
