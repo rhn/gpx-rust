@@ -1,3 +1,4 @@
+//! Contains functionaity useful for implementing XML parsers
 extern crate xml as _xml;
 
 use std;
