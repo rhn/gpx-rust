@@ -45,7 +45,7 @@ impl<Data: ErrorTrait> ErrorTrait for Positioned<Data> {
     }
 }
 
-/// Parses complex element in XML stream into `Data` type.
+/// Can parse complex element in XML stream into `Data` type.
 ///
 /// The element may take any form.
 /// Implement on converter types.
@@ -61,7 +61,7 @@ impl ParseVia<XmlElement> for conv::XmlElement {
     }
 }
 
-/// Parses simple element in XML stream into `Data` type.
+/// Can parse simple element in XML stream into `Data` type.
 ///
 /// The element must contain only character data.
 /// `ParseVia` trait is automatically defined.
@@ -104,7 +104,7 @@ impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
     }
 }
 
-/// Parses attribute into `Data` type.
+/// Can parse attribute into `Data` type.
 ///
 /// Implement for `conv` types.
 pub trait FromAttributeVia<Data> {

@@ -4,7 +4,7 @@ extern crate macro_attr;
 extern crate gpx_debug;
 
 #[macro_use]
-pub mod parsers;
+mod parsers;
 
 pub mod xml;
 pub mod xsd;
