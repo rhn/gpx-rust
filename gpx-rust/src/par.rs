@@ -3,7 +3,6 @@ extern crate xml as _xml;
 
 use std;
 use std::io;
-use std::str::FromStr;
 use std::fmt;
 use std::error::Error as ErrorTrait;
 

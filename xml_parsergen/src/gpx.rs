@@ -233,6 +233,7 @@ pub struct Generator<'a> {
 pub static DEFAULT_GENERATOR: Generator<'static> = Generator {
     parse_via_char: r#"
 impl ParseViaChar<{{{ type }}}> for {{{ conv }}} {
+    #[allow(unused_comparisons)]
     fn from_char(s: &str) -> Result<{{{ type }}}, ::gpx::par::Error> {
         let value = try!(<{{{ base_conv }}} as ParseViaChar<{{{ type }}}>>::from_char(s));
 {{# lower }}

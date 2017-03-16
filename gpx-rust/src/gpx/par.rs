@@ -23,7 +23,7 @@ use gpx;
 use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Copyright, Person };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
-use ::par::{ FromAttributeVia, ParseVia, ParseViaChar, parse_elem };
+use ::par::{ FromAttributeVia, ParseVia, ParseViaChar };
 use ::par::{ Positioned, AttributeValueError };
 
 
