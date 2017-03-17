@@ -308,7 +308,7 @@ impl ParseVia<{{{ data }}}> for {{{ conv }}} {
             match &(name.local_name) as &str {
                 {{# attribute }}
                 {{{ name }}} => {
-                    self.{{{ field }}} = Some(try!({{{ conv }}}(&attr.value)));
+                    self.{{{ field }}} = Some(try!({{{ conv }}}::from_attribute(&attr.value)));
                 }
                 {{/ attribute }}
                 _ => {
@@ -440,14 +440,12 @@ struct {{{ name }}} {
         });
         let attributes_owned = data.attributes.iter().map(|attr| {
             let conv = match convs.get(&attr.type_) {
-                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
-                    format!("{}::from_attribute", conv_name)
-                },
+                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name.clone(),
                 Some(_) => panic!("Attribute {} must be parsed with a function", &attr.name),
                 None => panic!("No parser for {}", &attr.type_),
             };
             let name = &attr.name;
-            (quote!(#name), ident_safe(&attr.name).to_string(), conv)
+            (quote!(#name), String::from(ident_safe(&attr.name)), conv)
         }).collect::<Vec<_>>();
         let attributes = attributes_owned.iter().map(|&(ref name, ref field, ref conv)| {
             vec![name.as_str(), field, conv]
