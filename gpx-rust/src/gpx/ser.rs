@@ -15,7 +15,7 @@ use xsd;
 use gpx::{ Gpx, Version, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem, ToAttributeVia };
+use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem, SerializeCharElemVia, ToAttributeVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -216,36 +216,57 @@ impl SerializeVia<Waypoint> for conv::Wpt {
         if let Some(ref item) = data.geoid_height {
             try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
         }
-        set_optional!(sink, data.name, "name");
-        set_optional!(sink, data.comment, "cmt");
-        set_optional!(sink, data.description, "desc");
-        set_optional!(sink, data.source, "src");
+        set_optional_typed!(sink, data.name, "name", xsd::conv::String);
+        set_optional_typed!(sink, data.comment, "cmt", xsd::conv::String);
+        set_optional_typed!(sink, data.description, "desc", xsd::conv::String);
+        set_optional_typed!(sink, data.source, "src", xsd::conv::String);
         for item in &data.links {
             try!(conv::Link::serialize_via(item, sink, "link"));
         }
-        set_optional!(sink, data.symbol, "sym");
-        set_optional!(sink, data.type_, "type");
-        set_optional!(sink, data.fix, "fix");
-        set_optional!(sink, data.satellites, "sat");
+        set_optional_typed!(sink, data.symbol, "sym", xsd::conv::String);
+        set_optional_typed!(sink, data.type_, "type", xsd::conv::String);
+        set_optional_typed!(sink, data.fix, "fix", conv::Fix);
+        set_optional_typed!(sink, data.satellites, "sat", xsd::conv::NonNegativeInteger);
         set_optional_typed!(sink, data.hdop, "hdop", xsd::conv::Decimal);
         set_optional_typed!(sink, data.vdop, "vdop", xsd::conv::Decimal);
         set_optional_typed!(sink, data.pdop, "pdop", xsd::conv::Decimal);
         set_optional_typed!(sink, data.dgps_age, "ageofdgpsdata", xsd::conv::Decimal);
-        set_optional!(sink, data.dgps_id, "dgpsid");
+        set_optional_typed!(sink, data.dgps_id, "dgpsid", conv::DgpsStation);
         set_optional!(sink, data.extensions, "extensions");
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
     }
 }
 
-impl SerializeCharElem for Fix {
-    fn to_characters(&self) -> String {
-        match self {
+impl SerializeCharElemVia<Fix> for conv::Fix {
+    fn to_characters(data: &Fix) -> String {
+        match data {
             &Fix::None => "none",
             &Fix::_2D => "2d",
             &Fix::_3D => "3d",
             &Fix::DGPS => "dgps",
             &Fix::PPS => "pps"
         }.into()
+    }
+}
+
+
+impl SerializeCharElemVia<u16> for conv::DgpsStation {
+    fn to_characters(data: &u16) -> String {
+        if 0 > *data {
+            /*Err(::gpx::par::Error::TooSmall {
+                limit: 0.into(),
+                value: value.into(),
+            })*/
+            panic!("Too small");
+        } else if *data > 1024 {
+            /*Err(::gpx::par::Error::TooLarge {
+                limit: 1024.into(),
+                value: value.into(),
+            })*/
+            panic!("Too large");
+        } else {
+            <::xsd::conv::Integer as SerializeCharElemVia<u16>>::to_characters(data)
+        }
     }
 }

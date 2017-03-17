@@ -107,6 +107,10 @@ mod ser {
     impl SerializeCharElemVia<u64> for xsd::conv::Integer {
         fn to_characters(data: &u64) -> String { data.to_string() }
     }
+    
+    impl SerializeCharElemVia<u16> for xsd::conv::Integer {
+        fn to_characters(data: &u16) -> String { data.to_string() }
+    }
 
     impl SerializeCharElemVia<i16> for xsd::conv::Integer {
         fn to_characters(data: &i16) -> String { data.to_string() }

@@ -79,21 +79,6 @@ pub trait SerializeCharElem {
     fn to_characters(&self) -> String;
 }
 
-impl<T: SerializeCharElem> Serialize for T {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), SerError> {
-        let elemname = Name::local(name);
-        try!(sink.write(
-            XmlEvent::StartElement { name: elemname.clone(),
-                                     attributes: Cow::Owned(Vec::new()),
-                                     namespace: Cow::Owned(Namespace::empty()) }
-        ));
-        try!(sink.write(XmlEvent::Characters(&self.to_characters())));
-        try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
-        Ok(())
-    }
-}
-
 impl SerializeCharElem for u16 {
     fn to_characters(&self) -> String { self.to_string() }
 }
