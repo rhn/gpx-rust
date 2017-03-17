@@ -515,19 +515,13 @@ struct {{{ name }}} {
                 _ => format!("self.{}.push", field),
             };
             let conv = match convs.get(&elem.type_) {
-                Some(&(_, TypeConverter::ParseFun(ref fun))) => {
-                    format!("{fun}(self.reader, elem_start)", fun=fun)
-                },
                 Some(&(_, TypeConverter::ParserClass(ref cls))) => {
                     format!("{cls}::new(self.reader).parse(elem_start)", cls=cls)
                 },
                 Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
                     format!("{}::parse_via(self.reader, elem_start)", conv_name)
                 }
-                Some(&(_, TypeConverter::AttributeFun(_))) => {
-                    panic!("Element {} has attribute conversion", &elem.type_)
-                }
-                None => panic!("Missing conversion for {}", &elem.type_),
+                _ => panic!("Missing conversion for {}", &elem.type_),
             };
             format!("{tag} => {{
                 {saver}(try!({conv}));
