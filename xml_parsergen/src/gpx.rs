@@ -250,7 +250,7 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
 pub struct Generator<'a> {
     parse_via_char: &'a str,
     parse_via: &'a str,
-    parse_start: &'a str,
+    element_parse: &'a str,
 }
 
 pub static DEFAULT_GENERATOR: Generator<'static> = Generator {
@@ -286,7 +286,8 @@ impl ParseVia<{{{ data }}}> for {{{ conv }}} {
         {{{ parser_type }}}::new(parser).parse(elem_start)
     }
 }"#,
-    parse_start: r#"
+    element_parse: r#"
+impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}<'a, T> {
     fn parse_start(&mut self, elem_start: ElemStart)
             -> Result<(), ::xml::AttributeError> {
         for attr in elem_start.attributes {
@@ -319,7 +320,24 @@ impl ParseVia<{{{ data }}}> for {{{ conv }}} {
         self.elem_name = Some(elem_start.name);
         Ok(())
     }
-"#,
+    {{{ body }}}
+    fn parse_element(&mut self, elem_start: ElemStart)
+            -> Result<(), Positioned<::gpx::par::Error>> {
+        {{{ parse_element_body }}}
+    }
+    fn get_parser_position(&self) -> _xml::common::TextPosition {
+        self.reader.position()
+    }
+    fn get_name(&self) -> &OwnedName {
+        match &self.elem_name {
+            &Some(ref i) => i,
+            &None => panic!("Name was not set while parsing"),
+        }
+    }
+    fn next(&mut self) -> Result<XmlEvent, _xml::reader::Error> {
+        self.reader.next()
+    }
+}"#,
 };
 
 trait GetOrElse<K, V> {
@@ -450,10 +468,6 @@ struct {{{ name }}} {
         let attributes = attributes_owned.iter().map(|&(ref name, ref field, ref conv)| {
             vec![name.as_str(), field, conv]
         });
-        let parser_start_fn = render_string(HashBuilder::new().insert_array("attribute",
-                                                                            &["name", "field", "conv"],
-                                                                            attributes),
-                                            self.parse_start);
         let macroattrs = data.attributes.iter().map(|attr| {
             let field = &attr.name;
             let attr_name = &attr.name;
@@ -565,32 +579,14 @@ struct {{{ name }}} {
                                 #( #elem_inits, )* }
             }
         ).to_string().replace("{", "{\n").replace(";", ";\n");
-        render_string(HashBuilder::new().insert("cls_name", name)
+        render_string(HashBuilder::new().insert("parser_type", name)
                                         .insert("macro_attrs", macroattrs)
                                         .insert("parse_element_body", parse_elem_body)
-                                        .insert("parser_start_fn", parser_start_fn)
+                                        .insert_array("attribute",
+                                                      &["name", "field", "conv"],
+                                                      attributes)
                                         .insert("body", body),
-                      r#"
-impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ cls_name }}}<'a, T> {
-    {{{ parser_start_fn }}}
-    {{{ body }}}
-    fn parse_element(&mut self, elem_start: ElemStart)
-            -> Result<(), Positioned<::gpx::par::Error>> {
-        {{{ parse_element_body }}}
-    }
-    fn get_parser_position(&self) -> _xml::common::TextPosition {
-        self.reader.position()
-    }
-    fn get_name(&self) -> &OwnedName {
-        match &self.elem_name {
-            &Some(ref i) => i,
-            &None => panic!("Name was not set while parsing"),
-        }
-    }
-    fn next(&mut self) -> Result<XmlEvent, _xml::reader::Error> {
-        self.reader.next()
-    }
-}"#)
+                      self.element_parse)
     }
     
     fn parse_impl(&self, type_name: &str, data: &SimpleType, convs: &ConvMap, types_: &TypeMap)
