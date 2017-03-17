@@ -308,8 +308,7 @@ impl ParseVia<{{{ data }}}> for {{{ conv }}} {
             match &(name.local_name) as &str {
                 {{# attribute }}
                 {{{ name }}} => {
-                    let v = &attr.value;
-                    _parser_attr! { self, v, { {{{ field }}}, {{{ conv }}} } }
+                    self.{{{ field }}} = Some(try!({{{ conv }}}(&attr.value)));
                 }
                 {{/ attribute }}
                 _ => {
