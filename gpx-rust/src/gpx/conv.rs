@@ -50,3 +50,6 @@ pub struct Person {}
 
 /// Defines conversion between String and GPX emailType
 pub struct Email {}
+
+/// Defines conversion for GPX wptType
+pub struct Wpt {}

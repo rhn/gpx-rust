@@ -80,7 +80,7 @@ fn process() -> Result<(), Error> {
         "dgpsStationType".into() => ("u16".into(), TypeConverter::UniversalClass("::gpx::conv::DgpsStation".into())),
         "extensionsType".into() => ("XmlElement".into(), TypeConverter::UniversalClass("::gpx::conv::Extensions".into())), // FIXME: dedicated type?
         "personType".into() => ("Person".into(), TypeConverter::UniversalClass("::gpx::conv::Person".into())),
-        "wptType".into() => ("Waypoint".into(), TypeConverter::ParserClass("WaypointParser".into())),
+        "wptType".into() => ("Waypoint".into(), TypeConverter::UniversalClass("::gpx::conv::Wpt".into())),
         "metadataType".into() => ("Metadata".into(), TypeConverter::UniversalClass("::gpx::conv::Metadata".into())),
         "trkType".into() => ("Track".into(), TypeConverter::UniversalClass("::gpx::conv::Trk".into())),
         "rteType".into() => ("Route".into(), TypeConverter::UniversalClass("::gpx::conv::Rte".into())),
@@ -177,6 +177,7 @@ fn process() -> Result<(), Error> {
         ("CopyrightParser", attr_convs.get("copyrightType").expect("copyrighterr")),
         ("PersonParser", attr_convs.get("personType").expect("personerr")),
         ("EmailParser", attr_convs.get("emailType").expect("emailerr")),
+        ("WaypointParser", attr_convs.get("wptType").expect("wpterr")),
     ];
     try!(write_file(&out_dir.join("gpx_auto.rs"), |f| {
         for item in &structs {

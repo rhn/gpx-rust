@@ -81,17 +81,6 @@ impl ToAttributeVia<f64> for Longitude {
     }
 }
 
-/// via XSD string type
-/*impl SerializeVia<String> for XsdString {
-    fn serialize_via<W: io::Write>(data: &String, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), SerError> {
-        try!(sink.write(XmlEvent::start_element(name)));
-        try!(sink.write(XmlEvent::characters(data)));
-        try!(sink.write(XmlEvent::EndElement { name: Some(name.into()) }));
-        Ok(())
-    }
-}*/
-
 impl SerializeVia<Bounds> for conv::Bounds {
     fn serialize_via<W: io::Write>(data: &Bounds, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), SerError> {
@@ -149,7 +138,7 @@ impl SerializeVia<Gpx> for conv::Gpx {
             try!(::gpx::conv::Metadata::serialize_via(meta, sink, "metadata"));
         }
         for item in &data.waypoints {
-            try!(item.serialize_with(sink, "wpt"));
+            try!(::gpx::conv::Wpt::serialize_via(item, sink, "wpt"));
         }
         for item in &data.routes {
             try!(::gpx::conv::Rte::serialize_via(item, sink, "rte"));
@@ -200,13 +189,13 @@ impl Version {
 }
 
 /// Custom serialization beeded because of the location field
-impl Serialize for Waypoint {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
+impl SerializeVia<Waypoint> for conv::Wpt {
+    fn serialize_via<W: io::Write>(data: &Waypoint, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), SerError> {
         let elemname = Name::local(name);
-        let lat = try!(Latitude::to_attribute(&self.location.latitude)
+        let lat = try!(Latitude::to_attribute(&data.location.latitude)
             .map_err(|e| SerError::ElementAttributeError("latitude", e)));
-        let lon = try!(Longitude::to_attribute(&self.location.longitude)
+        let lon = try!(Longitude::to_attribute(&data.location.longitude)
             .map_err(|e| SerError::ElementAttributeError("longitude", e)));
         try!(sink.write(XmlEvent::StartElement {
             name: elemname.clone(),
@@ -217,33 +206,33 @@ impl Serialize for Waypoint {
                                      value: &lon }]),
             namespace: Cow::Owned(Namespace::empty()),
         }));
-        if let Some(ref item) = self.location.elevation {
+        if let Some(ref item) = data.location.elevation {
             try!(xsd::conv::Decimal::serialize_via(item, sink, "ele"));
         }
-        set_optional_typed!(sink, self.time, "time", xsd::conv::DateTime);
-        if let Some(ref item) = self.mag_variation {
+        set_optional_typed!(sink, data.time, "time", xsd::conv::DateTime);
+        if let Some(ref item) = data.mag_variation {
             try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
         }
-        if let Some(ref item) = self.geoid_height {
+        if let Some(ref item) = data.geoid_height {
             try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
         }
-        set_optional!(sink, self.name, "name");
-        set_optional!(sink, self.comment, "cmt");
-        set_optional!(sink, self.description, "desc");
-        set_optional!(sink, self.source, "src");
-        for item in &self.links {
+        set_optional!(sink, data.name, "name");
+        set_optional!(sink, data.comment, "cmt");
+        set_optional!(sink, data.description, "desc");
+        set_optional!(sink, data.source, "src");
+        for item in &data.links {
             try!(conv::Link::serialize_via(item, sink, "link"));
         }
-        set_optional!(sink, self.symbol, "sym");
-        set_optional!(sink, self.type_, "type");
-        set_optional!(sink, self.fix, "fix");
-        set_optional!(sink, self.satellites, "sat");
-        set_optional_typed!(sink, self.hdop, "hdop", xsd::conv::Decimal);
-        set_optional_typed!(sink, self.vdop, "vdop", xsd::conv::Decimal);
-        set_optional_typed!(sink, self.pdop, "pdop", xsd::conv::Decimal);
-        set_optional_typed!(sink, self.dgps_age, "ageofdgpsdata", xsd::conv::Decimal);
-        set_optional!(sink, self.dgps_id, "dgpsid");
-        set_optional!(sink, self.extensions, "extensions");
+        set_optional!(sink, data.symbol, "sym");
+        set_optional!(sink, data.type_, "type");
+        set_optional!(sink, data.fix, "fix");
+        set_optional!(sink, data.satellites, "sat");
+        set_optional_typed!(sink, data.hdop, "hdop", xsd::conv::Decimal);
+        set_optional_typed!(sink, data.vdop, "vdop", xsd::conv::Decimal);
+        set_optional_typed!(sink, data.pdop, "pdop", xsd::conv::Decimal);
+        set_optional_typed!(sink, data.dgps_age, "ageofdgpsdata", xsd::conv::Decimal);
+        set_optional!(sink, data.dgps_id, "dgpsid");
+        set_optional!(sink, data.extensions, "extensions");
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
     }
