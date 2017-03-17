@@ -15,7 +15,7 @@ use xsd;
 use gpx::{ Gpx, Version, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElem, SerializeCharElemVia, ToAttributeVia };
+use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElemVia, ToAttributeVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -252,6 +252,7 @@ impl SerializeCharElemVia<Fix> for conv::Fix {
 
 
 impl SerializeCharElemVia<u16> for conv::DgpsStation {
+    #[allow(unused_comparisons)]
     fn to_characters(data: &u16) -> String {
         if 0 > *data {
             /*Err(::gpx::par::Error::TooSmall {

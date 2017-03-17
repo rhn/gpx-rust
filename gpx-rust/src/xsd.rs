@@ -88,13 +88,9 @@ mod ser {
     //! Serialization impls
     use xsd;
     use xsd::conv;
-    use ser::{ ToAttributeVia, SerializeCharElem, SerializeCharElemVia };
+    use ser::{ ToAttributeVia, SerializeCharElemVia };
     
     use gpx::ser::AttributeValueError;
-    
-    impl SerializeCharElem for xsd::NonNegativeInteger {
-        fn to_characters(&self) -> String { self.to_string() }
-    }
     
     impl SerializeCharElemVia<f64> for xsd::conv::Decimal {
         fn to_characters(data: &f64) -> String { data.to_string() }

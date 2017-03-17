@@ -65,28 +65,6 @@ pub trait Serialize {
         -> Result<(), SerError>;
 }
 
-pub trait SerializeAttr {
-    fn to_attribute(&self) -> &str;
-}
-
-impl SerializeAttr for String {
-    fn to_attribute(&self) -> &str {
-        return &self;
-    }
-}
-
-pub trait SerializeCharElem {
-    fn to_characters(&self) -> String;
-}
-
-impl SerializeCharElem for u16 {
-    fn to_characters(&self) -> String { self.to_string() }
-}
-
-impl SerializeCharElem for String {
-    fn to_characters(&self) -> String { self.clone() }
-}
-
 /// Character type can be converted into multiple data types, e.g. Decimal into f32 or f64
 pub trait SerializeCharElemVia<Data: ?Sized> {
     fn to_characters(value: &Data) -> String;
@@ -96,13 +74,6 @@ pub trait SerializeCharElemVia<Data: ?Sized> {
 pub trait SerializeVia<Data: ?Sized> {
     fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
         -> Result<(), SerError>;
-}
-
-/// Trivial case: a type knows how to convert itself
-impl<Data: SerializeCharElem + ?Sized> SerializeCharElemVia<Data> for Data {
-    fn to_characters(value: &Data) -> String {
-        value.to_characters()
-    }
 }
 
 /// Leverage char conversion capabilities
