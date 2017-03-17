@@ -194,7 +194,7 @@ fn process() -> Result<(), Error> {
                 gpx::Generator::parser_cls(&item.name, item.type_, &attr_convs).as_bytes()
             ).map_err(Error::Io));
             try!(f.write(
-                gpx::Generator::parser_impl(&item.name, item.type_, &attr_convs).as_bytes()
+                DEFAULT_GENERATOR.parser_impl(&item.name, item.type_, &attr_convs).as_bytes()
             ).map_err(Error::Io));
         }
         for &(ref name, ref conv_) in &parser_impls_via {

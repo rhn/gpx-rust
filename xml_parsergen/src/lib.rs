@@ -69,7 +69,7 @@ pub trait ParserGen {
     fn struct_def(name: &str, tags: &TagMap, data: &ComplexType,
                   type_convs: &ConvMap) -> String;
     fn parser_cls(name: &str, data: &ComplexType, type_convs: &ConvMap) -> String;
-    fn parser_impl(name: &str, data: &ComplexType, convs: &ConvMap) -> String;
+    fn parser_impl(&self, name: &str, data: &ComplexType, convs: &ConvMap) -> String;
     fn parse_impl(&self, type_name: &str, data: &SimpleType, convs: &ConvMap, types_: &TypeMap)
         -> String;
     fn parse_impl_complex(&self, parser_name: &str, conv_entry: &(UserType, TypeConverter))

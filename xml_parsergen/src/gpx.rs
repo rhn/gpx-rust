@@ -4,11 +4,33 @@ use std;
 use std::io;
 use std::collections::HashMap;
 use quote;
-use self::rustache::{ HashBuilder, Render };
+use self::rustache::{ HashBuilder, VecBuilder, Render };
 
 use xsd_types::{ Type, SimpleType, ComplexType, Element, ElementMaxOccurs, Attribute };
 use ::{ StructInfo, ParserGen, TagMap, TypeConverter, TypeMap, ConvMap, ident_safe, UserType };
 
+
+trait InsertArray {
+    fn insert_array<'a, Entry: IntoIterator<Item=&'a str>,
+                        Array: IntoIterator<Item=Entry>>
+        (self, name: &str, field_names: &[&str], items: Array) -> Self;
+}
+
+impl<'a> InsertArray for HashBuilder<'a> {
+    fn insert_array<'b, Entry: IntoIterator<Item=&'b str>,
+                        Array: IntoIterator<Item=Entry>>
+            (self, name: &str, field_names: &[&str], items: Array) -> Self {
+        let mut v = VecBuilder::new();
+        for item in items {
+            let mut h = HashBuilder::new();
+            for (&name, field) in field_names.iter().zip(item) {
+                h = h.insert(name, field);
+            }
+            v = v.push(h);
+        }
+        self.insert(name, v)
+    }
+}
 
 fn render_string(data: HashBuilder, template: &str) -> String {
     let mut out = io::Cursor::new(Vec::new());
@@ -228,6 +250,7 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
 pub struct Generator<'a> {
     parse_via_char: &'a str,
     parse_via: &'a str,
+    parse_start: &'a str,
 }
 
 pub static DEFAULT_GENERATOR: Generator<'static> = Generator {
@@ -263,6 +286,41 @@ impl ParseVia<{{{ data }}}> for {{{ conv }}} {
         {{{ parser_type }}}::new(parser).parse(elem_start)
     }
 }"#,
+    parse_start: r#"
+    fn parse_start(&mut self, elem_start: ElemStart)
+            -> Result<(), ::xml::AttributeError> {
+        for attr in elem_start.attributes {
+            let name = attr.name;
+
+            if let &Some(ref ns) = &name.namespace {
+                match &ns as &str {
+                    "http://www.topografix.com/GPX/1/1" |
+                    "http://www.topografix.com/GPX/1/0" => (),
+                    ns => {
+                        println!("WARNING: namespace ignored on {:?}:{}: {}",
+                             name.prefix,
+                             name.local_name,
+                             ns);
+                        continue;
+                    }
+                }
+            }
+            match &(name.local_name) as &str {
+                {{# attribute }}
+                {{{ name }}} => {
+                    let v = &attr.value;
+                    _parser_attr! { self, v, { {{{ field }}}, {{{ conv }}} } }
+                }
+                {{/ attribute }}
+                _ => {
+                    return Err(::xml::AttributeError::Unexpected(name));
+                }
+            }
+        }
+        self.elem_name = Some(elem_start.name);
+        Ok(())
+    }
+"#,
 };
 
 trait GetOrElse<K, V> {
@@ -376,11 +434,29 @@ struct {{{ name }}} {
         ).to_string()
     }
     
-    fn parser_impl(name: &str, data: &ComplexType, convs: &ConvMap) -> String {
+    fn parser_impl(&self, name: &str, data: &ComplexType, convs: &ConvMap) -> String {
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
             quote::Ident::new(attr.name.clone())
         });
+        let attributes_owned = data.attributes.iter().map(|attr| {
+            let conv = match convs.get(&attr.type_) {
+                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
+                    format!("{}::from_attribute", conv_name)
+                },
+                Some(_) => panic!("Attribute {} must be parsed with a function", &attr.name),
+                None => panic!("No parser for {}", &attr.type_),
+            };
+            let name = &attr.name;
+            (quote!(#name), ident_safe(&attr.name).to_string(), conv)
+        }).collect::<Vec<_>>();
+        let attributes = attributes_owned.iter().map(|&(ref name, ref field, ref conv)| {
+            vec![name.as_str(), field, conv]
+        });
+        let parser_start_fn = render_string(HashBuilder::new().insert_array("attribute",
+                                                                            &["name", "field", "conv"],
+                                                                            attributes),
+                                            self.parse_start);
         let macroattrs = data.attributes.iter().map(|attr| {
             let field = &attr.name;
             let attr_name = &attr.name;
@@ -495,10 +571,11 @@ struct {{{ name }}} {
         render_string(HashBuilder::new().insert("cls_name", name)
                                         .insert("macro_attrs", macroattrs)
                                         .insert("parse_element_body", parse_elem_body)
+                                        .insert("parser_start_fn", parser_start_fn)
                                         .insert("body", body),
                       r#"
 impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ cls_name }}}<'a, T> {
-    ParserStart!( {{{ macro_attrs }}} );
+    {{{ parser_start_fn }}}
     {{{ body }}}
     fn parse_element(&mut self, elem_start: ElemStart)
             -> Result<(), Positioned<::gpx::par::Error>> {
