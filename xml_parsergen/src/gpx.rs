@@ -7,7 +7,7 @@ use quote;
 use self::rustache::{ HashBuilder, VecBuilder, Render };
 
 use xsd_types::{ Type, SimpleType, ComplexType, Element, ElementMaxOccurs, Attribute };
-use ::{ StructInfo, ParserGen, TagMap, TypeConverter, TypeMap, ConvMap, ident_safe, UserType };
+use ::{ StructInfo, ParserGen, TagMap, TypeMap, ConvMap, ident_safe, UserType };
 
 
 trait InsertArray {
@@ -416,16 +416,8 @@ struct {{{ name }}} {
     fn parser_cls(name: &str, data: &ComplexType, convs: &ConvMap) -> String {
         let cls_name = quote::Ident::new(name);
         let attrs = data.attributes.iter().map(|attr| {
-            let fallback = UserType("String".into());
-            let attr_type = match convs.get(&attr.type_) {
-                Some(&(ref type_, TypeConverter::AttributeFun(_))) => type_,
-                Some(&(ref type_, TypeConverter::UniversalClass(_))) => type_,
-                Some(_) => panic!("Type {} doesn't have converter appropriate for attribute", &attr.type_),
-                None => {
-                     println!("cargo:warning=\"Missing type for attr {}\"", &attr.type_);
-                     &fallback
-                }
-            };
+            let &(ref attr_type, _) = convs.get(&attr.type_)
+                                           .expect(format!("Missing type for {}", &attr.type_).as_str());
             quote::Ident::new(format!("{}: Option<{}>",
                                       ident_safe(&attr.name),
                                       attr_type.as_user_type()))
@@ -461,34 +453,14 @@ struct {{{ name }}} {
     
     fn parser_impl(&self, name: &str, data: &ComplexType, convs: &ConvMap) -> String {
         let attributes_owned = data.attributes.iter().map(|attr| {
-            let conv = match convs.get(&attr.type_) {
-                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name.clone(),
-                Some(_) => panic!("Attribute {} must be parsed with a function", &attr.name),
-                None => panic!("No parser for {}", &attr.type_),
-            };
+            let &(_, ref conv) = convs.get(&attr.type_)
+                                      .expect(format!("No parser for {}", &attr.type_).as_str());
             let name = &attr.name;
             (quote!(#name), String::from(ident_safe(&attr.name)), conv)
         }).collect::<Vec<_>>();
         let attributes = attributes_owned.iter().map(|&(ref name, ref field, ref conv)| {
-            vec![name.as_str(), field, conv]
+            vec![name.as_str(), field, conv.as_user_type()]
         });
-        let macroattrs = data.attributes.iter().map(|attr| {
-            let field = &attr.name;
-            let attr_name = &attr.name;
-            let conv = match convs.get(&attr.type_) {
-                Some(&(_, TypeConverter::AttributeFun(ref foo))) => foo.clone(),
-                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
-                    format!("{}::from_attribute", conv_name)
-                },
-                Some(_) => panic!("Attribute {} must be parsed with a function", &attr.name),
-                None => {
-                    println!("No parser for {}", &attr.type_);
-                    "FIXME".into()
-                }
-            };
-            format!("{attr_name} => {{ {field}, {conv} }},\n",
-                    attr_name=quote!(#attr_name), field=field, conv=conv)
-        }).collect::<String>();
         let elements_owned = data.sequence.iter().map(|elem| {
             let type_ = match elem.max_occurs {
                 ElementMaxOccurs::Some(0) => {
@@ -514,18 +486,11 @@ struct {{{ name }}} {
                 ElementMaxOccurs::Some(1) => format!("self.{} = Some", field),
                 _ => format!("self.{}.push", field),
             };
-            let conv = match convs.get(&elem.type_) {
-                Some(&(_, TypeConverter::ParserClass(ref cls))) => {
-                    format!("{cls}::new(self.reader).parse(elem_start)", cls=cls)
-                },
-                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
-                    format!("{}::parse_via(self.reader, elem_start)", conv_name)
-                }
-                _ => panic!("Missing conversion for {}", &elem.type_),
-            };
+            let &(_, ref conv) = convs.get(&elem.type_)
+                                      .expect(format!("Missing conversion for {}", &elem.type_).as_str());
             format!("{tag} => {{
-                {saver}(try!({conv}));
-            }}\n", tag=quote!(#tag), saver=saver, conv=conv)
+                {saver}(try!({conv}::parse_via(self.reader, elem_start)));
+            }}\n", tag=quote!(#tag), saver=saver, conv=conv.as_user_type())
         }).collect::<String>();
         
         let parse_elem_body = if !match_elems.is_empty() {
@@ -569,7 +534,6 @@ struct {{{ name }}} {
             )"#)
         };
         render_string(HashBuilder::new().insert("parser_type", name)
-                                        .insert("macro_attrs", macroattrs)
                                         .insert("parse_element_body", parse_elem_body)
                                         .insert_array("attribute",
                                                       &["name", "field", "conv"],
@@ -583,14 +547,8 @@ struct {{{ name }}} {
     fn parse_impl(&self, type_name: &str, data: &SimpleType, convs: &ConvMap, types_: &TypeMap)
             -> String {
         let converter = convs.get(type_name).unwrap();
-        let get_univ = |converter| {
-            match converter {
-                &(_, TypeConverter::UniversalClass(ref convname)) => convname,
-                x => panic!("Entry {:?} is not a universal converter", x),
-            }
-        };
-        let conv_name = get_univ(converter);
-        let base_conv = get_univ(convs.get(data.base.as_str()).expect(format!("Base {} not found", data.base).as_str()));
+        let &(_, ref conv_name) = converter;
+        let &(_, ref base_conv) = convs.get(data.base.as_str()).expect(format!("Base {} not found", data.base).as_str());
         let format_literal = |value| {
             match converter.0.as_user_type() {
                 "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" => format!("{}", value),
@@ -613,11 +571,8 @@ struct {{{ name }}} {
         render_string(values, self.parse_via_char)
     }
     
-    fn parse_impl_complex(&self, parser_name: &str, conv_entry: &(UserType, TypeConverter)) -> String {
-        let (type_name, converter) = match *conv_entry {
-            (ref type_name, TypeConverter::UniversalClass(ref conv_name)) => (type_name, conv_name),
-            _ => panic!("Converter for {} is not universal", parser_name),
-        };
+    fn parse_impl_complex(&self, parser_name: &str, conv_entry: &(UserType, UserType)) -> String {
+        let (ref type_name, ref converter) = *conv_entry;
         render_string(HashBuilder::new().insert("data", type_name.as_user_type())
                                         .insert("conv", converter.as_str())
                                         .insert("parser_type", parser_name),
@@ -672,13 +627,10 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
                     true => format!("data.{}", field_name),
                     false => "value".into()
                 };
-                let conv_name = match type_convs.get(&attr.type_) {
-                    Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name,
-                    _ => "ccc"
-                };
+                let &(_, ref conv_name) = type_convs.get(&attr.type_).expect("Failed");
                 let push = render_string(HashBuilder::new().insert("attr_name", quote!(#attr_name).to_string())
                                                 .insert("field_value", field_value.as_str())
-                                                .insert("conv_name", conv_name),
+                                                .insert("conv_name", conv_name.as_user_type()),
                               r#"
                 OwnedAttribute { name: OwnedName::local( {{{ attr_name }}} ),
                                  value: try!({{{ conv_name }}}::to_attribute(&{{{ field_value }}})) },
@@ -709,13 +661,10 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
                     None => f(elem_name.as_str())
                 }))
             };
-            let ser_call = match type_convs.get(&elem.type_) {
-                Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => {
-                    let type_name = quote::Ident::new(conv_name.clone());
-                    quote!(#type_name::serialize_via(item, sink, #elem_name))
-                },
-                _ => quote!(item.serialize_with(sink, #elem_name))
-            };
+            let type_name = quote::Ident::new(type_convs.get(&elem.type_)
+                                                        .expect("No item").1.as_user_type());
+            let ser_call = quote!(#type_name::serialize_via(item, sink, #elem_name));
+
             match elem.max_occurs {
                 ElementMaxOccurs::Some(1) => {
                     let name = quote::Ident::new(get_attr_name(&|n| { String::from(n) }));
@@ -736,13 +685,11 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
             }
         });
         
-        let conv_name = match type_convs.get(type_name) {
-            Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name.as_str(),
-            _ => panic!("Refusing to create serializer for non-universal class {}", type_name)
-        };
+        let &(_, ref conv_name) = type_convs.get(type_name)
+                                            .expect(format!("Refusing to create serializer for non-universal class {}", type_name).as_str());
         
         render_string(HashBuilder::new().insert("cls_name", cls_name)
-                                        .insert("conv_name", conv_name)
+                                        .insert("conv_name", conv_name.as_user_type())
                                         .insert("attributes", attributes)
                                         .insert("events", quote!( #( #events )* ).to_string()),
                       r#"

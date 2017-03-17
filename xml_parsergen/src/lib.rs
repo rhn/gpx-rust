@@ -31,20 +31,6 @@ pub struct ParserInfo<'a> {
 }
 
 #[derive(Debug)]
-pub enum TypeConverter {
-    ParserClass(String),
-    ParseFun(String),
-    AttributeFun(String),
-    UniversalClass(String),
-}
-
-impl<'a> From<&'a str> for TypeConverter {
-    fn from(data: &str) -> TypeConverter {
-        TypeConverter::ParseFun(data.into())
-    }
-}
-
-#[derive(Debug)]
 pub struct UserType(String);
 
 impl UserType {
@@ -56,7 +42,7 @@ impl<'a> From<&'a str> for UserType {
     fn from(data: &'a str) -> UserType { UserType(data.into()) }
 }
 
-pub type ConvMap = HashMap<String, (UserType, TypeConverter)>;
+pub type ConvMap = HashMap<String, (UserType, UserType)>;
 
 #[derive(Debug)]
 pub enum Error {
@@ -72,7 +58,7 @@ pub trait ParserGen {
     fn parser_impl(&self, name: &str, data: &ComplexType, convs: &ConvMap) -> String;
     fn parse_impl(&self, type_name: &str, data: &SimpleType, convs: &ConvMap, types_: &TypeMap)
         -> String;
-    fn parse_impl_complex(&self, parser_name: &str, conv_entry: &(UserType, TypeConverter))
+    fn parse_impl_complex(&self, parser_name: &str, conv_entry: &(UserType, UserType))
         -> String;
     fn build_impl(cls_name: &str, data: &ComplexType, struct_info: &StructInfo, convs: &ConvMap)
         -> String;

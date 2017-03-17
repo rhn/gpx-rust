@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io;
 use std::io::{ Write, BufWriter };
 
-use xml_parsergen::{ ParserGen, ParserInfo, StructInfo, TypeConverter, TypeMap, ConvMap, gpx, prettify };
+use xml_parsergen::{ ParserGen, ParserInfo, StructInfo, TypeMap, ConvMap, gpx, prettify };
 use xml_parsergen::xsd_types::{ Type, SimpleType, ComplexType };
 use xml_parsergen::gpx::DEFAULT_GENERATOR;
 
@@ -70,31 +70,31 @@ fn process() -> Result<(), Error> {
 
     let types = gpx::get_types();
     let attr_convs: ConvMap = map!{
-        "gpxType".into() => ("Gpx".into(), TypeConverter::UniversalClass("::gpx::conv::Gpx".into())),
-        "boundsType".into() => ("Bounds".into(), TypeConverter::UniversalClass("::gpx::conv::Bounds".into())),
-        "copyrightType".into() => ("Copyright".into(), TypeConverter::UniversalClass("::gpx::conv::Copyright".into())),
-        "latitudeType".into() => ("f64".into(), TypeConverter::UniversalClass("gpx::conv::Latitude".into())),
-        "longitudeType".into() => ("f64".into(), TypeConverter::UniversalClass("gpx::conv::Longitude".into())),
-        "linkType".into() => ("Link".into(), TypeConverter::UniversalClass("::gpx::conv::Link".into())),
-        "fixType".into() => ("Fix".into(), TypeConverter::UniversalClass("::gpx::conv::Fix".into())),
-        "dgpsStationType".into() => ("u16".into(), TypeConverter::UniversalClass("::gpx::conv::DgpsStation".into())),
-        "extensionsType".into() => ("XmlElement".into(), TypeConverter::UniversalClass("::gpx::conv::Extensions".into())), // FIXME: dedicated type?
-        "personType".into() => ("Person".into(), TypeConverter::UniversalClass("::gpx::conv::Person".into())),
-        "wptType".into() => ("Waypoint".into(), TypeConverter::UniversalClass("::gpx::conv::Wpt".into())),
-        "metadataType".into() => ("Metadata".into(), TypeConverter::UniversalClass("::gpx::conv::Metadata".into())),
-        "trkType".into() => ("Track".into(), TypeConverter::UniversalClass("::gpx::conv::Trk".into())),
-        "rteType".into() => ("Route".into(), TypeConverter::UniversalClass("::gpx::conv::Rte".into())),
-        "trksegType".into() => ("TrackSegment".into(), TypeConverter::UniversalClass("::gpx::conv::Trkseg".into())),
-        "emailType".into() => ("String".into(), TypeConverter::UniversalClass("::gpx::conv::Email".into())),
-        "_gpx:version".into() => ("Version".into(), TypeConverter::UniversalClass("::gpx::conv::Version".into())),
-        "xsd:decimal".into() => ("xsd::Decimal".into(), TypeConverter::UniversalClass("::xsd::conv::Decimal".into())),
-        "xsd:dateTime".into() => ("xsd::DateTime".into(), TypeConverter::UniversalClass("::xsd::conv::DateTime".into())),
-        "xsd:string".into() => ("String".into(), TypeConverter::UniversalClass("::xsd::conv::String".into())),
-        "xsd:nonNegativeInteger".into() => ("u64".into(), TypeConverter::UniversalClass("::xsd::conv::NonNegativeInteger".into())),
-        "degreesType".into() => ("f32".into(), TypeConverter::UniversalClass("::gpx::conv::Degrees".into())),
-        "xsd:anyURI".into() => ("xsd::Uri".into(), TypeConverter::UniversalClass("::xsd::conv::Uri".into())),
-        "xsd:integer".into() => ("i64".into(), TypeConverter::UniversalClass("::xsd::conv::Integer".into())),
-        "xsd:gYear".into() => ("i16".into(), TypeConverter::UniversalClass("::xsd::conv::GYear".into())),
+        "gpxType".into() => ("Gpx".into(), "::gpx::conv::Gpx".into()),
+        "boundsType".into() => ("Bounds".into(), "::gpx::conv::Bounds".into()),
+        "copyrightType".into() => ("Copyright".into(), "::gpx::conv::Copyright".into()),
+        "latitudeType".into() => ("f64".into(), "gpx::conv::Latitude".into()),
+        "longitudeType".into() => ("f64".into(), "gpx::conv::Longitude".into()),
+        "linkType".into() => ("Link".into(), "::gpx::conv::Link".into()),
+        "fixType".into() => ("Fix".into(), "::gpx::conv::Fix".into()),
+        "dgpsStationType".into() => ("u16".into(), "::gpx::conv::DgpsStation".into()),
+        "extensionsType".into() => ("XmlElement".into(), "::gpx::conv::Extensions".into()), // FIXME: dedicated type?
+        "personType".into() => ("Person".into(), "::gpx::conv::Person".into()),
+        "wptType".into() => ("Waypoint".into(), "::gpx::conv::Wpt".into()),
+        "metadataType".into() => ("Metadata".into(), "::gpx::conv::Metadata".into()),
+        "trkType".into() => ("Track".into(), "::gpx::conv::Trk".into()),
+        "rteType".into() => ("Route".into(), "::gpx::conv::Rte".into()),
+        "trksegType".into() => ("TrackSegment".into(), "::gpx::conv::Trkseg".into()),
+        "emailType".into() => ("String".into(), "::gpx::conv::Email".into()),
+        "_gpx:version".into() => ("Version".into(), "::gpx::conv::Version".into()),
+        "xsd:decimal".into() => ("xsd::Decimal".into(), "::xsd::conv::Decimal".into()),
+        "xsd:dateTime".into() => ("xsd::DateTime".into(), "::xsd::conv::DateTime".into()),
+        "xsd:string".into() => ("String".into(), "::xsd::conv::String".into()),
+        "xsd:nonNegativeInteger".into() => ("u64".into(), "::xsd::conv::NonNegativeInteger".into()),
+        "degreesType".into() => ("f32".into(), "::gpx::conv::Degrees".into()),
+        "xsd:anyURI".into() => ("xsd::Uri".into(), "::xsd::conv::Uri".into()),
+        "xsd:integer".into() => ("i64".into(), "::xsd::conv::Integer".into()),
+        "xsd:gYear".into() => ("i16".into(), "::xsd::conv::GYear".into()),
     };
     let parsers = vec![
         ParserInfo { name: "TrackSegmentParser".into(), type_: get_complex(&types, "trksegType") },
