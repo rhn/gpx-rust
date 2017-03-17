@@ -21,14 +21,6 @@ const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
 
 macro_rules! set_optional(
-    ($sink:ident, $name:expr, $tag:expr) => {
-        if let Some(ref item) = $name {
-            try!(item.serialize_with($sink, $tag));
-        }
-    }
-);
-
-macro_rules! set_optional_typed(
     ($sink:ident, $name:expr, $tag:expr, $type_:path) => {
         if let Some(ref item) = $name {
             try!(<$type_>::serialize_via(item, $sink, $tag));
@@ -209,30 +201,30 @@ impl SerializeVia<Waypoint> for conv::Wpt {
         if let Some(ref item) = data.location.elevation {
             try!(xsd::conv::Decimal::serialize_via(item, sink, "ele"));
         }
-        set_optional_typed!(sink, data.time, "time", xsd::conv::DateTime);
+        set_optional!(sink, data.time, "time", xsd::conv::DateTime);
         if let Some(ref item) = data.mag_variation {
             try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
         }
         if let Some(ref item) = data.geoid_height {
             try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
         }
-        set_optional_typed!(sink, data.name, "name", xsd::conv::String);
-        set_optional_typed!(sink, data.comment, "cmt", xsd::conv::String);
-        set_optional_typed!(sink, data.description, "desc", xsd::conv::String);
-        set_optional_typed!(sink, data.source, "src", xsd::conv::String);
+        set_optional!(sink, data.name, "name", xsd::conv::String);
+        set_optional!(sink, data.comment, "cmt", xsd::conv::String);
+        set_optional!(sink, data.description, "desc", xsd::conv::String);
+        set_optional!(sink, data.source, "src", xsd::conv::String);
         for item in &data.links {
             try!(conv::Link::serialize_via(item, sink, "link"));
         }
-        set_optional_typed!(sink, data.symbol, "sym", xsd::conv::String);
-        set_optional_typed!(sink, data.type_, "type", xsd::conv::String);
-        set_optional_typed!(sink, data.fix, "fix", conv::Fix);
-        set_optional_typed!(sink, data.satellites, "sat", xsd::conv::NonNegativeInteger);
-        set_optional_typed!(sink, data.hdop, "hdop", xsd::conv::Decimal);
-        set_optional_typed!(sink, data.vdop, "vdop", xsd::conv::Decimal);
-        set_optional_typed!(sink, data.pdop, "pdop", xsd::conv::Decimal);
-        set_optional_typed!(sink, data.dgps_age, "ageofdgpsdata", xsd::conv::Decimal);
-        set_optional_typed!(sink, data.dgps_id, "dgpsid", conv::DgpsStation);
-        set_optional_typed!(sink, data.extensions, "extensions", conv::Extensions);
+        set_optional!(sink, data.symbol, "sym", xsd::conv::String);
+        set_optional!(sink, data.type_, "type", xsd::conv::String);
+        set_optional!(sink, data.fix, "fix", conv::Fix);
+        set_optional!(sink, data.satellites, "sat", xsd::conv::NonNegativeInteger);
+        set_optional!(sink, data.hdop, "hdop", xsd::conv::Decimal);
+        set_optional!(sink, data.vdop, "vdop", xsd::conv::Decimal);
+        set_optional!(sink, data.pdop, "pdop", xsd::conv::Decimal);
+        set_optional!(sink, data.dgps_age, "ageofdgpsdata", xsd::conv::Decimal);
+        set_optional!(sink, data.dgps_id, "dgpsid", conv::DgpsStation);
+        set_optional!(sink, data.extensions, "extensions", conv::Extensions);
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
     }
