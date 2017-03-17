@@ -288,6 +288,14 @@ impl ParseVia<{{{ data }}}> for {{{ conv }}} {
 }"#,
     element_parse: r#"
 impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}<'a, T> {
+    fn new(reader: &'a mut EventReader<T>) -> Self {
+        {{{ parser_type }}} {
+            reader: reader,
+            elem_name: None,
+            {{# attribute }} {{{ field }}}: None, {{/ attribute }}
+            {{# element }} {{{ field }}}: {{{ parser_type }}}::default(), {{/ element }}
+        }
+    }
     fn parse_start(&mut self, elem_start: ElemStart)
             -> Result<(), ::xml::AttributeError> {
         for attr in elem_start.attributes {
@@ -452,10 +460,6 @@ struct {{{ name }}} {
     }
     
     fn parser_impl(&self, name: &str, data: &ComplexType, convs: &ConvMap) -> String {
-        let cls_name = quote::Ident::new(name);
-        let attrs = data.attributes.iter().map(|attr| {
-            quote::Ident::new(attr.name.clone())
-        });
         let attributes_owned = data.attributes.iter().map(|attr| {
             let conv = match convs.get(&attr.type_) {
                 Some(&(_, TypeConverter::UniversalClass(ref conv_name))) => conv_name.clone(),
@@ -485,20 +489,20 @@ struct {{{ name }}} {
             format!("{attr_name} => {{ {field}, {conv} }},\n",
                     attr_name=quote!(#attr_name), field=field, conv=conv)
         }).collect::<String>();
-        let elem_inits = data.sequence.iter().map(|elem| {
-            quote::Ident::new(
-                format!("{ident}: {init}",
-                        ident=ident_safe(&elem.name),
-                        init=match elem.max_occurs {
-                            ElementMaxOccurs::Some(0) => {
-                                panic!("Element has 0 occurrences, can't derive data type")
-                            }
-                            ElementMaxOccurs::Some(1) => "None",
-                            _ => "Vec::new()"
-                        }
-                )
-            )
+        let elements_owned = data.sequence.iter().map(|elem| {
+            let type_ = match elem.max_occurs {
+                ElementMaxOccurs::Some(0) => {
+                    panic!("Element has 0 occurrences, can't derive data type")
+                }
+                ElementMaxOccurs::Some(1) => "Option",
+                _ => "Vec"
+            };
+            (String::from(ident_safe(&elem.name)), type_)
+        }).collect::<Vec<_>>();
+        let elements = elements_owned.iter().map(|&(ref field, ref type_)| {
+            vec![field.as_str(), type_]
         });
+        
         let match_elems = data.sequence.iter().map(|elem| {
             let field = ident_safe(&elem.name).clone();
             let tag = &elem.name;
@@ -570,22 +574,15 @@ struct {{{ name }}} {
                 self.reader.position())
             )"#)
         };
-
-        let body = quote!(
-            fn new(reader: &'a mut EventReader<T>) -> Self {
-                    #cls_name { reader: reader,
-                                elem_name: None,
-                                #( #attrs: None, )*
-                                #( #elem_inits, )* }
-            }
-        ).to_string().replace("{", "{\n").replace(";", ";\n");
         render_string(HashBuilder::new().insert("parser_type", name)
                                         .insert("macro_attrs", macroattrs)
                                         .insert("parse_element_body", parse_elem_body)
                                         .insert_array("attribute",
                                                       &["name", "field", "conv"],
                                                       attributes)
-                                        .insert("body", body),
+                                        .insert_array("element",
+                                                      &["field", "parser_type"],
+                                                      elements),
                       self.element_parse)
     }
     
