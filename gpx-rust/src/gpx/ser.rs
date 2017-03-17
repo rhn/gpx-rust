@@ -15,7 +15,7 @@ use xsd;
 use gpx::{ Gpx, Version, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ SerError, Serialize, SerializeDocument, SerializeVia, SerializeCharElemVia, ToAttributeVia };
+use ser::{ SerError, SerializeDocument, SerializeVia, SerializeCharElemVia, ToAttributeVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -232,7 +232,7 @@ impl SerializeVia<Waypoint> for conv::Wpt {
         set_optional_typed!(sink, data.pdop, "pdop", xsd::conv::Decimal);
         set_optional_typed!(sink, data.dgps_age, "ageofdgpsdata", xsd::conv::Decimal);
         set_optional_typed!(sink, data.dgps_id, "dgpsid", conv::DgpsStation);
-        set_optional!(sink, data.extensions, "extensions");
+        set_optional_typed!(sink, data.extensions, "extensions", conv::Extensions);
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
     }

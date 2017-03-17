@@ -9,6 +9,7 @@ use self::_xml::namespace::Namespace;
 use self::_xml::writer;
 use self::_xml::writer::{ EmitterConfig, EventWriter, XmlEvent };
 
+use conv;
 use xml;
 
 use gpx::ser::AttributeValueError;
@@ -60,11 +61,6 @@ pub trait SerializeDocument {
             -> Result<(), SerError>;
 }
 
-pub trait Serialize {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str)
-        -> Result<(), SerError>;
-}
-
 /// Character type can be converted into multiple data types, e.g. Decimal into f32 or f64
 pub trait SerializeCharElemVia<Data: ?Sized> {
     fn to_characters(value: &Data) -> String;
@@ -93,7 +89,7 @@ impl<T, Data: ?Sized> SerializeVia<Data> for T where T: SerializeCharElemVia<Dat
 }
 
 /// Special handling of namespaces
-impl SerializeVia<xml::XmlElement> for xml::XmlElement {
+impl SerializeVia<xml::XmlElement> for conv::XmlElement {
     fn serialize_via<W: io::Write>(data: &xml::XmlElement, sink: &mut EventWriter<W>, name: &str) 
             -> Result<(), SerError> {
         try!(sink.write(
@@ -111,7 +107,7 @@ impl SerializeVia<xml::XmlElement> for xml::XmlElement {
                 &xml::XmlNode::Text(ref s) => {
                     sink.write(XmlEvent::Characters(s)).map_err(SerError::from)
                 },
-                &xml::XmlNode::Element(ref e) => e.serialize_with(sink, name),
+                &xml::XmlNode::Element(ref e) => conv::XmlElement::serialize_via(e, sink, name),
             });
         }
         try!(sink.write(XmlEvent::EndElement { name: Some(data.name.borrow()) }));
@@ -121,12 +117,4 @@ impl SerializeVia<xml::XmlElement> for xml::XmlElement {
 
 pub trait ToAttributeVia<Data> {
     fn to_attribute(&Data) -> Result<String, AttributeValueError>;
-}
-
-/// TODO: drop
-impl Serialize for xml::XmlElement {
-    fn serialize_with<W: io::Write>(&self, sink: &mut EventWriter<W>, name: &str) 
-            -> Result<(), SerError> {
-        xml::XmlElement::serialize_via(self, sink, name)
-    }
 }
