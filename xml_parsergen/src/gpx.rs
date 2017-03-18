@@ -21,14 +21,17 @@ impl<'a> InsertArray for HashBuilder<'a> {
                         Array: IntoIterator<Item=Entry>>
             (self, name: &str, field_names: &[&str], items: Array) -> Self {
         let mut v = VecBuilder::new();
+        let mut empty = true;
         for item in items {
             let mut h = HashBuilder::new();
             for (&name, field) in field_names.iter().zip(item) {
                 h = h.insert(name, field);
             }
             v = v.push(h);
+            empty = false;
         }
-        self.insert(name, v)
+        self.insert(format!("has_{}", name).as_str(), !empty)
+            .insert(name, v)
     }
 }
 
@@ -328,10 +331,50 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
         self.elem_name = Some(elem_start.name);
         Ok(())
     }
-    {{{ body }}}
     fn parse_element(&mut self, elem_start: ElemStart)
             -> Result<(), Positioned<::gpx::par::Error>> {
-        {{{ parse_element_body }}}
+{{# has_element }}
+        if let Some(ref ns) = elem_start.name.namespace.clone() {
+            match &ns as &str {
+                "http://www.topografix.com/GPX/1/1" => (),
+                "http://www.topografix.com/GPX/1/0" => {
+                    println!("WARNING: GPX 1.0 not fully supported, errors may appear");
+                },
+                ns => {
+                    {
+                        let name = &elem_start.name;
+                        println!("WARNING: unknown namespace ignored on {:?}:{}: {}",
+                             name.prefix,
+                             name.local_name,
+                             ns);
+                    }
+                    try!(ElementParser::new(self.reader).parse(elem_start));
+                    return Ok(());
+                }
+            }
+        }
+        match &elem_start.name.local_name as &str {
+            {{# element }}
+            {{{ name }}} => {
+                {{{ saver }}}(try!({{{ conv }}}::parse_via(self.reader, elem_start)));
+            }
+            {{/ element }}
+            _ => {
+                // TODO: add config and handler
+                return Err(Positioned::with_position(
+                    ::gpx::par::Error::UnknownElement(elem_start.name),
+                    self.reader.position()
+                ));
+            }
+        };
+        Ok(())
+{{/ has_element }}
+{{^ has_element }}
+        Err(Positioned::with_position(
+            ::gpx::par::Error::UnknownElement(elem_start.name),
+            self.reader.position())
+        )
+{{/ has_element }}
     }
     fn get_parser_position(&self) -> _xml::common::TextPosition {
         self.reader.position()
@@ -462,84 +505,30 @@ struct {{{ name }}} {
             vec![name.as_str(), field, conv.as_user_type()]
         });
         let elements_owned = data.sequence.iter().map(|elem| {
-            let type_ = match elem.max_occurs {
+            let tag = &elem.name;
+            let field = ident_safe(&elem.name);
+            let (type_, saver) = match elem.max_occurs {
                 ElementMaxOccurs::Some(0) => {
                     panic!("Element has 0 occurrences, can't derive data type")
                 }
-                ElementMaxOccurs::Some(1) => "Option",
-                _ => "Vec"
-            };
-            (String::from(ident_safe(&elem.name)), type_)
-        }).collect::<Vec<_>>();
-        let elements = elements_owned.iter().map(|&(ref field, ref type_)| {
-            vec![field.as_str(), type_]
-        });
-        
-        let match_elems = data.sequence.iter().map(|elem| {
-            let field = ident_safe(&elem.name).clone();
-            let tag = &elem.name;
-            let saver = match elem.max_occurs {
-                ElementMaxOccurs::Some(0) => {
-                    println!("cargo:warning=\"Element has 0 occurrences, inserting panic on encounter.\"");
-                    format!("panic!(\"Element {} should never appear\")", tag)
-                },
-                ElementMaxOccurs::Some(1) => format!("self.{} = Some", field),
-                _ => format!("self.{}.push", field),
+                ElementMaxOccurs::Some(1) => ("Option", format!("self.{} = Some", field)),
+                _ => ("Vec", format!("self.{}.push", field))
             };
             let &(_, ref conv) = convs.get(&elem.type_)
                                       .expect(format!("Missing conversion for {}", &elem.type_).as_str());
-            format!("{tag} => {{
-                {saver}(try!({conv}::parse_via(self.reader, elem_start)));
-            }}\n", tag=quote!(#tag), saver=saver, conv=conv.as_user_type())
-        }).collect::<String>();
-        
-        let parse_elem_body = if !match_elems.is_empty() {
-            render_string(HashBuilder::new().insert("match_elems", match_elems),
-                          r#"
-            if let Some(ref ns) = elem_start.name.namespace.clone() {
-                match &ns as &str {
-                    "http://www.topografix.com/GPX/1/1" => (),
-                    "http://www.topografix.com/GPX/1/0" => {
-                        println!("WARNING: GPX 1.0 not fully supported, errors may appear");
-                    },
-                    ns => {
-                        {
-                            let name = &elem_start.name;
-                            println!("WARNING: unknown namespace ignored on {:?}:{}: {}",
-                                 name.prefix,
-                                 name.local_name,
-                                 ns);
-                        }
-                        try!(ElementParser::new(self.reader).parse(elem_start));
-                        return Ok(());
-                    }
-                }
-            }
-            match &elem_start.name.local_name as &str {
-                {{{ match_elems }}}
-                _ => {
-                    // TODO: add config and handler
-                    return Err(Positioned::with_position(
-                        ::gpx::par::Error::UnknownElement(elem_start.name),
-                        self.reader.position()
-                    ));
-                }
-            };
-            Ok(())"#)
-        } else {
-            String::from(r#"
-            Err(Positioned::with_position(
-                ::gpx::par::Error::UnknownElement(elem_start.name),
-                self.reader.position())
-            )"#)
-        };
+            (quote!(#tag), String::from(field), type_, saver, conv)
+        }).collect::<Vec<_>>(); // this data must be kept until processing
+        // but only references can be processed
+        let elements = elements_owned.iter().map(|&(ref name, ref field, ref type_, ref saver, conv)| {
+            vec![name.as_str(), field.as_str(), type_, saver.as_str(), conv.as_user_type()]
+        });
+
         render_string(HashBuilder::new().insert("parser_type", name)
-                                        .insert("parse_element_body", parse_elem_body)
                                         .insert_array("attribute",
                                                       &["name", "field", "conv"],
                                                       attributes)
                                         .insert_array("element",
-                                                      &["field", "parser_type"],
+                                                      &["name", "field", "parser_type", "saver", "conv"], 
                                                       elements),
                       self.element_parse)
     }
