@@ -684,7 +684,7 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
                       r#"
 impl SerializeVia<{{{ cls_name }}}> for {{{ conv_name }}} {
     fn serialize_via<W: io::Write>(data: &{{{ cls_name }}}, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), SerError> {
+            -> Result<(), Error> {
         let elemname = Name::local(name);
         let attributes = {{{ attributes }}};
         

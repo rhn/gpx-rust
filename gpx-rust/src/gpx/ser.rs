@@ -15,7 +15,7 @@ use xsd;
 use gpx::{ Gpx, Version, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ SerError, SerializeDocument, SerializeVia, SerializeCharElemVia, ToAttributeVia };
+use ser::{ Error, SerializeDocument, SerializeVia, SerializeCharElemVia, ToAttributeVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -75,7 +75,7 @@ impl ToAttributeVia<f64> for Longitude {
 
 impl SerializeVia<Bounds> for conv::Bounds {
     fn serialize_via<W: io::Write>(data: &Bounds, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), SerError> {
+            -> Result<(), Error> {
         let name = Name::local(name);
         try!(sink.write(
             XmlEvent::StartElement {
@@ -101,7 +101,7 @@ impl SerializeVia<Bounds> for conv::Bounds {
 
 impl SerializeDocument for Gpx {
     fn serialize_root<W: io::Write>(&self, sink: &mut EventWriter<W>)
-            -> Result<(), SerError> {
+            -> Result<(), Error> {
         conv::Gpx::serialize_via(self, sink, "gpx")
     }
 }
@@ -109,7 +109,7 @@ impl SerializeDocument for Gpx {
 /// Gpx needs custom serialization because it needs to carry the GPX namespace and version number
 impl SerializeVia<Gpx> for conv::Gpx {
     fn serialize_via<W: io::Write>(data: &Gpx, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), SerError> {
+            -> Result<(), Error> {
         let elemname = Name::local(name);
         let mut ns = Namespace::empty();
         ns.put(NS_NO_PREFIX, GPX_NS);
@@ -148,10 +148,10 @@ impl SerializeVia<Gpx> for conv::Gpx {
 
 impl SerializeVia<String> for conv::Email {
     fn serialize_via<W: io::Write>(data: &String, sink: &mut EventWriter<W>, name: &str)
-           -> Result<(), SerError> {
+           -> Result<(), Error> {
         let split = data.split("@").collect::<Vec<_>>();
         if split.len() != 2 {
-            return Err(SerError::Value(Box::new(ValueError::InvalidEmail)));
+            return Err(Error::Value(Box::new(ValueError::InvalidEmail)));
         }
         let (id, domain) = (split[0], split[1]);
         
@@ -183,12 +183,12 @@ impl Version {
 /// Custom serialization beeded because of the location field
 impl SerializeVia<Waypoint> for conv::Wpt {
     fn serialize_via<W: io::Write>(data: &Waypoint, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), SerError> {
+            -> Result<(), Error> {
         let elemname = Name::local(name);
         let lat = try!(Latitude::to_attribute(&data.location.latitude)
-            .map_err(|e| SerError::ElementAttributeError("latitude", e)));
+            .map_err(|e| Error::ElementAttributeError("latitude", e)));
         let lon = try!(Longitude::to_attribute(&data.location.longitude)
-            .map_err(|e| SerError::ElementAttributeError("longitude", e)));
+            .map_err(|e| Error::ElementAttributeError("longitude", e)));
         try!(sink.write(XmlEvent::StartElement {
             name: elemname.clone(),
             attributes: Cow::Owned(
