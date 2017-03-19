@@ -19,11 +19,9 @@ pub mod par {
     //! Parsing impls
     extern crate chrono;
     
-    use std;
     use std::str::FromStr;
     use std::num::ParseIntError;
     use std::num::ParseFloatError;
-    use std::string;
     
     use par::{ FromAttributeVia, ParseViaChar };
     use par::FormatError;

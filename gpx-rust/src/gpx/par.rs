@@ -5,7 +5,6 @@
 extern crate xml as _xml;
 extern crate chrono;
 
-use std;
 use std::fmt;
 use std::io;
 use std::io::Read;
@@ -36,8 +35,8 @@ pub enum Error {
     Xml(_xml::reader::Error),
     DuplicateGpx,
     UnknownFix(String),
+    /// Errors from XSD types
     Xsd(xsd::par::Error),
-    BadString(std::string::ParseError),
     BadAttribute(xml::AttributeError),
     BadElement(xml::ElementError),
     BadShape(xml::BuildError),
@@ -81,11 +80,6 @@ impl From<_xml::reader::Error> for Error {
     }
 }
 
-impl From<std::string::ParseError> for Error {
-    fn from(err: std::string::ParseError) -> Error {
-        Error::BadString(err)
-    }
-}
 
 /// FIXME: Remove this once xml::Error figured out
 impl From<xml::Error> for Error {
@@ -108,7 +102,6 @@ impl ErrorTrait for Error {
             Error::UnknownFix(_) => "Unknown fix value",
             Error::Xml(_) => "XML parser error",
             Error::Xsd(_) => "XSD type parsing error",
-            Error::BadString(_) => "Bad string",
             Error::BadShape(_) => "Wrong elements number",
             Error::BadAttribute(_) => "Bad attribute",
             Error::BadElement(_) => "Bad element",
