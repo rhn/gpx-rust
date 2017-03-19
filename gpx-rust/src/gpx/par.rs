@@ -32,13 +32,12 @@ include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 /// Describes a failure while parsing data
 #[derive(Debug)]
 pub enum Error {
+    /// IO and XML problems
     Xml(_xml::reader::Error),
     DuplicateGpx,
     UnknownFix(String),
-    BadInt(std::num::ParseIntError),
-    BadFloat(std::num::ParseFloatError),
+    Xsd(xsd::par::Error),
     BadString(std::string::ParseError),
-    BadTime(chrono::ParseError),
     BadAttribute(xml::AttributeError),
     BadElement(xml::ElementError),
     BadShape(xml::BuildError),
@@ -50,6 +49,12 @@ pub enum Error {
     InvalidEmailDomain(String),
     UnknownElement(OwnedName),
     InvalidVersion(String),
+}
+
+impl From<xsd::par::Error> for Error {
+    fn from(err: xsd::par::Error) -> Error {
+        Error::Xsd(err)
+    }
 }
 
 impl From<xml::AttributeError> for Error {
@@ -76,27 +81,9 @@ impl From<_xml::reader::Error> for Error {
     }
 }
 
-impl From<std::num::ParseIntError> for Error {
-    fn from(err: std::num::ParseIntError) -> Error {
-        Error::BadInt(err)
-    }
-}
-
 impl From<std::string::ParseError> for Error {
     fn from(err: std::string::ParseError) -> Error {
         Error::BadString(err)
-    }
-}
-
-impl From<std::num::ParseFloatError> for Error {
-    fn from(err: std::num::ParseFloatError) -> Error {
-        Error::BadFloat(err)
-    }
-}
-
-impl From<chrono::ParseError> for Error {
-    fn from(err: chrono::ParseError) -> Error {
-        Error::BadTime(err)
     }
 }
 
@@ -120,10 +107,8 @@ impl ErrorTrait for Error {
             Error::DuplicateGpx => "Repeated gpx root",
             Error::UnknownFix(_) => "Unknown fix value",
             Error::Xml(_) => "XML parser error",
-            Error::BadInt(_) => "Bad int",
-            Error::BadFloat(_) => "Bad float",
+            Error::Xsd(_) => "XSD type parsing error",
             Error::BadString(_) => "Bad string",
-            Error::BadTime(_) => "Bad time",
             Error::BadShape(_) => "Wrong elements number",
             Error::BadAttribute(_) => "Bad attribute",
             Error::BadElement(_) => "Bad element",
@@ -141,13 +126,13 @@ impl FormatError for Error {}
 
 impl FromAttributeVia<f64> for Latitude {
     fn from_attribute(attr: &str) -> Result<f64, Box<FormatError>> {
-        f64::from_str(attr).map_err(|e| Box::new(Error::from(e)) as Box<FormatError>)
+        f64::from_str(attr).map_err(|e| Box::new(Error::from(xsd::par::Error::from(e))) as Box<FormatError>)
     }
 }
 
 impl FromAttributeVia<f64> for Longitude {
     fn from_attribute(attr: &str) -> Result<f64, Box<FormatError>> {
-        f64::from_str(attr).map_err(|e| Box::new(Error::from(e)) as Box<FormatError>)
+        f64::from_str(attr).map_err(|e| Box::new(Error::from(xsd::par::Error::from(e))) as Box<FormatError>)
     }
 }
 

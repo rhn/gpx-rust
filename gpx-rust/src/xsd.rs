@@ -17,12 +17,37 @@ pub type Uri = String;
 
 pub mod par {
     //! Parsing impls
+    extern crate chrono;
+    
+    use std;
     use std::str::FromStr;
+    use std::num::ParseIntError;
+    use std::num::ParseFloatError;
+    use std::string;
     
     use par::{ FromAttributeVia, ParseViaChar };
     use par::FormatError;
     use xsd;
     use xsd::conv;
+    
+    #[derive(Debug)]
+    pub enum Error {
+        BadInt(ParseIntError),
+        BadFloat(ParseFloatError),
+        BadTime(chrono::ParseError),
+    }
+    
+    impl From<ParseIntError> for Error {
+        fn from(err: ParseIntError) -> Error {
+            Error::BadInt(err)
+        }
+    }
+    
+    impl From<ParseFloatError> for Error {
+        fn from(err: ParseFloatError) -> Error {
+            Error::BadFloat(err)
+        }
+    }
     
     impl ParseViaChar<String> for conv::String {
         fn from_char(chars: &str) -> Result<String, ::gpx::par::Error> {
@@ -32,37 +57,37 @@ pub mod par {
     
     impl ParseViaChar<u16> for conv::Integer {
         fn from_char(s: &str) -> Result<u16, ::gpx::par::Error> {
-            u16::from_str(s).map_err(::gpx::par::Error::from)
+            u16::from_str(s).map_err(|e| Error::from(e).into())
         }
     }
     
     impl ParseViaChar<u64> for conv::Integer {
         fn from_char(s: &str) -> Result<u64, ::gpx::par::Error> {
-            u64::from_str(s).map_err(::gpx::par::Error::from)
+            u64::from_str(s).map_err(|e| Error::from(e).into())
         }
     }
     
     impl ParseViaChar<i16> for conv::Integer {
         fn from_char(s: &str) -> Result<i16, ::gpx::par::Error> {
-            i16::from_str(s).map_err(::gpx::par::Error::from)
+            i16::from_str(s).map_err(|e| Error::from(e).into())
         }
     }
     
     impl ParseViaChar<f64> for conv::Decimal {
         fn from_char(s: &str) -> Result<f64, ::gpx::par::Error> {
-            f64::from_str(s).map_err(::gpx::par::Error::from)
+            f64::from_str(s).map_err(|e| Error::BadFloat(e).into())
         }
     }
     
     impl ParseViaChar<f32> for conv::Decimal {
         fn from_char(s: &str) -> Result<f32, ::gpx::par::Error> {
-            f32::from_str(s).map_err(::gpx::par::Error::from)
+            f32::from_str(s).map_err(|e| Error::BadFloat(e).into())
         }
     }
     
     impl ParseViaChar<xsd::DateTime> for conv::DateTime {
         fn from_char(chars: &str) -> Result<xsd::DateTime, ::gpx::par::Error> {
-            xsd::DateTime::parse_from_rfc3339(chars).map_err(::gpx::par::Error::from)
+            xsd::DateTime::parse_from_rfc3339(chars).map_err(|e| Error::BadTime(e).into())
         }
     }
     
