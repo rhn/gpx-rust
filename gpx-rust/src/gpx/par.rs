@@ -28,27 +28,6 @@ use ::par::{ Positioned, FormatError };
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 
-/// Marks unsupported GPX version
-///
-/// TODO: deprecate once other attribute failures become apparent
-#[derive(Debug)]
-pub struct VersionError {
-    version: String
-}
-
-impl fmt::Display for VersionError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        fmt::Debug::fmt(self, fmt)
-    }
-}
-
-impl FormatError for VersionError {}
-
-impl ErrorTrait for VersionError {
-    fn description(&self) -> &str {
-        "Invalid GPX version"
-    }
-}
 
 /// Describes a failure while parsing data
 #[derive(Debug)]
@@ -69,6 +48,7 @@ pub enum Error {
     BadEmailId(String),
     InvalidEmailDomain(String),
     UnknownElement(OwnedName),
+    InvalidVersion(String),
 }
 
 impl From<xml::AttributeError> for Error {
@@ -155,6 +135,7 @@ impl ErrorTrait for Error {
             Error::TooLarge { limit: _, value: _ } => "Too large",
             Error::BadEmailId(_) => "Bad email ID",
             Error::InvalidEmailDomain(_) => "Invalid email domain",
+            Error::InvalidVersion(_) => "Invalid GPX version",
             Error::UnknownElement(_) => "Unknown element",
         }
     }
@@ -179,7 +160,7 @@ impl FromAttributeVia<Version> for conv::Version {
         match attr {
             "1.0" => Ok(Version::V1_0),
             "1.1" => Ok(Version::V1_1),
-            v => Err(Box::new(VersionError { version: v.into() }) as Box<FormatError>),
+            v => Err(Box::new(Error::InvalidVersion(v.into())) as Box<FormatError>),
         }
     }
 }
