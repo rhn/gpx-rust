@@ -122,5 +122,5 @@ impl SerializeVia<xml::XmlElement> for conv::XmlElement {
 }
 
 pub trait ToAttributeVia<Data> {
-    fn to_attribute(&Data) -> Result<String, AttributeValueError>;
+    fn to_attribute(&Data) -> Result<String, Box<FormatError>>;
 }

@@ -15,7 +15,8 @@ use xsd;
 use gpx::{ Gpx, Version, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ Error, FormatError };
+use ser;
+use ser::FormatError;
 use ser::{ SerializeDocument, SerializeVia, SerializeCharElemVia, ToAttributeVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
@@ -32,34 +33,36 @@ macro_rules! set_optional(
 /// Error raised when value is not serializable as XML attribute
 #[derive(Debug)]
 pub enum AttributeValueError {
-    DecimalOutOfBounds(f64)
+    
 }
 
 #[derive(Debug)]
-pub enum ValueError {
+pub enum Error {
     InvalidEmail,
+    DecimalOutOfBounds(f64)
 }
 
-impl FormatError for ValueError {}
+impl FormatError for Error {}
 
-impl fmt::Display for ValueError {
+impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         fmt::Debug::fmt(self, fmt)
     }
 }
 
-impl ErrorTrait for ValueError {
+impl ErrorTrait for Error {
     fn description(&self) -> &str {
         match *self {
-            ValueError::InvalidEmail => "Email must contain exactly one @ sign"
+            Error::InvalidEmail => "Email must contain exactly one @ sign",
+            Error::DecimalOutOfBounds(_) => "Decimal value is outside of allowed range",
         }
     }
 }
 
 impl ToAttributeVia<f64> for Latitude {
-    fn to_attribute(data: &f64) -> Result<String, AttributeValueError> {
+    fn to_attribute(data: &f64) -> Result<String, Box<FormatError>> {
         if *data >= 90.0 || *data < -90.0 {
-            Err(AttributeValueError::DecimalOutOfBounds(*data))
+            Err(Box::new(Error::DecimalOutOfBounds(*data)) as Box<FormatError>)
         } else {
             Ok(data.to_string())
         }
@@ -67,9 +70,9 @@ impl ToAttributeVia<f64> for Latitude {
 }
 
 impl ToAttributeVia<f64> for Longitude {
-    fn to_attribute(data: &f64) -> Result<String, AttributeValueError> {
+    fn to_attribute(data: &f64) -> Result<String, Box<FormatError>> {
         if *data >= 180.0 || *data < -180.0 {
-            Err(AttributeValueError::DecimalOutOfBounds(*data))
+            Err(Box::new(Error::DecimalOutOfBounds(*data)) as Box<FormatError>)
         } else {
             Ok(data.to_string())
         }
@@ -78,7 +81,7 @@ impl ToAttributeVia<f64> for Longitude {
 
 impl SerializeVia<Bounds> for conv::Bounds {
     fn serialize_via<W: io::Write>(data: &Bounds, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), Error> {
+            -> Result<(), ser::Error> {
         let name = Name::local(name);
         try!(sink.write(
             XmlEvent::StartElement {
@@ -104,7 +107,7 @@ impl SerializeVia<Bounds> for conv::Bounds {
 
 impl SerializeDocument for Gpx {
     fn serialize_root<W: io::Write>(&self, sink: &mut EventWriter<W>)
-            -> Result<(), Error> {
+            -> Result<(), ser::Error> {
         conv::Gpx::serialize_via(self, sink, "gpx")
     }
 }
@@ -112,7 +115,7 @@ impl SerializeDocument for Gpx {
 /// Gpx needs custom serialization because it needs to carry the GPX namespace and version number
 impl SerializeVia<Gpx> for conv::Gpx {
     fn serialize_via<W: io::Write>(data: &Gpx, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), Error> {
+            -> Result<(), ser:: Error> {
         let elemname = Name::local(name);
         let mut ns = Namespace::empty();
         ns.put(NS_NO_PREFIX, GPX_NS);
@@ -151,10 +154,10 @@ impl SerializeVia<Gpx> for conv::Gpx {
 
 impl SerializeVia<String> for conv::Email {
     fn serialize_via<W: io::Write>(data: &String, sink: &mut EventWriter<W>, name: &str)
-           -> Result<(), Error> {
+           -> Result<(), ser::Error> {
         let split = data.split("@").collect::<Vec<_>>();
         if split.len() != 2 {
-            return Err(Error::Value(Box::new(ValueError::InvalidEmail)));
+            return Err(ser::Error::Value(Box::new(Error::InvalidEmail)));
         }
         let (id, domain) = (split[0], split[1]);
         
@@ -186,12 +189,12 @@ impl Version {
 /// Custom serialization beeded because of the location field
 impl SerializeVia<Waypoint> for conv::Wpt {
     fn serialize_via<W: io::Write>(data: &Waypoint, sink: &mut EventWriter<W>, name: &str)
-            -> Result<(), Error> {
+            -> Result<(), ser::Error> {
         let elemname = Name::local(name);
         let lat = try!(Latitude::to_attribute(&data.location.latitude)
-            .map_err(|e| Error::ElementAttributeError("latitude", e)));
+            .map_err(ser::Error::Value));
         let lon = try!(Longitude::to_attribute(&data.location.longitude)
-            .map_err(|e| Error::ElementAttributeError("longitude", e)));
+            .map_err(ser::Error::Value));
         try!(sink.write(XmlEvent::StartElement {
             name: elemname.clone(),
             attributes: Cow::Owned(

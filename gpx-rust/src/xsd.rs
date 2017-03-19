@@ -89,9 +89,8 @@ mod ser {
     use xsd;
     use xsd::conv;
     use ser::{ ToAttributeVia, SerializeCharElemVia };
-    
-    use gpx::ser::AttributeValueError;
-    
+    use ser::FormatError;
+
     impl SerializeCharElemVia<f64> for xsd::conv::Decimal {
         fn to_characters(data: &f64) -> String { data.to_string() }
     }
@@ -125,7 +124,7 @@ mod ser {
     }
 
     impl ToAttributeVia<String> for conv::String {
-        fn to_attribute(data: &String) -> Result<String, AttributeValueError> {
+        fn to_attribute(data: &String) -> Result<String, Box<FormatError>> {
             Ok(data.to_string())
         }
     }

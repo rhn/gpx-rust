@@ -622,7 +622,7 @@ impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
                                                 .insert("conv_name", conv_name.as_user_type()),
                               r#"
                 OwnedAttribute { name: OwnedName::local( {{{ attr_name }}} ),
-                                 value: try!({{{ conv_name }}}::to_attribute(&{{{ field_value }}})) },
+                                 value: try!({{{ conv_name }}}::to_attribute(&{{{ field_value }}}).map_err(Error::Value)) },
     "#);
                 if attr.required == false {
                     format!("if let Some(value) = &data.{} {{
