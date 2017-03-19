@@ -32,7 +32,8 @@ include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 /// Describes a failure while parsing data
 #[derive(Debug)]
 pub enum Error {
-    Str(&'static str),
+    DuplicateGpx,
+    UnknownFix(String),
     XmlEvent(_xml::reader::Error),
     BadInt(std::num::ParseIntError),
     BadFloat(std::num::ParseFloatError),
@@ -75,12 +76,6 @@ impl From<_xml::reader::Error> for Error {
     }
 }
 
-impl From<&'static str> for Error {
-    fn from(msg: &'static str) -> Error {
-        Error::Str(msg)
-    }
-}
-
 impl From<std::num::ParseIntError> for Error {
     fn from(err: std::num::ParseIntError) -> Error {
         Error::BadInt(err)
@@ -109,7 +104,7 @@ impl From<chrono::ParseError> for Error {
 impl From<xml::Error> for Error {
     #[allow(unused_variables)]
     fn from(err: xml::Error) -> Error {
-        Error::Str("BUG: xml::Error")
+        panic!("BUG: xml::Error")
     }
 }
 
@@ -117,12 +112,13 @@ impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         fmt::Debug::fmt(self, fmt)
     }
-}
+}   
 
 impl ErrorTrait for Error {
     fn description(&self) -> &str {
         match *self {
-            Error::Str(_) => "Str (FIXME)",
+            Error::DuplicateGpx => "Repeated gpx root",
+            Error::UnknownFix(_) => "Unknown fix value",
             Error::XmlEvent(_) => "XmlEvent",
             Error::BadInt(_) => "Bad int",
             Error::BadFloat(_) => "Bad float",
@@ -226,7 +222,7 @@ impl ParseViaChar<Fix> for conv::Fix {
             "3d" => Fix::_3D,
             "dgps" => Fix::DGPS,
             "pps" => Fix::PPS,
-            _ => return Err(Error::Str("Unknown fix kind")),
+            _ => return Err(Error::UnknownFix(s.into())),
         })
     }
 }
@@ -297,10 +293,13 @@ impl<'a, T: Read> ElementBuild for EmailParser<'a, T> {
 /// Error describing a failure while parsing an XML stream
 #[derive(Debug)]
 pub enum DocumentError {
+    /// IO, XML errors
     ParserError(_xml::reader::Error),
-    DocumentParserError(xml::DocumentParserError),
+    /// XML parser errors arising from broken parser
+    DocumentParserError(xml::DocumentParserError), // TODO: turn into panics?
+    /// Problems parsing contents
     BadData(Positioned<Error>),
-    MissingGpx,
+    MissingGpx, // try to make this positioned and put inside BadData?
 }
 
 impl From<_xml::reader::Error> for DocumentError {
@@ -330,7 +329,7 @@ impl DocumentParserData for ParserData {
     fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>, elem_start: ElemStart)
             -> Result<(), Positioned<Error>> {
         if let &mut ParserData(Some(_)) = self {
-            return Err(Positioned::with_position("Duplicate GPX element".into(),
+            return Err(Positioned::with_position(Error::DuplicateGpx,
                                                  reader.position()));
         }
         self.0 = Some(try!(GpxElemParser::new(&mut reader).parse(elem_start)));
