@@ -32,9 +32,9 @@ include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
 /// Describes a failure while parsing data
 #[derive(Debug)]
 pub enum Error {
+    Xml(_xml::reader::Error),
     DuplicateGpx,
     UnknownFix(String),
-    XmlEvent(_xml::reader::Error),
     BadInt(std::num::ParseIntError),
     BadFloat(std::num::ParseFloatError),
     BadString(std::string::ParseError),
@@ -72,7 +72,7 @@ impl From<xml::BuildError> for Error {
 
 impl From<_xml::reader::Error> for Error {
     fn from(err: _xml::reader::Error) -> Error {
-        Error::XmlEvent(err)
+        Error::Xml(err)
     }
 }
 
@@ -119,7 +119,7 @@ impl ErrorTrait for Error {
         match *self {
             Error::DuplicateGpx => "Repeated gpx root",
             Error::UnknownFix(_) => "Unknown fix value",
-            Error::XmlEvent(_) => "XmlEvent",
+            Error::Xml(_) => "XML parser error",
             Error::BadInt(_) => "Bad int",
             Error::BadFloat(_) => "Bad float",
             Error::BadString(_) => "Bad string",
