@@ -15,7 +15,8 @@ use xsd;
 use gpx::{ Gpx, Version, Waypoint, Fix, Bounds };
 use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
-use ser::{ Error, SerializeDocument, SerializeVia, SerializeCharElemVia, ToAttributeVia };
+use ser::{ Error, FormatError };
+use ser::{ SerializeDocument, SerializeVia, SerializeCharElemVia, ToAttributeVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -38,6 +39,8 @@ pub enum AttributeValueError {
 pub enum ValueError {
     InvalidEmail,
 }
+
+impl FormatError for ValueError {}
 
 impl fmt::Display for ValueError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {

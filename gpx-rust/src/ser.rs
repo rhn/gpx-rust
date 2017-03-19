@@ -1,6 +1,7 @@
 /// Serialization procedures for turning arbitrary data into XML documents
 extern crate xml as _xml;
 
+use std::fmt;
 use std::io;
 use std::borrow::Cow;
 use std::error::Error as ErrorTrait;
@@ -15,6 +16,9 @@ use xml;
 
 use gpx::ser::AttributeValueError;
 
+/// Error formatting a value to string
+pub trait FormatError where Self: fmt::Debug {}
+
 /// Problems encountered while serializing
 #[derive(Debug)]
 pub enum Error {
@@ -22,8 +26,7 @@ pub enum Error {
     Writer(writer::Error),
     Attribute(AttributeValueError),
     ElementAttributeError(&'static str, AttributeValueError),
-    /// namespace-dependent problems with data
-    Value(Box<ErrorTrait>),
+    Value(Box<FormatError>), // TODO: save location and generalize beyond string
 }
 
 impl From<writer::Error> for Error {
