@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 //! Types defined in XSD spec.
 //! Number types are not converted precisely to save on complexity and speed.
 //! XSD defines numbers to have arbitrary precision and to save trailing zeroes, which is not required for basic purposes.

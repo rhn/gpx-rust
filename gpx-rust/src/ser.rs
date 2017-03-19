@@ -1,4 +1,8 @@
-/// Serialization procedures for turning arbitrary data into XML documents
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+//! Serialization procedures for turning arbitrary data into XML documents
 extern crate xml as _xml;
 
 use std::fmt;
