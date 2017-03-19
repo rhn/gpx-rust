@@ -61,12 +61,12 @@ pub enum BuildError {
 
 #[derive(Debug)]
 pub enum AttributeError {
-    InvalidValue(::par::AttributeValueError),
+    InvalidValue(Box<::par::FormatError>),
     Unexpected(OwnedName)
 }
 
-impl From<::par::AttributeValueError> for AttributeError {
-    fn from(err: ::par::AttributeValueError) -> AttributeError {
+impl From<Box<::par::FormatError>> for AttributeError {
+    fn from(err: Box<::par::FormatError>) -> AttributeError {
         AttributeError::InvalidValue(err)
     }
 }

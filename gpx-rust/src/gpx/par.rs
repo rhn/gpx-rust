@@ -23,7 +23,7 @@ use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, Track
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ FromAttributeVia, ParseVia, ParseViaChar };
-use ::par::{ Positioned, AttributeValueError };
+use ::par::{ Positioned, FormatError };
 
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
@@ -41,6 +41,8 @@ impl fmt::Display for VersionError {
         fmt::Debug::fmt(self, fmt)
     }
 }
+
+impl FormatError for VersionError {}
 
 impl ErrorTrait for VersionError {
     fn description(&self) -> &str {
@@ -158,24 +160,26 @@ impl ErrorTrait for Error {
     }
 }
 
+impl FormatError for Error {}
+
 impl FromAttributeVia<f64> for Latitude {
-    fn from_attribute(attr: &str) -> Result<f64, AttributeValueError> {
-        f64::from_str(attr).map_err(|e| AttributeValueError::Error(Box::new(e)))
+    fn from_attribute(attr: &str) -> Result<f64, Box<FormatError>> {
+        f64::from_str(attr).map_err(|e| Box::new(Error::from(e)) as Box<FormatError>)
     }
 }
 
 impl FromAttributeVia<f64> for Longitude {
-    fn from_attribute(attr: &str) -> Result<f64, AttributeValueError> {
-        f64::from_str(attr).map_err(|e| AttributeValueError::Error(Box::new(e)))
+    fn from_attribute(attr: &str) -> Result<f64, Box<FormatError>> {
+        f64::from_str(attr).map_err(|e| Box::new(Error::from(e)) as Box<FormatError>)
     }
 }
 
 impl FromAttributeVia<Version> for conv::Version {
-    fn from_attribute(attr: &str) -> Result<Version, AttributeValueError> {
+    fn from_attribute(attr: &str) -> Result<Version, Box<FormatError>> {
         match attr {
             "1.0" => Ok(Version::V1_0),
             "1.1" => Ok(Version::V1_1),
-            v => Err(AttributeValueError::Error(Box::new(VersionError { version: v.into() })))
+            v => Err(Box::new(VersionError { version: v.into() }) as Box<FormatError>),
         }
     }
 }

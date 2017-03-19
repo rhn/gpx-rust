@@ -20,7 +20,7 @@ pub mod par {
     use std::str::FromStr;
     
     use par::{ FromAttributeVia, ParseViaChar };
-    use par::AttributeValueError;
+    use par::FormatError;
     use xsd;
     use xsd::conv;
     
@@ -67,7 +67,7 @@ pub mod par {
     }
     
     impl FromAttributeVia<String> for conv::String {
-        fn from_attribute(attr: &str) -> Result<String, AttributeValueError> {
+        fn from_attribute(attr: &str) -> Result<String, Box<FormatError>> {
             Ok(String::from(attr))
         }
     }

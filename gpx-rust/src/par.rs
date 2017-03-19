@@ -108,13 +108,8 @@ impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
 ///
 /// Implement for `conv` types.
 pub trait FromAttributeVia<Data> {
-    fn from_attribute(&str) -> Result<Data, AttributeValueError>;
+    fn from_attribute(&str) -> Result<Data, Box<FormatError>>;
 }
 
-/// Raise whenever attribute value is out of bounds
-///
-/// TODO: follow this Box<> pattern to allow for carrying of namespace-specific errors
-#[derive(Debug)]
-pub enum AttributeValueError {
-    Error(Box<std::error::Error>),
-}
+/// A string value cannot be parsed
+pub trait FormatError where Self: fmt::Debug {} // TODO: enforce Error
