@@ -7,7 +7,8 @@ use std::io::{ BufReader, BufWriter };
 use std::fs::File;
 use clap::{ App, Arg };
 
-use gpx_rust::ser::{ SerializeDocument, SerError };
+use gpx_rust::ser;
+use gpx_rust::ser::SerializeDocument;
 use gpx_rust::gpx;
 use gpx_rust::gpx::{ Gpx, Document };
 
@@ -15,7 +16,7 @@ use gpx_rust::gpx::{ Gpx, Document };
 #[derive(Debug)]
 enum ResaveError {
     Io(std::io::Error),
-    Serialize(SerError),
+    Serialize(ser::Error),
 }
 
 #[derive(Debug)]

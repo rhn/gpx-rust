@@ -1,7 +1,6 @@
 //! Contains functionaity useful for implementing XML parsers
 extern crate xml as _xml;
 
-use std;
 use std::io;
 use std::fmt;
 use std::error::Error as ErrorTrait;

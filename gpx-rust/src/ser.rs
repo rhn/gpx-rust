@@ -4,7 +4,7 @@ extern crate xml as _xml;
 use std::fmt;
 use std::io;
 use std::borrow::Cow;
-use std::error::Error as ErrorTrait;
+
 use self::_xml::common::XmlVersion;
 use self::_xml::name::Name;
 use self::_xml::namespace::Namespace;
@@ -14,8 +14,7 @@ use self::_xml::writer::{ EmitterConfig, EventWriter, XmlEvent };
 use conv;
 use xml;
 
-use gpx::ser::AttributeValueError;
-
+    
 /// Error formatting a value to string
 pub trait FormatError where Self: fmt::Debug {}
 
@@ -24,20 +23,12 @@ pub trait FormatError where Self: fmt::Debug {}
 pub enum Error {
     /// I/O and programming problems
     Writer(writer::Error),
-    Attribute(AttributeValueError),
-    ElementAttributeError(&'static str, AttributeValueError),
     Value(Box<FormatError>), // TODO: save location and generalize beyond string
 }
 
 impl From<writer::Error> for Error {
     fn from(e: writer::Error) -> Self {
         Error::Writer(e)
-    }
-}
-
-impl From<AttributeValueError> for Error {
-    fn from(e: AttributeValueError) -> Self {
-        Error::Attribute(e)
     }
 }
 

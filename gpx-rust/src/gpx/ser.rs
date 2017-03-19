@@ -30,12 +30,6 @@ macro_rules! set_optional(
     }
 );
 
-/// Error raised when value is not serializable as XML attribute
-#[derive(Debug)]
-pub enum AttributeValueError {
-    
-}
-
 #[derive(Debug)]
 pub enum Error {
     InvalidEmail,
