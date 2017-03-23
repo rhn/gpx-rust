@@ -21,7 +21,7 @@ use gpx::conv::{ Latitude, Longitude };
 use gpx::conv;
 use ser;
 use ser::FormatError;
-use ser::{ SerializeDocument, SerializeVia, SerializeCharElemVia, ToAttributeVia };
+use ser::{ SerializeDocument, SerializeVia, ToCharsVia };
 
 const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 
@@ -82,20 +82,22 @@ impl ErrorTrait for Error {
     }
 }
 
-impl ToAttributeVia<f64> for Latitude {
-    fn to_attribute(data: &f64) -> Result<String, Box<FormatError>> {
+impl ToCharsVia<f64> for Latitude {
+    type Error = Error;
+    fn to_characters(data: &f64) -> Result<String, Error> {
         if *data >= 90.0 || *data < -90.0 {
-            Err(Box::new(Error::DecimalOutOfBounds(*data)) as Box<FormatError>)
+            Err(Error::DecimalOutOfBounds(*data))
         } else {
             Ok(data.to_string())
         }
     }
 }
 
-impl ToAttributeVia<f64> for Longitude {
-    fn to_attribute(data: &f64) -> Result<String, Box<FormatError>> {
+impl ToCharsVia<f64> for Longitude {
+    type Error = Error;
+    fn to_characters(data: &f64) -> Result<String, Error> {
         if *data >= 180.0 || *data < -180.0 {
-            Err(Box::new(Error::DecimalOutOfBounds(*data)) as Box<FormatError>)
+            Err(Error::DecimalOutOfBounds(*data))
         } else {
             Ok(data.to_string())
         }
@@ -214,10 +216,8 @@ impl SerializeVia<Waypoint> for conv::Wpt {
     fn serialize_via<W: io::Write>(data: &Waypoint, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), ser::Error> {
         let elemname = Name::local(name);
-        let lat = try!(Latitude::to_attribute(&data.location.latitude)
-            .map_err(ser::Error::Value));
-        let lon = try!(Longitude::to_attribute(&data.location.longitude)
-            .map_err(ser::Error::Value));
+        let lat = try!(Latitude::to_characters(&data.location.latitude));
+        let lon = try!(Longitude::to_characters(&data.location.longitude));
         try!(sink.write(XmlEvent::StartElement {
             name: elemname.clone(),
             attributes: Cow::Owned(
@@ -259,7 +259,7 @@ impl SerializeVia<Waypoint> for conv::Wpt {
     }
 }
 
-impl SerializeCharElemVia<Fix> for conv::Fix {
+impl ToCharsVia<Fix> for conv::Fix {
     type Error = Error;
     fn to_characters(data: &Fix) -> Result<String, Self::Error> {
         Ok(match data {
@@ -273,7 +273,7 @@ impl SerializeCharElemVia<Fix> for conv::Fix {
 }
 
 
-impl SerializeCharElemVia<u16> for conv::DgpsStation {
+impl ToCharsVia<u16> for conv::DgpsStation {
     type Error = Error;
     #[allow(unused_comparisons)]
     fn to_characters(data: &u16) -> Result<String, Self::Error> {
@@ -289,7 +289,7 @@ impl SerializeCharElemVia<u16> for conv::DgpsStation {
                                         as Box<OutOfBoundsTrait>))
 
         } else {
-            <::xsd::conv::Integer as SerializeCharElemVia<u16>>::to_characters(data).map_err(Error::from)
+            <::xsd::conv::Integer as ToCharsVia<u16>>::to_characters(data).map_err(Error::from)
         }
     }
 }

@@ -116,9 +116,11 @@ pub mod conv {
 
 pub mod ser {
     //! Serialization impls
+    use std;
+
     use xsd;
     use xsd::conv;
-    use ser::{ ToAttributeVia, SerializeCharElemVia };
+    use ser::ToCharsVia;
     use ser::FormatError;
 
     #[derive(Debug)]
@@ -126,51 +128,45 @@ pub mod ser {
 
     impl FormatError for Error {}
     
-    type Result_ = Result<String, Error>;
+    type Result = std::result::Result<String, Error>;
 
-    impl SerializeCharElemVia<f64> for xsd::conv::Decimal {
+    impl ToCharsVia<f64> for xsd::conv::Decimal {
         type Error = Error;
-        fn to_characters(data: &f64) -> Result_ { Ok(data.to_string()) }
+        fn to_characters(data: &f64) -> Result { Ok(data.to_string()) }
     }
     
-    impl SerializeCharElemVia<f32> for xsd::conv::Decimal {
+    impl ToCharsVia<f32> for xsd::conv::Decimal {
         type Error = Error;
-        fn to_characters(data: &f32) -> Result_ { Ok(data.to_string()) }
+        fn to_characters(data: &f32) -> Result { Ok(data.to_string()) }
     }
 
-    impl SerializeCharElemVia<u64> for xsd::conv::Integer {
+    impl ToCharsVia<u64> for xsd::conv::Integer {
         type Error = Error;
-        fn to_characters(data: &u64) -> Result_ { Ok(data.to_string()) }
+        fn to_characters(data: &u64) -> Result { Ok(data.to_string()) }
     }
     
-    impl SerializeCharElemVia<u16> for xsd::conv::Integer {
+    impl ToCharsVia<u16> for xsd::conv::Integer {
         type Error = Error;
-        fn to_characters(data: &u16) -> Result_ { Ok(data.to_string()) }
+        fn to_characters(data: &u16) -> Result { Ok(data.to_string()) }
     }
 
-    impl SerializeCharElemVia<i16> for xsd::conv::Integer {
+    impl ToCharsVia<i16> for xsd::conv::Integer {
         type Error = Error;
-        fn to_characters(data: &i16) -> Result_ { Ok(data.to_string()) }
+        fn to_characters(data: &i16) -> Result { Ok(data.to_string()) }
     }
 
-    impl SerializeCharElemVia<xsd::DateTime> for xsd::conv::DateTime {
+    impl ToCharsVia<xsd::DateTime> for xsd::conv::DateTime {
         type Error = Error;
-        fn to_characters(data: &xsd::DateTime) -> Result_ { Ok(data.to_rfc3339()) }
+        fn to_characters(data: &xsd::DateTime) -> Result { Ok(data.to_rfc3339()) }
     }
 
-    impl SerializeCharElemVia<String> for conv::String {
+    impl ToCharsVia<String> for conv::String {
         type Error = Error;
-        fn to_characters(data: &String) -> Result_ { Ok(data.clone()) }
+        fn to_characters(data: &String) -> Result { Ok(data.clone()) }
     }
 
-    impl SerializeCharElemVia<str> for conv::String {
+    impl ToCharsVia<str> for conv::String {
         type Error = Error;
-        fn to_characters(data: &str) -> Result_ { Ok(data.into()) }
-    }
-
-    impl ToAttributeVia<String> for conv::String {
-        fn to_attribute(data: &String) -> Result<String, Box<FormatError>> {
-            Ok(data.to_string())
-        }
+        fn to_characters(data: &str) -> Result { Ok(data.into()) }
     }
 }

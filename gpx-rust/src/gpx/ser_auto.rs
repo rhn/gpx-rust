@@ -11,7 +11,7 @@ use self::_xml::name::{ Name, OwnedName };
 use self::_xml::namespace::Namespace;
 use self::_xml::writer::{ XmlEvent, EventWriter };
 
-use ser::{ Error, SerializeVia, ToAttributeVia };
+use ser::{ Error, SerializeVia, ToCharsVia };
 use gpx::*;
 
 include!(concat!(env!("OUT_DIR"), "/gpx_ser_auto.rs"));
