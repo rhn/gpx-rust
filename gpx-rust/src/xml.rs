@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+//! General parsing of XML documents
+
 extern crate xml;
 
 use std::io;
@@ -99,6 +101,7 @@ pub struct ElementParser<'a, T: 'a + Read> {
     nodes: Vec<XmlNode>,
 }
 
+/// Node start info; for parser building
 pub struct ElemStart {
     pub name: OwnedName,
     pub attributes: Vec<OwnedAttribute>,
@@ -226,11 +229,13 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T
     }
 }
 
+/// Represents an XML document, including metadata
 pub struct Document<T> {
     pub info: DocInfo,
     pub data: T,
 }
 
+/// Document metadata
 pub struct DocInfo {
     pub version: XmlVersion,
     pub encoding: String,

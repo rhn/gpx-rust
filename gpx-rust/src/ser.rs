@@ -68,9 +68,9 @@ pub trait SerializeDocument {
             -> Result<(), Error>;
 }
 
-/// Character type which can be obtained and saved
+/// Can be serialized as a simple string
 ///
-/// Serialize type as character data for use as attribute value or character node
+/// Serializes value of the type as character data for use as attribute value or character node
 /// Allows to use multiple data types as source, e.g. save xsd:Decimal from f32 or f64
 // ?Sized allows the use of &str as input
 pub trait ToCharsVia<Data: ?Sized> {
@@ -78,7 +78,7 @@ pub trait ToCharsVia<Data: ?Sized> {
     fn to_characters(value: &Data) -> Result<String, Self::Error>;
 }
 
-/// Implement on converters to do Conv::serialize_via(data, ...)
+/// Can be serialized as a regular XML element
 pub trait SerializeVia<Data: ?Sized> {
     fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
         -> Result<(), Error>;
