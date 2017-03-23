@@ -114,43 +114,58 @@ pub mod conv {
     pub struct DateTime {}
 }
 
-mod ser {
+pub mod ser {
     //! Serialization impls
     use xsd;
     use xsd::conv;
     use ser::{ ToAttributeVia, SerializeCharElemVia };
     use ser::FormatError;
 
+    #[derive(Debug)]
+    pub enum Error {}
+
+    impl FormatError for Error {}
+    
+    type Result_ = Result<String, Error>;
+
     impl SerializeCharElemVia<f64> for xsd::conv::Decimal {
-        fn to_characters(data: &f64) -> String { data.to_string() }
+        type Error = Error;
+        fn to_characters(data: &f64) -> Result_ { Ok(data.to_string()) }
     }
     
     impl SerializeCharElemVia<f32> for xsd::conv::Decimal {
-        fn to_characters(data: &f32) -> String { data.to_string() }
+        type Error = Error;
+        fn to_characters(data: &f32) -> Result_ { Ok(data.to_string()) }
     }
 
     impl SerializeCharElemVia<u64> for xsd::conv::Integer {
-        fn to_characters(data: &u64) -> String { data.to_string() }
+        type Error = Error;
+        fn to_characters(data: &u64) -> Result_ { Ok(data.to_string()) }
     }
     
     impl SerializeCharElemVia<u16> for xsd::conv::Integer {
-        fn to_characters(data: &u16) -> String { data.to_string() }
+        type Error = Error;
+        fn to_characters(data: &u16) -> Result_ { Ok(data.to_string()) }
     }
 
     impl SerializeCharElemVia<i16> for xsd::conv::Integer {
-        fn to_characters(data: &i16) -> String { data.to_string() }
+        type Error = Error;
+        fn to_characters(data: &i16) -> Result_ { Ok(data.to_string()) }
     }
 
     impl SerializeCharElemVia<xsd::DateTime> for xsd::conv::DateTime {
-        fn to_characters(data: &xsd::DateTime) -> String { data.to_rfc3339() }
+        type Error = Error;
+        fn to_characters(data: &xsd::DateTime) -> Result_ { Ok(data.to_rfc3339()) }
     }
 
     impl SerializeCharElemVia<String> for conv::String {
-        fn to_characters(data: &String) -> String { data.clone() }
+        type Error = Error;
+        fn to_characters(data: &String) -> Result_ { Ok(data.clone()) }
     }
 
     impl SerializeCharElemVia<str> for conv::String {
-        fn to_characters(data: &str) -> String { data.into() }
+        type Error = Error;
+        fn to_characters(data: &str) -> Result_ { Ok(data.into()) }
     }
 
     impl ToAttributeVia<String> for conv::String {

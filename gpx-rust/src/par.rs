@@ -49,9 +49,11 @@ impl<Data: ErrorTrait> ErrorTrait for Positioned<Data> {
     }
 }
 
+/// Problem with attributes serialization
 #[derive(Debug)]
 pub enum AttributeError<T: FormatError> {
-    InvalidValue(T),
+    InvalidValue(T), // TODO: include attribute name
+    /// This name is not allowed here
     Unexpected(OwnedName),
     // missing should be in build error, to give flexibility for fancy constraints
 }
@@ -63,6 +65,8 @@ impl<T: FormatError> From<T> for AttributeError<T> {
 }
 
 /// A string value cannot be parsed
+///
+/// Marks that this error can be used in AttributeError
 pub trait FormatError where Self: fmt::Debug {} // TODO: enforce Error
 
 

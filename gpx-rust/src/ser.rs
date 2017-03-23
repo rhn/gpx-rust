@@ -19,8 +19,8 @@ use conv;
 use xml;
 
     
-/// Error formatting a value to string
-pub trait FormatError where Self: fmt::Debug {}
+/// Value cannot be formatted to a valid string
+pub trait FormatError where Self: fmt::Debug + 'static {}
 
 /// Problems encountered while serializing
 #[derive(Debug)]
@@ -33,6 +33,12 @@ pub enum Error {
 impl From<writer::Error> for Error {
     fn from(e: writer::Error) -> Self {
         Error::Writer(e)
+    }
+}
+
+impl<E: FormatError + 'static> From<E> for Error {
+    fn from(err: E) -> Self {
+        Error::Value(Box::new(err) as Box<FormatError>)
     }
 }
 
@@ -62,9 +68,13 @@ pub trait SerializeDocument {
             -> Result<(), Error>;
 }
 
-/// Character type can be converted into multiple data types, e.g. Decimal into f32 or f64
+/// Character type which can be obtained and saved
+///
+/// Allows to use multiple data types as source, e.g. save xsd:Decimal from f32 or f64
+// ?Sized allows the use of &str as input
 pub trait SerializeCharElemVia<Data: ?Sized> {
-    fn to_characters(value: &Data) -> String;
+    type Error: FormatError; // For simplicity, there should be only one Error type for any Data type
+    fn to_characters(value: &Data) -> Result<String, Self::Error>;
 }
 
 /// Implement on converters to do Conv::serialize_via(data, ...)
@@ -74,7 +84,8 @@ pub trait SerializeVia<Data: ?Sized> {
 }
 
 /// Leverage char conversion capabilities
-impl<T, Data: ?Sized> SerializeVia<Data> for T where T: SerializeCharElemVia<Data> {
+impl<T, Data: ?Sized> SerializeVia<Data> for T where T: SerializeCharElemVia<Data>,
+        T::Error: Into<Error> {
     fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
             -> Result<(), Error> {
         let elemname = Name::local(name);
@@ -83,7 +94,7 @@ impl<T, Data: ?Sized> SerializeVia<Data> for T where T: SerializeCharElemVia<Dat
                                      attributes: Cow::Owned(Vec::new()),
                                      namespace: Cow::Owned(Namespace::empty()) }
         ));
-        try!(sink.write(XmlEvent::Characters(&T::to_characters(data))));
+        try!(sink.write(XmlEvent::Characters(&try!(T::to_characters(data)))));
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
     }

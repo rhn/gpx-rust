@@ -38,10 +38,32 @@ macro_rules! set_optional(
 #[derive(Debug)]
 pub enum Error {
     InvalidEmail,
-    DecimalOutOfBounds(f64)
+    OutOfBounds(BoundCondition, Box<OutOfBoundsTrait>),
+    DecimalOutOfBounds(f64),
+    Xsd(xsd::ser::Error),
+}
+
+#[derive(Debug)]
+pub struct OutOfBoundsValue<T> {
+    limit: T,
+    value: T,
+}
+
+pub trait OutOfBoundsTrait where Self: fmt::Debug {}
+
+impl<T: fmt::Debug> OutOfBoundsTrait for OutOfBoundsValue<T> {}
+
+#[derive(Debug)]
+pub enum BoundCondition {
+    EqualGreater,
+    EqualLesser,
 }
 
 impl FormatError for Error {}
+
+impl From<xsd::ser::Error> for Error {
+    fn from(err: xsd::ser::Error) -> Error { Error::Xsd(err) }
+}
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -54,6 +76,8 @@ impl ErrorTrait for Error {
         match *self {
             Error::InvalidEmail => "Email must contain exactly one @ sign",
             Error::DecimalOutOfBounds(_) => "Decimal value is outside of allowed range",
+            Error::OutOfBounds(_, _) => "Value outside of allowed range",
+            Error::Xsd(_) => "XSD",
         }
     }
 }
@@ -236,35 +260,36 @@ impl SerializeVia<Waypoint> for conv::Wpt {
 }
 
 impl SerializeCharElemVia<Fix> for conv::Fix {
-    fn to_characters(data: &Fix) -> String {
-        match data {
+    type Error = Error;
+    fn to_characters(data: &Fix) -> Result<String, Self::Error> {
+        Ok(match data {
             &Fix::None => "none",
             &Fix::_2D => "2d",
             &Fix::_3D => "3d",
             &Fix::DGPS => "dgps",
             &Fix::PPS => "pps"
-        }.into()
+        }.into())
     }
 }
 
 
 impl SerializeCharElemVia<u16> for conv::DgpsStation {
+    type Error = Error;
     #[allow(unused_comparisons)]
-    fn to_characters(data: &u16) -> String {
+    fn to_characters(data: &u16) -> Result<String, Self::Error> {
         if 0 > *data {
-            /*Err(::gpx::par::Error::TooSmall {
-                limit: 0.into(),
-                value: value.into(),
-            })*/
-            panic!("Too small");
+            Err(Error::OutOfBounds(BoundCondition::EqualGreater,
+                                   Box::new(OutOfBoundsValue { limit: 0,
+                                                               value: *data })
+                                        as Box<OutOfBoundsTrait>))
         } else if *data > 1024 {
-            /*Err(::gpx::par::Error::TooLarge {
-                limit: 1024.into(),
-                value: value.into(),
-            })*/
-            panic!("Too large");
+            Err(Error::OutOfBounds(BoundCondition::EqualLesser,
+                                   Box::new(OutOfBoundsValue { limit: 1024,
+                                                               value: *data })
+                                        as Box<OutOfBoundsTrait>))
+
         } else {
-            <::xsd::conv::Integer as SerializeCharElemVia<u16>>::to_characters(data)
+            <::xsd::conv::Integer as SerializeCharElemVia<u16>>::to_characters(data).map_err(Error::from)
         }
     }
 }
