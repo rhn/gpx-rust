@@ -39,6 +39,8 @@ pub mod par {
         BadTime(chrono::ParseError),
     }
     
+    impl FormatError for Error {}
+
     impl From<ParseIntError> for Error {
         fn from(err: ParseIntError) -> Error {
             Error::BadInt(err)
@@ -94,7 +96,8 @@ pub mod par {
     }
     
     impl FromAttributeVia<String> for conv::String {
-        fn from_attribute(attr: &str) -> Result<String, Box<FormatError>> {
+        type Error = Error;
+        fn from_attribute(attr: &str) -> Result<String, Self::Error> {
             Ok(String::from(attr))
         }
     }

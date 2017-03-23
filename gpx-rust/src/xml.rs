@@ -14,8 +14,8 @@ use self::xml::namespace::Namespace;
 use self::xml::reader::{ EventReader, XmlEvent };
 use self::xml::common::{ XmlVersion, TextPosition, Position };
 
+use par;
 use par::Positioned;
-
 
 type DataError = Positioned<::gpx::par::Error>;
 
@@ -61,18 +61,6 @@ pub enum Error {
 #[derive(Debug)]
 pub enum BuildError {
     Custom(Box<ErrorTrait>)
-}
-
-#[derive(Debug)]
-pub enum AttributeError {
-    InvalidValue(Box<::par::FormatError>),
-    Unexpected(OwnedName)
-}
-
-impl From<Box<::par::FormatError>> for AttributeError {
-    fn from(err: Box<::par::FormatError>) -> AttributeError {
-        AttributeError::InvalidValue(err)
-    }
 }
 
 #[derive(Debug)]
@@ -125,8 +113,8 @@ pub trait ElementBuild {
 
 pub trait ElementParse<'a, R: Read, E>
     where Self: Sized + ElementBuild,
-          E: From<AttributeError> + From<ElementError> + From<Self::BuildError>
-             + From<xml::reader::Error> {
+          E: From<ElementError> + From<Self::BuildError> + From<par::AttributeError<E>>
+             + From<xml::reader::Error> + par::FormatError {
     // public iface
     fn new(reader: &'a mut EventReader<R>) -> Self;
     
@@ -164,12 +152,8 @@ pub trait ElementParse<'a, R: Read, E>
     }
     /// Helper, equivalent to self.reader.position()
     fn get_parser_position(&self) -> TextPosition;
-    /// Helper, remove
-    //fn parse_self(self, elem_start: ElemStart) -> Result<Self::Element, self::Error> {
-      //  self.parse(elem_start)
-    //}
     /// Parses the start event and attributes within it. Should be implemented, bu default ignores attributes.
-    fn parse_start(&mut self, elem_start: ElemStart) -> Result<(), AttributeError> {
+    fn parse_start(&mut self, elem_start: ElemStart) -> Result<(), par::AttributeError<E>> {
         let _ = elem_start;
         Ok(())
     }
@@ -213,11 +197,13 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T
                         info: None,
                         nodes: Vec::new() }
     }
-    fn parse_start(&mut self, elem_start: ElemStart) -> Result<(), AttributeError> {
+    fn parse_start(&mut self, elem_start: ElemStart)
+            -> Result<(), par::AttributeError<::gpx::par::Error>> {
         self.info = Some(elem_start);
         Ok(())
     }
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), Positioned<::gpx::par::Error>> {
+    fn parse_element(&mut self, elem_start: ElemStart)
+            -> Result<(), Positioned<::gpx::par::Error>> {
         let elem = try!(ElementParser::new(self.reader).parse(elem_start));
         self.nodes.push(XmlNode::Element(elem));
         Ok(())

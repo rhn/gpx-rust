@@ -34,6 +34,7 @@ macro_rules! set_optional(
     }
 );
 
+/// Value cannot be serialized
 #[derive(Debug)]
 pub enum Error {
     InvalidEmail,

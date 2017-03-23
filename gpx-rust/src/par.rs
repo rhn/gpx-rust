@@ -11,6 +11,7 @@ use std::error::Error as ErrorTrait;
 
 use self::_xml::common::{ Position, TextPosition };
 use self::_xml::reader::{ EventReader, XmlEvent };
+use self::_xml::name::OwnedName;
 
 use xml;
 use xml::{ ElementParse, ElementParser, XmlElement, ElemStart };
@@ -47,6 +48,23 @@ impl<Data: ErrorTrait> ErrorTrait for Positioned<Data> {
         Some(&self.data)
     }
 }
+
+#[derive(Debug)]
+pub enum AttributeError<T: FormatError> {
+    InvalidValue(T),
+    Unexpected(OwnedName),
+    // missing should be in build error, to give flexibility for fancy constraints
+}
+
+impl<T: FormatError> From<T> for AttributeError<T> {
+    fn from(err: T) -> AttributeError<T> {
+        AttributeError::InvalidValue(err)
+    }
+}
+
+/// A string value cannot be parsed
+pub trait FormatError where Self: fmt::Debug {} // TODO: enforce Error
+
 
 /// Can parse complex element in XML stream into `Data` type.
 ///
@@ -111,8 +129,6 @@ impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
 ///
 /// Implement for `conv` types.
 pub trait FromAttributeVia<Data> {
-    fn from_attribute(&str) -> Result<Data, Box<FormatError>>;
+    type Error: FormatError;
+    fn from_attribute(&str) -> Result<Data, Self::Error>;
 }
-
-/// A string value cannot be parsed
-pub trait FormatError where Self: fmt::Debug {} // TODO: enforce Error

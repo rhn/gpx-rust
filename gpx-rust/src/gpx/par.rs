@@ -26,7 +26,7 @@ use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, Track
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
 use ::par::{ FromAttributeVia, ParseVia, ParseViaChar };
-use ::par::{ Positioned, FormatError };
+use ::par::{ Positioned, FormatError, AttributeError };
 
 
 include!(concat!(env!("OUT_DIR"), "/gpx_par_auto.rs"));
@@ -41,7 +41,7 @@ pub enum Error {
     UnknownFix(String),
     /// Errors from XSD types
     Xsd(xsd::par::Error),
-    BadAttribute(xml::AttributeError),
+    //BadAttribute(AttributeError),
     BadElement(xml::ElementError),
     BadShape(xml::BuildError),
     TooSmall { limit: f64,
@@ -50,7 +50,7 @@ pub enum Error {
                value: f64 },
     BadEmailId(String),
     InvalidEmailDomain(String),
-    UnknownElement(OwnedName),
+    UnknownElement(OwnedName), // also attribute
     InvalidVersion(String),
 }
 
@@ -60,9 +60,12 @@ impl From<xsd::par::Error> for Error {
     }
 }
 
-impl From<xml::AttributeError> for Error {
-    fn from(err: xml::AttributeError) -> Error {
-        Error::BadAttribute(err)
+impl From<AttributeError<Error>> for Error {
+    fn from(err: AttributeError<Error>) -> Error {
+        match err {
+            AttributeError::Unexpected(name) => Error::UnknownElement(name),
+            AttributeError::InvalidValue(e) => Error::from(e),
+        }
     }
 }
 
@@ -84,6 +87,11 @@ impl From<_xml::reader::Error> for Error {
     }
 }
 
+impl From<xsd::par::Error> for AttributeError<Error> {
+    fn from(err: xsd::par::Error) -> AttributeError<Error> {
+        AttributeError::InvalidValue(Error::from(err))
+    }
+}
 
 /// FIXME: Remove this once xml::Error figured out
 impl From<xml::Error> for Error {
@@ -107,7 +115,6 @@ impl ErrorTrait for Error {
             Error::Xml(_) => "XML parser error",
             Error::Xsd(_) => "XSD type parsing error",
             Error::BadShape(_) => "Wrong elements number",
-            Error::BadAttribute(_) => "Bad attribute",
             Error::BadElement(_) => "Bad element",
             Error::TooSmall { limit: _, value: _ } => "Too small",
             Error::TooLarge { limit: _, value: _ } => "Too large",
@@ -122,23 +129,26 @@ impl ErrorTrait for Error {
 impl FormatError for Error {}
 
 impl FromAttributeVia<f64> for Latitude {
-    fn from_attribute(attr: &str) -> Result<f64, Box<FormatError>> {
-        f64::from_str(attr).map_err(|e| Box::new(Error::from(xsd::par::Error::from(e))) as Box<FormatError>)
+    type Error = Error;
+    fn from_attribute(attr: &str) -> Result<f64, Error> {
+        f64::from_str(attr).map_err(|e| Error::from(xsd::par::Error::from(e)))
     }
 }
 
 impl FromAttributeVia<f64> for Longitude {
-    fn from_attribute(attr: &str) -> Result<f64, Box<FormatError>> {
-        f64::from_str(attr).map_err(|e| Box::new(Error::from(xsd::par::Error::from(e))) as Box<FormatError>)
+    type Error = Error;
+    fn from_attribute(attr: &str) -> Result<f64, Error> {
+        f64::from_str(attr).map_err(|e| Error::from(xsd::par::Error::from(e)))
     }
 }
 
 impl FromAttributeVia<Version> for conv::Version {
-    fn from_attribute(attr: &str) -> Result<Version, Box<FormatError>> {
+    type Error = Error;
+    fn from_attribute(attr: &str) -> Result<Version, Error> {
         match attr {
             "1.0" => Ok(Version::V1_0),
             "1.1" => Ok(Version::V1_1),
-            v => Err(Box::new(Error::InvalidVersion(v.into())) as Box<FormatError>),
+            v => Err(Error::InvalidVersion(v.into())),
         }
     }
 }

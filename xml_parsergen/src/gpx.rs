@@ -304,7 +304,7 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
         }
     }
     fn parse_start(&mut self, elem_start: ElemStart)
-            -> Result<(), ::xml::AttributeError> {
+            -> Result<(), ::par::AttributeError<::gpx::par::Error>> {
         for attr in elem_start.attributes {
             let name = attr.name;
 
@@ -328,7 +328,7 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
                 }
                 {{/ attribute }}
                 _ => {
-                    return Err(::xml::AttributeError::Unexpected(name));
+                    return Err(::par::AttributeError::Unexpected(name));
                 }
             }
         }
