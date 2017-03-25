@@ -288,9 +288,10 @@ impl ParseViaChar<{{{ type }}}> for {{{ conv }}} {
 }"#,
     parse_via: r#"
 impl ParseVia<{{{ data }}}> for {{{ conv }}} {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<{{{ data }}}, Positioned<Error>> {
-        {{{ parser_type }}}::new(parser).parse(elem_start)
+        {{{ parser_type }}}::new(parser).parse(name, attributes)
     }
 }"#,
     element_parse: r#"
@@ -303,10 +304,10 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
             {{# element }} {{{ field }}}: {{{ parser_type }}}::default(), {{/ element }}
         }
     }
-    fn parse_start(&mut self, elem_start: ElemStart)
+    fn parse_start(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), ::par::AttributeError<::gpx::par::Error>> {
-        for attr in elem_start.attributes {
-            let name = attr.name;
+        for attr in attributes {
+            let name = &attr.name;
 
             if let &Some(ref ns) = &name.namespace {
                 match &ns as &str {
@@ -328,17 +329,17 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
                 }
                 {{/ attribute }}
                 _ => {
-                    return Err(::par::AttributeError::Unexpected(name));
+                    return Err(::par::AttributeError::Unexpected(name.clone()));
                 }
             }
         }
-        self.elem_name = Some(elem_start.name);
+        self.elem_name = Some(name.clone());
         Ok(())
     }
-    fn parse_element(&mut self, elem_start: ElemStart)
+    fn parse_element(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), Positioned<::gpx::par::Error>> {
 {{# has_element }}
-        if let Some(ref ns) = elem_start.name.namespace.clone() {
+        if let Some(ref ns) = name.namespace.clone() {
             match &ns as &str {
                 "http://www.topografix.com/GPX/1/1" => (),
                 "http://www.topografix.com/GPX/1/0" => {
@@ -346,27 +347,26 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
                 },
                 ns => {
                     {
-                        let name = &elem_start.name;
                         println!("WARNING: unknown namespace ignored on {:?}:{}: {}",
                              name.prefix,
                              name.local_name,
                              ns);
                     }
-                    try!(ElementParser::new(self.reader).parse(elem_start));
+                    try!(ElementParser::new(self.reader).parse(name, attributes));
                     return Ok(());
                 }
             }
         }
-        match &elem_start.name.local_name as &str {
+        match &name.local_name as &str {
             {{# element }}
             {{{ name }}} => {
-                {{{ saver }}}(try!({{{ conv }}}::parse_via(self.reader, elem_start)));
+                {{{ saver }}}(try!({{{ conv }}}::parse_via(self.reader, name, attributes)));
             }
             {{/ element }}
             _ => {
                 // TODO: add config and handler
                 return Err(Positioned::with_position(
-                    ::gpx::par::Error::UnknownElement(elem_start.name),
+                    ::gpx::par::Error::UnknownElement(name.clone()),
                     self.reader.position()
                 ));
             }
@@ -375,7 +375,7 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
 {{/ has_element }}
 {{^ has_element }}
         Err(Positioned::with_position(
-            ::gpx::par::Error::UnknownElement(elem_start.name),
+            ::gpx::par::Error::UnknownElement(name.clone()),
             self.reader.position())
         )
 {{/ has_element }}

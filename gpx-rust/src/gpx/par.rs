@@ -16,10 +16,11 @@ use std::str::FromStr;
 use std::error::Error as ErrorTrait;
 use self::_xml::common::Position;
 use self::_xml::name::OwnedName;
+use self::_xml::attribute::OwnedAttribute;
 use self::_xml::reader::{ XmlEvent, EventReader };
 
 use xml;
-use xml::{ DocumentParserData, XmlElement, ElemStart, ElementParser, ElementParse, ElementBuild };
+use xml::{ DocumentParserData, XmlElement, ElementParser, ElementParse, ElementBuild };
 use xsd;
 use gpx;
 use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Copyright, Person };
@@ -165,44 +166,50 @@ impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
 }
 
 impl ParseVia<Bounds> for conv::Bounds {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Bounds, Positioned<Error>> {
-        BoundsParser::new(parser).parse(elem_start)
+        BoundsParser::new(parser).parse(name, attributes)
     }
 }
 
 impl ParseVia<Metadata> for conv::Metadata {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Metadata, Positioned<Error>> {
-        MetadataParser::new(parser).parse(elem_start)
+        MetadataParser::new(parser).parse(name, attributes)
     }
 }
 
 impl ParseVia<Route> for conv::Rte {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Route, Positioned<Error>> {
-        RteParser::new(parser).parse(elem_start)
+        RteParser::new(parser).parse(name, attributes)
     }
 }
 
 impl ParseVia<Track> for conv::Trk {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Track, Positioned<Error>> {
-        TrkParser::new(parser).parse(elem_start)
+        TrkParser::new(parser).parse(name, attributes)
     }
 }
 
 impl ParseVia<TrackSegment> for conv::Trkseg {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<TrackSegment, Positioned<Error>> {
-        TrackSegmentParser::new(parser).parse(elem_start)
+        TrackSegmentParser::new(parser).parse(name, attributes)
     }
 }
 
 impl ParseVia<Link> for conv::Link {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, 
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Link, Positioned<Error>> {
-        LinkParser::new(parser).parse(elem_start)
+        LinkParser::new(parser).parse(name, attributes)
     }
 }
 
@@ -318,13 +325,14 @@ struct ParserData(Option<Gpx>);
 impl DocumentParserData for ParserData {
     type Contents = Gpx;
     type Error = DocumentError;
-    fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), Positioned<Error>> {
         if let &mut ParserData(Some(_)) = self {
             return Err(Positioned::with_position(Error::DuplicateGpx,
                                                  reader.position()));
         }
-        self.0 = Some(try!(GpxElemParser::new(&mut reader).parse(elem_start)));
+        self.0 = Some(try!(GpxElemParser::new(&mut reader).parse(name, attributes)));
         Ok(())
     }
     fn build(self) -> Result<Gpx, Self::Error> {

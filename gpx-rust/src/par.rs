@@ -12,9 +12,10 @@ use std::error::Error as ErrorTrait;
 use self::_xml::common::{ Position, TextPosition };
 use self::_xml::reader::{ EventReader, XmlEvent };
 use self::_xml::name::OwnedName;
+use self::_xml::attribute::OwnedAttribute;
 
 use xml;
-use xml::{ ElementParse, ElementParser, XmlElement, ElemStart };
+use xml::{ ElementParse, ElementParser, XmlElement };
 use gpx::par::Error;
 use conv;
 
@@ -75,14 +76,16 @@ pub trait FormatError where Self: fmt::Debug {} // TODO: enforce Error
 /// The element may take any form.
 /// Implement on converter types.
 pub trait ParseVia<Data> {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
         -> Result<Data, Positioned<Error>>;
 }
 
 impl ParseVia<XmlElement> for conv::XmlElement {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<XmlElement, Positioned<Error>> {
-        ElementParser::new(parser).parse(elem_start)
+        ElementParser::new(parser).parse(name, attributes)
     }
 }
 
@@ -96,8 +99,10 @@ pub trait ParseViaChar<Data> {
 
 /// Implements basic event loop reading character data from inside
 impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_via<R: io::Read>(parser: &mut EventReader<R>, 
+                              end_name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Data, Positioned<Error>> {
+        // FIXME: error on present attributes
         let mut ret = String::new();
         loop {
             match parser.next() {
@@ -105,7 +110,7 @@ impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
                     ret = data;
                 }
                 Ok(XmlEvent::EndElement { name }) => {
-                    return if name == elem_start.name {
+                    return if &name == end_name {
                         Self::from_char(&ret).map_err(|e| {
                             Positioned::with_position(e.into(), parser.position())
                         })

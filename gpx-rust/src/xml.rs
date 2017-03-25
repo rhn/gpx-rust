@@ -97,15 +97,9 @@ enum ParserState {
 
 pub struct ElementParser<'a, T: 'a + Read> {
     reader: &'a mut EventReader<T>,
-    info: Option<ElemStart>,
+    name: Option<OwnedName>, // Using reference intentionally - this code does not need to interact with Name
+    attributes: Vec<OwnedAttribute>,
     nodes: Vec<XmlNode>,
-}
-
-/// Node start info; for parser building
-pub struct ElemStart {
-    pub name: OwnedName,
-    pub attributes: Vec<OwnedAttribute>,
-    pub namespace: Namespace,
 }
 
 pub trait ElementBuild {
@@ -122,14 +116,13 @@ pub trait ElementParse<'a, R: Read, E>
     fn new(reader: &'a mut EventReader<R>) -> Self;
     
     /// Parses the element and its subelements, returning ElementBuild::Element instance.
-    fn parse(mut self, elem_start: ElemStart) -> Result<Self::Element, Positioned<E>> {
-        try!(self.parse_start(elem_start).map_err(|e| self._with_pos(e)));
+    fn parse(mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+            -> Result<Self::Element, Positioned<E>> {
+        try!(self.parse_start(name, attributes).map_err(|e| self._with_pos(e)));
         loop {
             match try!(self.next().map_err(|e| self._with_pos(e))) {
                 XmlEvent::StartElement { name, attributes, namespace } => {
-                    try!(self.parse_element(ElemStart { name: name,
-                                                        attributes: attributes,
-                                                        namespace: namespace }));
+                    try!(self.parse_element(&name, attributes.as_slice()));
                 }
                 XmlEvent::EndElement { name } => {
                     if &name == self.get_name() {
@@ -156,12 +149,14 @@ pub trait ElementParse<'a, R: Read, E>
     /// Helper, equivalent to self.reader.position()
     fn get_parser_position(&self) -> TextPosition;
     /// Parses the start event and attributes within it. Should be implemented, bu default ignores attributes.
-    fn parse_start(&mut self, elem_start: ElemStart) -> Result<(), par::AttributeError<E>> {
-        let _ = elem_start;
+    fn parse_start(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+            -> Result<(), par::AttributeError<E>> {
+        let _ = (name, attributes);
         Ok(())
     }
     /// Parses sub-element.
-    fn parse_element(&mut self, elem_start: ElemStart) -> Result<(), Positioned<E>>;
+    fn parse_element(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+        -> Result<(), Positioned<E>>;
     /// Parses characters. By default ignores.
     fn parse_characters(&mut self, data: String) -> Result<(), E> {
         let _ = data;
@@ -183,11 +178,10 @@ impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
     type Element = XmlElement;
     type BuildError = BuildError;
     fn build(self) -> Result<XmlElement, Self::BuildError> {
-        let elem_start = self.info.unwrap(); // this is a programming error if info is not present here
         Ok(XmlElement {
-            name: elem_start.name,
-            attributes: elem_start.attributes,
-            namespace: elem_start.namespace,
+            name: self.name.unwrap().to_owned(),
+            attributes: self.attributes,
+            namespace: Namespace::empty(),
             nodes: self.nodes
         })
     }
@@ -197,17 +191,18 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T
     fn new(reader: &'a mut EventReader<T>)
             -> ElementParser<'a, T> {
         ElementParser { reader: reader,
-                        info: None,
+                        name: None,
+                        attributes: Vec::new(),
                         nodes: Vec::new() }
     }
-    fn parse_start(&mut self, elem_start: ElemStart)
+    fn parse_start(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), par::AttributeError<::gpx::par::Error>> {
-        self.info = Some(elem_start);
+        self.name = Some(name.clone());
         Ok(())
     }
-    fn parse_element(&mut self, elem_start: ElemStart)
+    fn parse_element(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), Positioned<::gpx::par::Error>> {
-        let elem = try!(ElementParser::new(self.reader).parse(elem_start));
+        let elem = try!(ElementParser::new(self.reader).parse(name, attributes));
         self.nodes.push(XmlNode::Element(elem));
         Ok(())
     }
@@ -219,8 +214,8 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T
         self.reader.position()
     }
     fn get_name(&self) -> &OwnedName {
-        match &self.info {
-            &Some(ref i) => &i.name,
+        match &self.name {
+            &Some(ref i) => i,
             &None => unreachable!(),
         }
     }
@@ -262,10 +257,7 @@ pub fn parse_document<R: Read, D: DocumentParserData>(source: R)
             },
             ParserState::Inside => match next {
                 XmlEvent::StartElement { name, attributes, namespace } => {
-                    let start = ElemStart { name: name,
-                                            attributes: attributes,
-                                            namespace: namespace };
-                    try!(contents.parse_element(&mut reader, start));
+                    try!(contents.parse_element(&mut reader, &name, &attributes));
                     ParserState::Inside
                 }
                 // TODO: more events
@@ -285,7 +277,8 @@ pub trait DocumentParserData where Self: Sized + Default {
     type Contents;
     type Error: From<xml::reader::Error> + From<DocumentParserError> + From<DataError>;
     // public iface
-    fn parse_element<R: Read>(&mut self, reader: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_element<R: Read>(&mut self, reader: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), DataError>;
     fn build(self) -> Result<Self::Contents, Self::Error>;
 }
@@ -296,9 +289,10 @@ struct ParserData(Vec<XmlNode>);
 impl DocumentParserData for ParserData {
     type Contents = Vec<XmlNode>;
     type Error = DocumentError;
-    fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>, elem_start: ElemStart)
+    fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>,
+                              name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), DataError> {
-        let elem = try!(ElementParser::new(&mut reader).parse(elem_start));
+        let elem = try!(ElementParser::new(&mut reader).parse(name, attributes));
         self.0.push(XmlNode::Element(elem));
         Ok(())
     }
