@@ -15,7 +15,6 @@ use self::_xml::namespace::Namespace;
 use self::_xml::writer;
 use self::_xml::writer::{ EmitterConfig, EventWriter, XmlEvent };
 
-use conv;
 use xml;
 
     
@@ -100,31 +99,3 @@ impl<T, Data: ?Sized> SerializeVia<Data> for T where T: ToCharsVia<Data>,
         Ok(())
     }
 }
-
-/// Special handling of namespaces
-impl SerializeVia<xml::Element> for conv::Element {
-    fn serialize_via<W: io::Write>(data: &xml::Element, sink: &mut EventWriter<W>, name: &str) 
-            -> Result<(), Error> {
-        try!(sink.write(
-            XmlEvent::StartElement { name: data.name.borrow(),
-                                     attributes: Cow::Borrowed(
-                                         data.attributes
-                                             .iter()
-                                             .map(|a| { a.borrow() })
-                                             .collect::<Vec<_>>()
-                                             .as_slice()),
-                                     namespace: Cow::Borrowed(&data.namespace) }
-        ));
-        for node in &data.nodes {
-            try!(match node {
-                &xml::Node::Text(ref s) => {
-                    sink.write(XmlEvent::Characters(s)).map_err(Error::from)
-                },
-                &xml::Node::Element(ref e) => conv::Element::serialize_via(e, sink, name),
-            });
-        }
-        try!(sink.write(XmlEvent::EndElement { name: Some(data.name.borrow()) }));
-        Ok(())
-    }
-}
-

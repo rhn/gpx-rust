@@ -41,7 +41,7 @@ pub struct Fix {}
 pub struct Degrees {}
 
 /// Defines conversions for GPX extensionsType
-pub type Extensions = ::conv::Element;
+pub type Extensions = ::xml::conv::Element;
 
 /// Defines conversion for GPX dgpsStationType
 pub struct DgpsStation {}

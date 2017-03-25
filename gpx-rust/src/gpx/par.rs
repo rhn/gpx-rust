@@ -20,13 +20,13 @@ use self::_xml::attribute::OwnedAttribute;
 use self::_xml::reader::{ XmlEvent, EventReader };
 
 use xml;
-use xml::{ DocumentParserData, ElementParser, ElementParse, ElementBuild };
+use xml::{ DocumentParserData, ElementParser };
 use xsd;
 use gpx;
 use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Copyright, Person };
 use gpx::conv;
 use gpx::conv::{ Latitude, Longitude };
-use ::par::{ FromAttributeVia, ParseVia, ParseViaChar };
+use ::par::{ FromAttributeVia, ParseVia, ParseViaChar, ElementParse, ElementBuild };
 use ::par::{ Positioned, FormatError, AttributeError };
 
 
@@ -279,10 +279,10 @@ impl<'a, T: Read> ElementBuild for EmailParser<'a, T> {
         let domain = self.domain.expect("BUG: domain not present");
         // TODO: apply regexes
         if let Some(_) = id.find("@") {
-            return Err(xml::BuildError::Custom(Box::new(Error::BadEmailId(id.into()))));
+            return Err(xml::par::BuildError::Custom(Box::new(Error::BadEmailId(id.into()))));
         }
         if let Some(_) = domain.find("@") {
-            return Err(xml::BuildError::Custom(Box::new(Error::InvalidEmailDomain(domain.into()))));
+            return Err(xml::par::BuildError::Custom(Box::new(Error::InvalidEmailDomain(domain.into()))));
         }
         Ok(format!("{}@{}", id, domain))
     }

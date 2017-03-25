@@ -6,6 +6,7 @@
 extern crate xml as _xml;
 
 use std::io;
+use std::io::Read;
 use std::fmt;
 use std::error::Error as ErrorTrait;
 
@@ -15,10 +16,8 @@ use self::_xml::name::OwnedName;
 use self::_xml::attribute::OwnedAttribute;
 
 use xml;
-use xml::{ ElementParse, ElementParser };
+use xml::ElementParser;
 use gpx::par::Error;
-use conv;
-
 
 /// Describes the position in the input stream for some data.
 ///
@@ -81,14 +80,6 @@ pub trait ParseVia<Data> {
         -> Result<Data, Positioned<Error>>;
 }
 
-impl ParseVia<xml::Element> for conv::Element {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
-                              name: &OwnedName, attributes: &[OwnedAttribute])
-            -> Result<xml::Element, Positioned<Error>> {
-        ElementParser::new(parser).parse(name, attributes)
-    }
-}
-
 /// Can parse simple element in XML stream into `Data` type.
 ///
 /// The element must contain only character data.
@@ -140,4 +131,76 @@ impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
 pub trait FromAttributeVia<Data> {
     type Error: FormatError;
     fn from_attribute(&str) -> Result<Data, Self::Error>;
+}
+
+pub trait ElementParse<'a, R: Read, E>
+    where Self: Sized + ElementBuild,
+          E: From<xml::ElementError> + From<Self::BuildError> + From<::par::AttributeError<E>>
+             + From<_xml::reader::Error> + ::par::FormatError {
+    // public iface
+    fn new(reader: &'a mut EventReader<R>) -> Self;
+    
+    /// Parses the element and its subelements, returning ElementBuild::Element instance.
+    fn parse(mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+            -> Result<Self::Element, Positioned<E>> {
+        try!(self.parse_start(name, attributes).map_err(|e| self._with_pos(e)));
+        loop {
+            match try!(self.next().map_err(|e| self._with_pos(e))) {
+                XmlEvent::StartElement { name, attributes, namespace: _ } => {
+                    try!(self.parse_element(&name, attributes.as_slice()));
+                }
+                XmlEvent::EndElement { name } => {
+                    if &name == self.get_name() {
+                        break;
+                    }
+                    return Err(self._with_pos(xml::ElementError::UnexpectedEnd));
+                }
+                XmlEvent::Characters(data) => {
+                    try!(self.parse_characters(data).map_err(|e| self._with_pos(e)));
+                }
+                XmlEvent::Whitespace(s) => {
+                    try!(self.parse_whitespace(s).map_err(|e| self._with_pos(e)));
+                }
+                e => return Err(self._with_pos(xml::ElementError::UnexpectedEvent(e)))
+            }
+        }
+        let pos = self.get_parser_position();
+        self.build().map_err(|e| Positioned::with_position(e.into(), pos))
+    }
+    /// Helper, converts any parse error to the positioned error type. Not a closure to hopefully save performance
+    fn _with_pos<Kind: Into<E>>(&self, kind: Kind) -> Positioned<E> {
+        Positioned::with_position(kind.into(), self.get_parser_position())
+    }
+    /// Helper, equivalent to self.reader.position()
+    fn get_parser_position(&self) -> TextPosition;
+    /// Parses the start event and attributes within it. Should be implemented, bu default ignores attributes.
+    fn parse_start(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+            -> Result<(), ::par::AttributeError<E>> {
+        let _ = (name, attributes);
+        Ok(())
+    }
+    /// Parses sub-element.
+    fn parse_element(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+        -> Result<(), Positioned<E>>;
+    /// Parses characters. By default ignores.
+    fn parse_characters(&mut self, data: String) -> Result<(), E> {
+        let _ = data;
+        Ok(())
+    }
+    /// Parses whitespace (as defined by xml-rs Whitespace event). By Default ignores.
+    fn parse_whitespace(&mut self, space: String)
+            -> Result<(), E> {
+        let _ = space;
+        Ok(())
+    }
+    /// Return the name of this element.
+    fn get_name(&self) -> &OwnedName;
+    /// Returns next event from the underlying parser.
+    fn next(&mut self) -> Result<XmlEvent, _xml::reader::Error>;
+}
+
+pub trait ElementBuild {
+    type Element;
+    type BuildError;
+    fn build(self) -> Result<Self::Element, Self::BuildError>;
 }
