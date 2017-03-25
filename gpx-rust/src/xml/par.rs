@@ -10,7 +10,6 @@ use std::error::Error as ErrorTrait;
 use self::_xml::reader::{ EventReader, XmlEvent };
 use self::_xml::name::OwnedName;
 use self::_xml::attribute::OwnedAttribute;
-use self::_xml::namespace::Namespace;
 use self::_xml::common::{ TextPosition, Position };
 
 use par::{ ParseVia, Positioned, ElementParse, ElementBuild };
@@ -26,7 +25,6 @@ pub enum BuildError {
     Custom(Box<ErrorTrait>)
 }
 
-
 pub struct ElementParser<'a, T: 'a + Read> {
     reader: &'a mut EventReader<T>,
     name: Option<OwnedName>, // Using reference intentionally - this code does not need to interact with Name
@@ -41,7 +39,6 @@ impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
         Ok(Element {
             name: self.name.unwrap().to_owned(),
             attributes: self.attributes,
-            namespace: Namespace::empty(),
             nodes: self.nodes
         })
     }

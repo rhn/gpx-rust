@@ -7,7 +7,7 @@ extern crate xml as _xml;
 use std::io::Write;
 use std::borrow::Cow;
 
-use self::_xml::writer::{ EmitterConfig, EventWriter, XmlEvent };
+use self::_xml::writer::{ EventWriter, XmlEvent };
 
 use ser::{ SerializeVia, Error };
 
@@ -26,7 +26,7 @@ impl SerializeVia<xml::Element> for conv::Element {
                                              .map(|a| { a.borrow() })
                                              .collect::<Vec<_>>()
                                              .as_slice()),
-                                     namespace: Cow::Borrowed(&data.namespace) }
+                                     namespace: Cow::Borrowed(&data.get_namespaces()) }
         ));
         for node in &data.nodes {
             try!(match node {

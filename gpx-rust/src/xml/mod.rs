@@ -8,15 +8,14 @@ extern crate xml;
 
 use std::io;
 use std::io::Read;
-use std::error::Error as ErrorTrait;
 
 use self::xml::name::OwnedName;
 use self::xml::attribute::OwnedAttribute;
 use self::xml::namespace::Namespace;
 use self::xml::reader::{ EventReader, XmlEvent };
-use self::xml::common::{ XmlVersion, TextPosition, Position };
+use self::xml::common::{ XmlVersion };
 
-use ::par::{ Positioned, ElementParse, ElementBuild };
+use ::par::{ Positioned, ElementParse };
 
 pub mod conv;
 pub mod par;
@@ -85,8 +84,30 @@ pub enum Node {
 pub struct Element {
     pub name: OwnedName,
     pub attributes: Vec<OwnedAttribute>,
-    pub namespace: Namespace,
     pub nodes: Vec<Node>,
+}
+
+fn add_ns_name<'a>(namespaces: &mut Namespace, name: &'a OwnedName) -> () {
+    if let &Some(ref prefix) = &name.prefix {
+        match name.namespace {
+            None => panic!("Prefix with no namespace! {} on {:?}", prefix, name),
+            Some(ref ns_uri) => {
+                namespaces.put(prefix.clone(), ns_uri.clone());
+            },
+        }
+    }
+}
+
+impl Element {
+    /// Returns namespaces used on this node
+    fn get_namespaces(&self) -> Namespace {
+        let mut namespaces = Namespace::empty();
+        add_ns_name(&mut namespaces, &self.name);
+        for attribute in &self.attributes {
+            add_ns_name(&mut namespaces, &attribute.name);
+        }
+        namespaces
+    }
 }
 
 enum ParserState {

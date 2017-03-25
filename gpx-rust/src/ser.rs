@@ -15,8 +15,6 @@ use self::_xml::namespace::Namespace;
 use self::_xml::writer;
 use self::_xml::writer::{ EmitterConfig, EventWriter, XmlEvent };
 
-use xml;
-
     
 /// Value cannot be formatted to a valid string
 pub trait FormatError where Self: fmt::Debug + 'static {}

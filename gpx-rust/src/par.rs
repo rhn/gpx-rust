@@ -16,7 +16,6 @@ use self::_xml::name::OwnedName;
 use self::_xml::attribute::OwnedAttribute;
 
 use xml;
-use xml::ElementParser;
 use gpx::par::Error;
 
 /// Describes the position in the input stream for some data.
