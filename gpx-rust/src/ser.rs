@@ -102,7 +102,7 @@ impl<T, Data: ?Sized> SerializeVia<Data> for T where T: ToCharsVia<Data>,
 }
 
 /// Special handling of namespaces
-impl SerializeVia<xml::Element> for conv::XmlElement {
+impl SerializeVia<xml::Element> for conv::Element {
     fn serialize_via<W: io::Write>(data: &xml::Element, sink: &mut EventWriter<W>, name: &str) 
             -> Result<(), Error> {
         try!(sink.write(
@@ -120,7 +120,7 @@ impl SerializeVia<xml::Element> for conv::XmlElement {
                 &xml::Node::Text(ref s) => {
                     sink.write(XmlEvent::Characters(s)).map_err(Error::from)
                 },
-                &xml::Node::Element(ref e) => conv::XmlElement::serialize_via(e, sink, name),
+                &xml::Node::Element(ref e) => conv::Element::serialize_via(e, sink, name),
             });
         }
         try!(sink.write(XmlEvent::EndElement { name: Some(data.name.borrow()) }));

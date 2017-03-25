@@ -81,7 +81,7 @@ pub trait ParseVia<Data> {
         -> Result<Data, Positioned<Error>>;
 }
 
-impl ParseVia<xml::Element> for conv::XmlElement {
+impl ParseVia<xml::Element> for conv::Element {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<xml::Element, Positioned<Error>> {
