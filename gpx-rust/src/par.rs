@@ -102,7 +102,7 @@ impl<T, Data> ParseVia<Data> for T where T: ParseViaChar<Data> {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, 
                               end_name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Data, Positioned<Error>> {
-        // FIXME: error on present attributes
+        let _ = attributes; // FIXME: error on present attributes
         let mut ret = String::new();
         loop {
             match parser.next() {

@@ -374,6 +374,7 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
         Ok(())
 {{/ has_element }}
 {{^ has_element }}
+        let _ = attributes;
         Err(Positioned::with_position(
             ::gpx::par::Error::UnknownElement(name.clone()),
             self.reader.position())

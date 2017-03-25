@@ -121,7 +121,7 @@ pub trait ElementParse<'a, R: Read, E>
         try!(self.parse_start(name, attributes).map_err(|e| self._with_pos(e)));
         loop {
             match try!(self.next().map_err(|e| self._with_pos(e))) {
-                XmlEvent::StartElement { name, attributes, namespace } => {
+                XmlEvent::StartElement { name, attributes, namespace: _ } => {
                     try!(self.parse_element(&name, attributes.as_slice()));
                 }
                 XmlEvent::EndElement { name } => {
@@ -198,6 +198,7 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T
     fn parse_start(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), par::AttributeError<::gpx::par::Error>> {
         self.name = Some(name.clone());
+        let _ = attributes; // FIXME: break if attributes present
         Ok(())
     }
     fn parse_element(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
@@ -256,7 +257,7 @@ pub fn parse_document<R: Read, D: DocumentParserData>(source: R)
                 ev => return Err(DocumentParserError::UnexpectedEventPreStart(ev).into())
             },
             ParserState::Inside => match next {
-                XmlEvent::StartElement { name, attributes, namespace } => {
+                XmlEvent::StartElement { name, attributes, namespace: _ } => {
                     try!(contents.parse_element(&mut reader, &name, &attributes));
                     ParserState::Inside
                 }
