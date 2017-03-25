@@ -12,7 +12,6 @@ use std::io;
 use self::geo::Bbox;
 
 use xml;
-use xml::XmlElement;
 use xsd;
 use xsd::*;
 
@@ -39,7 +38,7 @@ pub struct Gpx {
     pub waypoints: Vec<Waypoint>,
     pub routes: Vec<Route>,
     pub tracks: Vec<Track>,
-    pub extensions: Option<XmlElement>,
+    pub extensions: Option<xml::Element>,
 }
 
 /// `<gpx version=...>` attribute values
@@ -60,7 +59,7 @@ pub struct Metadata {
     pub time: Option<Time>,
     pub keywords: Option<String>,
     pub bounds: Option<Bounds>,
-    pub extensions: Option<XmlElement>,
+    pub extensions: Option<xml::Element>,
 }
 
 #[derive(XmlDebug)]
@@ -107,7 +106,7 @@ pub struct Waypoint {
     pub vdop: Option<xsd::Decimal>,
     pub dgps_age: Option<xsd::Decimal>,
     pub dgps_id: Option<u16>,
-    pub extensions: Option<XmlElement>,
+    pub extensions: Option<xml::Element>,
 }
 
 /// WGS84 geographical coordinates
@@ -138,7 +137,7 @@ pub struct Track {
     pub links: Vec<Link>,
     pub number: Option<xsd::NonNegativeInteger>,
     pub type_: Option<String>,
-    pub extensions: Option<XmlElement>,
+    pub extensions: Option<xml::Element>,
     pub segments: Vec<TrackSegment>,
 }
 
@@ -146,7 +145,7 @@ pub struct Track {
 #[derive(XmlDebug)]
 pub struct TrackSegment {
     pub waypoints: Vec<Waypoint>,
-    pub extensions: Option<XmlElement>,
+    pub extensions: Option<xml::Element>,
 }
 
 /// `<rte>` and `rteType`
@@ -159,7 +158,7 @@ pub struct Route {
     pub links: Vec<Link>,
     pub number: Option<xsd::NonNegativeInteger>,
     pub type_: Option<String>,
-    pub extensions: Option<XmlElement>,
+    pub extensions: Option<xml::Element>,
     pub waypoints: Vec<Waypoint>,
 }
 

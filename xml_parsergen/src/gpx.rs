@@ -471,7 +471,7 @@ struct {{{ name }}} {
                                       attr_type.as_user_type()))
         });
         let elems = data.sequence.iter().map(|elem| {
-            let fallback = UserType("XmlElement".into());
+            let fallback = UserType("xml::Element".into());
             let elem_type = match convs.get(&elem.type_) {
                 Some(&(ref cls, _)) => cls,
                 None => {

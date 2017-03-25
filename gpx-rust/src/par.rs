@@ -15,7 +15,7 @@ use self::_xml::name::OwnedName;
 use self::_xml::attribute::OwnedAttribute;
 
 use xml;
-use xml::{ ElementParse, ElementParser, XmlElement };
+use xml::{ ElementParse, ElementParser };
 use gpx::par::Error;
 use conv;
 
@@ -81,10 +81,10 @@ pub trait ParseVia<Data> {
         -> Result<Data, Positioned<Error>>;
 }
 
-impl ParseVia<XmlElement> for conv::XmlElement {
+impl ParseVia<xml::Element> for conv::XmlElement {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
-            -> Result<XmlElement, Positioned<Error>> {
+            -> Result<xml::Element, Positioned<Error>> {
         ElementParser::new(parser).parse(name, attributes)
     }
 }

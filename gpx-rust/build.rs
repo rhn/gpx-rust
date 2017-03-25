@@ -82,7 +82,7 @@ fn process() -> Result<(), Error> {
         "linkType".into() => ("Link".into(), "::gpx::conv::Link".into()),
         "fixType".into() => ("Fix".into(), "::gpx::conv::Fix".into()),
         "dgpsStationType".into() => ("u16".into(), "::gpx::conv::DgpsStation".into()),
-        "extensionsType".into() => ("XmlElement".into(), "::gpx::conv::Extensions".into()), // FIXME: dedicated type?
+        "extensionsType".into() => ("xml::Element".into(), "::gpx::conv::Extensions".into()), // FIXME: dedicated type?
         "personType".into() => ("Person".into(), "::gpx::conv::Person".into()),
         "wptType".into() => ("Waypoint".into(), "::gpx::conv::Wpt".into()),
         "metadataType".into() => ("Metadata".into(), "::gpx::conv::Metadata".into()),

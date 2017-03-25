@@ -4,4 +4,4 @@
 
 use xml;
 
-pub type XmlElement = xml::XmlElement;
+pub type XmlElement = xml::Element;

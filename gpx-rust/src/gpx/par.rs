@@ -20,7 +20,7 @@ use self::_xml::attribute::OwnedAttribute;
 use self::_xml::reader::{ XmlEvent, EventReader };
 
 use xml;
-use xml::{ DocumentParserData, XmlElement, ElementParser, ElementParse, ElementBuild };
+use xml::{ DocumentParserData, ElementParser, ElementParse, ElementBuild };
 use xsd;
 use gpx;
 use gpx::{ Document, Gpx, Bounds, Version, Waypoint, Fix, Metadata, Point, TrackSegment, Track, Route, Link, Copyright, Person };

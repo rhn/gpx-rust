@@ -76,17 +76,17 @@ impl From<&'static str> for Error {
 }
 
 #[derive(Debug)]
-pub enum XmlNode {
+pub enum Node {
     Text(String),
-    Element(XmlElement),
+    Element(Element),
 }
 
 #[derive(Debug)]
-pub struct XmlElement {
+pub struct Element {
     pub name: OwnedName,
     pub attributes: Vec<OwnedAttribute>,
     pub namespace: Namespace,
-    pub nodes: Vec<XmlNode>,
+    pub nodes: Vec<Node>,
 }
 
 enum ParserState {
@@ -99,7 +99,7 @@ pub struct ElementParser<'a, T: 'a + Read> {
     reader: &'a mut EventReader<T>,
     name: Option<OwnedName>, // Using reference intentionally - this code does not need to interact with Name
     attributes: Vec<OwnedAttribute>,
-    nodes: Vec<XmlNode>,
+    nodes: Vec<Node>,
 }
 
 pub trait ElementBuild {
@@ -175,10 +175,10 @@ pub trait ElementParse<'a, R: Read, E>
 }
 
 impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
-    type Element = XmlElement;
+    type Element = Element;
     type BuildError = BuildError;
-    fn build(self) -> Result<XmlElement, Self::BuildError> {
-        Ok(XmlElement {
+    fn build(self) -> Result<Self::Element, Self::BuildError> {
+        Ok(Element {
             name: self.name.unwrap().to_owned(),
             attributes: self.attributes,
             namespace: Namespace::empty(),
@@ -204,11 +204,11 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T
     fn parse_element(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), Positioned<::gpx::par::Error>> {
         let elem = try!(ElementParser::new(self.reader).parse(name, attributes));
-        self.nodes.push(XmlNode::Element(elem));
+        self.nodes.push(Node::Element(elem));
         Ok(())
     }
     fn parse_characters(&mut self, data: String) -> Result<(), ::gpx::par::Error> {
-        self.nodes.push(XmlNode::Text(data));
+        self.nodes.push(Node::Text(data));
         Ok(())
     }
     fn get_parser_position(&self) -> TextPosition {
@@ -285,16 +285,16 @@ pub trait DocumentParserData where Self: Sized + Default {
 }
 
 #[derive(Default)]
-struct ParserData(Vec<XmlNode>);
+struct ParserData(Vec<Node>);
 
 impl DocumentParserData for ParserData {
-    type Contents = Vec<XmlNode>;
+    type Contents = Vec<Node>;
     type Error = DocumentError;
     fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), DataError> {
         let elem = try!(ElementParser::new(&mut reader).parse(name, attributes));
-        self.0.push(XmlNode::Element(elem));
+        self.0.push(Node::Element(elem));
         Ok(())
     }
     fn build(self) -> Result<Self::Contents, Self::Error> {
@@ -302,6 +302,6 @@ impl DocumentParserData for ParserData {
     }
 }
 
-pub fn parse<R: Read>(source: R) -> Result<Document<Vec<XmlNode>>, DocumentError> {
+pub fn parse<R: Read>(source: R) -> Result<Document<Vec<Node>>, DocumentError> {
     parse_document::<R, ParserData>(source)
 }
