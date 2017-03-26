@@ -77,12 +77,11 @@ impl From<&'static str> for Error {
 #[derive(Debug)]
 pub enum Node {
     Text(String),
-    Element(Element),
+    Element(OwnedName, Element),
 }
 
 #[derive(Debug)]
 pub struct Element {
-    pub name: OwnedName,
     pub attributes: Vec<OwnedAttribute>,
     pub nodes: Vec<Node>,
 }
@@ -100,9 +99,9 @@ fn add_ns_name<'a>(namespaces: &mut Namespace, name: &'a OwnedName) -> () {
 
 impl Element {
     /// Returns namespaces used on this node
-    fn get_namespaces(&self) -> Namespace {
+    fn get_namespaces(&self, own_name: &OwnedName) -> Namespace {
         let mut namespaces = Namespace::empty();
-        add_ns_name(&mut namespaces, &self.name);
+        add_ns_name(&mut namespaces, own_name);
         for attribute in &self.attributes {
             add_ns_name(&mut namespaces, &attribute.name);
         }
@@ -187,7 +186,7 @@ impl DocumentParserData for ParserData {
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), DataError> {
         let elem = try!(ElementParser::new().parse(name, attributes, &mut reader));
-        self.0.push(Node::Element(elem));
+        self.0.push(Node::Element(name.clone(), elem));
         Ok(())
     }
     fn build(self) -> Result<Self::Contents, Self::Error> {

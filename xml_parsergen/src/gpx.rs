@@ -650,7 +650,7 @@ impl ElementBuild for {{{ parser_name }}} {
             };
             let type_name = quote::Ident::new(type_convs.get(&elem.type_)
                                                         .expect("No item").1.as_user_type());
-            let ser_call = quote!(#type_name::serialize_via(item, sink, #elem_name));
+            let ser_call = quote!(#type_name::serialize_via(item, sink, &OwnedName::local(#elem_name)));
 
             match elem.max_occurs {
                 ElementMaxOccurs::Some(1) => {
@@ -681,9 +681,9 @@ impl ElementBuild for {{{ parser_name }}} {
                                         .insert("events", quote!( #( #events )* ).to_string()),
                       r#"
 impl SerializeVia<{{{ cls_name }}}> for {{{ conv_name }}} {
-    fn serialize_via<W: io::Write>(data: &{{{ cls_name }}}, sink: &mut EventWriter<W>, name: &str)
+    fn serialize_via<W: io::Write>(data: &{{{ cls_name }}}, sink: &mut EventWriter<W>, name: &OwnedName)
             -> Result<(), Error> {
-        let elemname = Name::local(name);
+        let elemname = name.borrow();
         let attributes = {{{ attributes }}};
         
         try!(sink.write(

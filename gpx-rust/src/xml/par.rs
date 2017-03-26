@@ -35,7 +35,7 @@ impl ElementBuild for ElementParser {
     type BuildError = BuildError;
     fn build(self) -> Result<Self::Element, Self::BuildError> {
         Ok(Element {
-            name: self.name.unwrap().to_owned(),
+            //name: self.name.unwrap().to_owned(),
             attributes: self.attributes,
             nodes: self.nodes
         })
@@ -58,7 +58,7 @@ impl ElementParse<::gpx::par::Error> for ElementParser {
                                   name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), Positioned<::gpx::par::Error>> {
         let elem = try!(ElementParser::new().parse(name, attributes, reader));
-        self.nodes.push(Node::Element(elem));
+        self.nodes.push(Node::Element(name.clone(), elem));
         Ok(())
     }
     fn parse_characters(&mut self, data: String) -> Result<(), ::gpx::par::Error> {

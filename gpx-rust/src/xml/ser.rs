@@ -7,6 +7,7 @@ extern crate xml as _xml;
 use std::io::Write;
 use std::borrow::Cow;
 
+use self::_xml::name::OwnedName;
 use self::_xml::writer::{ EventWriter, XmlEvent };
 
 use ser::{ SerializeVia, Error };
@@ -16,27 +17,27 @@ use xml::conv;
 
 /// Special handling of namespaces
 impl SerializeVia<xml::Element> for conv::Element {
-    fn serialize_via<W: Write>(data: &xml::Element, sink: &mut EventWriter<W>, name: &str) 
+    fn serialize_via<W: Write>(data: &xml::Element, sink: &mut EventWriter<W>, name: &OwnedName) 
             -> Result<(), Error> {
         try!(sink.write(
-            XmlEvent::StartElement { name: data.name.borrow(),
+            XmlEvent::StartElement { name: name.borrow(),
                                      attributes: Cow::Borrowed(
                                          data.attributes
                                              .iter()
                                              .map(|a| { a.borrow() })
                                              .collect::<Vec<_>>()
                                              .as_slice()),
-                                     namespace: Cow::Borrowed(&data.get_namespaces()) }
+                                     namespace: Cow::Borrowed(&data.get_namespaces(name)) }
         ));
         for node in &data.nodes {
             try!(match node {
                 &xml::Node::Text(ref s) => {
                     sink.write(XmlEvent::Characters(s)).map_err(Error::from)
                 },
-                &xml::Node::Element(ref e) => conv::Element::serialize_via(e, sink, name),
+                &xml::Node::Element(ref name, ref e) => conv::Element::serialize_via(e, sink, name),
             });
         }
-        try!(sink.write(XmlEvent::EndElement { name: Some(data.name.borrow()) }));
+        try!(sink.write(XmlEvent::EndElement { name: Some(name.borrow()) }));
         Ok(())
     }
 }

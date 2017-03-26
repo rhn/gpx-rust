@@ -10,7 +10,7 @@ use std::io;
 use std::borrow::Cow;
 
 use self::_xml::common::XmlVersion;
-use self::_xml::name::Name;
+use self::_xml::name::OwnedName;
 use self::_xml::namespace::Namespace;
 use self::_xml::writer;
 use self::_xml::writer::{ EmitterConfig, EventWriter, XmlEvent };
@@ -77,16 +77,16 @@ pub trait ToCharsVia<Data: ?Sized> {
 
 /// Can be serialized as a regular XML element
 pub trait SerializeVia<Data: ?Sized> {
-    fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
+    fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &OwnedName)
         -> Result<(), Error>;
 }
 
 /// Leverage char conversion capabilities
 impl<T, Data: ?Sized> SerializeVia<Data> for T where T: ToCharsVia<Data>,
         T::Error: Into<Error> {
-    fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &str)
+    fn serialize_via<W: io::Write>(data: &Data, sink: &mut EventWriter<W>, name: &OwnedName)
             -> Result<(), Error> {
-        let elemname = Name::local(name);
+        let elemname = name.borrow();
         try!(sink.write(
             XmlEvent::StartElement { name: elemname.clone(),
                                      attributes: Cow::Owned(Vec::new()),

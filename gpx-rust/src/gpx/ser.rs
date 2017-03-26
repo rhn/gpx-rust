@@ -10,7 +10,7 @@ use std::fmt;
 use std::io;
 use std::borrow::Cow;
 use std::error::Error as ErrorTrait;
-use self::_xml::name::Name;
+use self::_xml::name::{ Name, OwnedName };
 use self::_xml::namespace::{ Namespace, NS_NO_PREFIX };
 use self::_xml::attribute::Attribute;
 use self::_xml::writer::{ XmlEvent, EventWriter };
@@ -29,7 +29,7 @@ const GPX_NS: &'static str = "http://www.topografix.com/GPX/1/1";
 macro_rules! set_optional(
     ($sink:ident, $name:expr, $tag:expr, $type_:path) => {
         if let Some(ref item) = $name {
-            try!(<$type_>::serialize_via(item, $sink, $tag));
+            try!(<$type_>::serialize_via(item, $sink, &OwnedName::local($tag)));
         }
     }
 );
@@ -105,9 +105,9 @@ impl ToCharsVia<f64> for Longitude {
 }
 
 impl SerializeVia<Bounds> for conv::Bounds {
-    fn serialize_via<W: io::Write>(data: &Bounds, sink: &mut EventWriter<W>, name: &str)
+    fn serialize_via<W: io::Write>(data: &Bounds, sink: &mut EventWriter<W>, name: &OwnedName)
             -> Result<(), ser::Error> {
-        let name = Name::local(name);
+        let name = name.borrow();
         try!(sink.write(
             XmlEvent::StartElement {
                 name: name,
@@ -133,15 +133,15 @@ impl SerializeVia<Bounds> for conv::Bounds {
 impl SerializeDocument for Gpx {
     fn serialize_root<W: io::Write>(&self, sink: &mut EventWriter<W>)
             -> Result<(), ser::Error> {
-        conv::Gpx::serialize_via(self, sink, "gpx")
+        conv::Gpx::serialize_via(self, sink, &OwnedName::local("gpx"))
     }
 }
 
 /// Gpx needs custom serialization because it needs to carry the GPX namespace and version number
 impl SerializeVia<Gpx> for conv::Gpx {
-    fn serialize_via<W: io::Write>(data: &Gpx, sink: &mut EventWriter<W>, name: &str)
+    fn serialize_via<W: io::Write>(data: &Gpx, sink: &mut EventWriter<W>, name: &OwnedName)
             -> Result<(), ser:: Error> {
-        let elemname = Name::local(name);
+        let elemname = name.borrow();
         let mut ns = Namespace::empty();
         ns.put(NS_NO_PREFIX, GPX_NS);
         let ns = ns;
@@ -158,19 +158,19 @@ impl SerializeVia<Gpx> for conv::Gpx {
             }
         ));
         if let Some(ref meta) = data.metadata {
-            try!(::gpx::conv::Metadata::serialize_via(meta, sink, "metadata"));
+            try!(::gpx::conv::Metadata::serialize_via(meta, sink, &OwnedName::local("metadata")));
         }
         for item in &data.waypoints {
-            try!(::gpx::conv::Wpt::serialize_via(item, sink, "wpt"));
+            try!(::gpx::conv::Wpt::serialize_via(item, sink, &OwnedName::local("wpt")));
         }
         for item in &data.routes {
-            try!(::gpx::conv::Rte::serialize_via(item, sink, "rte"));
+            try!(::gpx::conv::Rte::serialize_via(item, sink, &OwnedName::local("rte")));
         }
         for item in &data.tracks {
-            try!(::gpx::conv::Trk::serialize_via(item, sink, "trk"));
+            try!(::gpx::conv::Trk::serialize_via(item, sink, &OwnedName::local("trk")));
         }
         if let Some(ref ext) = data.extensions {
-            try!(::gpx::conv::Extensions::serialize_via(ext, sink, "extensions"));
+            try!(::gpx::conv::Extensions::serialize_via(ext, sink, &OwnedName::local("extensions")));
         }
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
@@ -178,7 +178,7 @@ impl SerializeVia<Gpx> for conv::Gpx {
 }
 
 impl SerializeVia<String> for conv::Email {
-    fn serialize_via<W: io::Write>(data: &String, sink: &mut EventWriter<W>, name: &str)
+    fn serialize_via<W: io::Write>(data: &String, sink: &mut EventWriter<W>, name: &OwnedName)
            -> Result<(), ser::Error> {
         let split = data.split("@").collect::<Vec<_>>();
         if split.len() != 2 {
@@ -186,15 +186,15 @@ impl SerializeVia<String> for conv::Email {
         }
         let (id, domain) = (split[0], split[1]);
         
-        let elemname = Name::local(name);
+        let elemname = name.borrow();
         try!(sink.write(XmlEvent::StartElement {
             name: elemname.clone(),
             attributes: Cow::Owned(Vec::new()),
             namespace: Cow::Owned(Namespace::empty()),
         }));
 
-        try!(::xsd::conv::String::serialize_via(id, sink, "id"));
-        try!(::xsd::conv::String::serialize_via(domain, sink, "domain"));
+        try!(::xsd::conv::String::serialize_via(id, sink, &OwnedName::local("id")));
+        try!(::xsd::conv::String::serialize_via(domain, sink, &OwnedName::local("domain")));
 
         try!(sink.write(XmlEvent::EndElement { name: Some(elemname) }));
         Ok(())
@@ -213,9 +213,9 @@ impl Version {
 
 /// Custom serialization beeded because of the location field
 impl SerializeVia<Waypoint> for conv::Wpt {
-    fn serialize_via<W: io::Write>(data: &Waypoint, sink: &mut EventWriter<W>, name: &str)
+    fn serialize_via<W: io::Write>(data: &Waypoint, sink: &mut EventWriter<W>, name: &OwnedName)
             -> Result<(), ser::Error> {
-        let elemname = Name::local(name);
+        let elemname = name.borrow();
         let lat = try!(Latitude::to_characters(&data.location.latitude));
         let lon = try!(Longitude::to_characters(&data.location.longitude));
         try!(sink.write(XmlEvent::StartElement {
@@ -227,22 +227,16 @@ impl SerializeVia<Waypoint> for conv::Wpt {
                                      value: &lon }]),
             namespace: Cow::Owned(Namespace::empty()),
         }));
-        if let Some(ref item) = data.location.elevation {
-            try!(xsd::conv::Decimal::serialize_via(item, sink, "ele"));
-        }
+        set_optional!(sink, data.location.elevation, "ele", xsd::conv::Decimal);
         set_optional!(sink, data.time, "time", xsd::conv::DateTime);
-        if let Some(ref item) = data.mag_variation {
-            try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
-        }
-        if let Some(ref item) = data.geoid_height {
-            try!(xsd::conv::Decimal::serialize_via(item, sink, "magvar"));
-        }
+        set_optional!(sink, data.mag_variation, "magvar", xsd::conv::Decimal); // FIXME: Degrees
+        set_optional!(sink, data.geoid_height, "geoidheight", xsd::conv::Decimal);
         set_optional!(sink, data.name, "name", xsd::conv::String);
         set_optional!(sink, data.comment, "cmt", xsd::conv::String);
         set_optional!(sink, data.description, "desc", xsd::conv::String);
         set_optional!(sink, data.source, "src", xsd::conv::String);
         for item in &data.links {
-            try!(conv::Link::serialize_via(item, sink, "link"));
+            try!(conv::Link::serialize_via(item, sink, &OwnedName::local("link")));
         }
         set_optional!(sink, data.symbol, "sym", xsd::conv::String);
         set_optional!(sink, data.type_, "type", xsd::conv::String);
