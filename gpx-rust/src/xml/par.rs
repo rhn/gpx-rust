@@ -7,10 +7,9 @@ extern crate xml as _xml;
 use std::io::Read;
 use std::error::Error as ErrorTrait;
 
-use self::_xml::reader::{ EventReader, XmlEvent };
+use self::_xml::reader::EventReader;
 use self::_xml::name::OwnedName;
 use self::_xml::attribute::OwnedAttribute;
-use self::_xml::common::{ TextPosition, Position };
 
 use par::{ ParseVia, Positioned, ElementParse, ElementBuild };
 
@@ -25,14 +24,13 @@ pub enum BuildError {
     Custom(Box<ErrorTrait>)
 }
 
-pub struct ElementParser<'a, T: 'a + Read> {
-    reader: &'a mut EventReader<T>,
+pub struct ElementParser {
     name: Option<OwnedName>, // Using reference intentionally - this code does not need to interact with Name
     attributes: Vec<OwnedAttribute>,
     nodes: Vec<Node>,
 }
 
-impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
+impl ElementBuild for ElementParser {
     type Element = Element;
     type BuildError = BuildError;
     fn build(self) -> Result<Self::Element, Self::BuildError> {
@@ -44,11 +42,9 @@ impl<'a, T: Read> ElementBuild for ElementParser<'a, T> {
     }
 }
 
-impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T> {
-    fn new(reader: &'a mut EventReader<T>)
-            -> ElementParser<'a, T> {
-        ElementParser { reader: reader,
-                        name: None,
+impl ElementParse<::gpx::par::Error> for ElementParser {
+    fn new() -> ElementParser {
+        ElementParser { name: None,
                         attributes: Vec::new(),
                         nodes: Vec::new() }
     }
@@ -58,9 +54,10 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T
         let _ = attributes; // FIXME: break if attributes present
         Ok(())
     }
-    fn parse_element(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+    fn parse_element<'a, R: Read>(&mut self, reader: &'a mut EventReader<R>,
+                                  name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), Positioned<::gpx::par::Error>> {
-        let elem = try!(ElementParser::new(self.reader).parse(name, attributes));
+        let elem = try!(ElementParser::new().parse(name, attributes, reader));
         self.nodes.push(Node::Element(elem));
         Ok(())
     }
@@ -68,17 +65,11 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for ElementParser<'a, T
         self.nodes.push(Node::Text(data));
         Ok(())
     }
-    fn get_parser_position(&self) -> TextPosition {
-        self.reader.position()
-    }
     fn get_name(&self) -> &OwnedName {
         match &self.name {
             &Some(ref i) => i,
             &None => unreachable!(),
         }
-    }
-    fn next(&mut self) -> Result<XmlEvent, _xml::reader::Error> {
-        self.reader.next()
     }
 }
 
@@ -86,6 +77,6 @@ impl ParseVia<xml::Element> for conv::Element {
     fn parse_via<R: Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<xml::Element, Positioned<Error>> {
-        ElementParser::new(parser).parse(name, attributes)
+        ElementParser::new().parse(name, attributes, parser)
     }
 }

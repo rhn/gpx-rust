@@ -116,7 +116,7 @@ enum ParserState {
     PostEnd,
 }
 
-pub type ElementParser<'a, T> = par::ElementParser<'a, T>;
+pub type ElementParser = par::ElementParser;
 
 /// Represents an XML document, including metadata
 pub struct Document<T> {
@@ -186,7 +186,7 @@ impl DocumentParserData for ParserData {
     fn parse_element<R: Read>(&mut self, mut reader: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), DataError> {
-        let elem = try!(ElementParser::new(&mut reader).parse(name, attributes));
+        let elem = try!(ElementParser::new().parse(name, attributes, &mut reader));
         self.0.push(Node::Element(elem));
         Ok(())
     }

@@ -291,14 +291,13 @@ impl ParseVia<{{{ data }}}> for {{{ conv }}} {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<{{{ data }}}, Positioned<Error>> {
-        {{{ parser_type }}}::new(parser).parse(name, attributes)
+        {{{ parser_type }}}::new().parse(name, attributes, parser)
     }
 }"#,
     element_parse: r#"
-impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}<'a, T> {
-    fn new(reader: &'a mut EventReader<T>) -> Self {
+impl ElementParse<::gpx::par::Error> for {{{ parser_type }}} {
+    fn new() -> Self {
         {{{ parser_type }}} {
-            reader: reader,
             elem_name: None,
             {{# attribute }} {{{ field }}}: None, {{/ attribute }}
             {{# element }} {{{ field }}}: {{{ parser_type }}}::default(), {{/ element }}
@@ -336,7 +335,8 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
         self.elem_name = Some(name.clone());
         Ok(())
     }
-    fn parse_element(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+    fn parse_element<'a, R: Read>(&mut self, reader: &'a mut EventReader<R>,
+                                  name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<(), Positioned<::gpx::par::Error>> {
 {{# has_element }}
         if let Some(ref ns) = name.namespace.clone() {
@@ -352,7 +352,7 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
                              name.local_name,
                              ns);
                     }
-                    try!(ElementParser::new(self.reader).parse(name, attributes));
+                    try!(ElementParser::new().parse(name, attributes, reader));
                     return Ok(());
                 }
             }
@@ -360,14 +360,14 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
         match &name.local_name as &str {
             {{# element }}
             {{{ name }}} => {
-                {{{ saver }}}(try!({{{ conv }}}::parse_via(self.reader, name, attributes)));
+                {{{ saver }}}(try!({{{ conv }}}::parse_via(reader, name, attributes)));
             }
             {{/ element }}
             _ => {
                 // TODO: add config and handler
                 return Err(Positioned::with_position(
                     ::gpx::par::Error::UnknownElement(name.clone()),
-                    self.reader.position()
+                    reader.position()
                 ));
             }
         };
@@ -377,21 +377,15 @@ impl<'a, T: Read> ElementParse<'a, T, ::gpx::par::Error> for {{{ parser_type }}}
         let _ = attributes;
         Err(Positioned::with_position(
             ::gpx::par::Error::UnknownElement(name.clone()),
-            self.reader.position())
+            reader.position())
         )
 {{/ has_element }}
-    }
-    fn get_parser_position(&self) -> _xml::common::TextPosition {
-        self.reader.position()
     }
     fn get_name(&self) -> &OwnedName {
         match &self.elem_name {
             &Some(ref i) => i,
             &None => panic!("Name was not set while parsing"),
         }
-    }
-    fn next(&mut self) -> Result<XmlEvent, _xml::reader::Error> {
-        self.reader.next()
     }
 }"#,
 };
@@ -490,8 +484,7 @@ struct {{{ name }}} {
                                       elem_type.as_user_type()))
         });
         quote!(
-            struct #cls_name<'a, T: 'a + Read> {
-                reader: &'a mut EventReader<T>,
+            struct #cls_name {
                 elem_name: Option<OwnedName>,
                 #( #attrs, )*
                 #( #elems, )*
@@ -598,7 +591,7 @@ struct {{{ name }}} {
                                         .insert("error_name", "Error") // TODO: figure out how to handle the class
                                         .insert("inits", inits.as_str()),
                       r#"
-impl<'a, T: Read> ElementBuild for {{{ parser_name }}}<'a, T> {
+impl ElementBuild for {{{ parser_name }}} {
     type Element = {{{ struct_name }}};
     type BuildError = xml::BuildError;
     fn build(self) -> Result<Self::Element, Self::BuildError> {

@@ -17,7 +17,7 @@ use std::error::Error as ErrorTrait;
 use self::_xml::common::Position;
 use self::_xml::name::OwnedName;
 use self::_xml::attribute::OwnedAttribute;
-use self::_xml::reader::{ XmlEvent, EventReader };
+use self::_xml::reader::EventReader;
 
 use xml;
 use xml::{ DocumentParserData, ElementParser };
@@ -154,7 +154,7 @@ impl FromAttributeVia<Version> for conv::Version {
     }
 }
 
-impl<'a, T: Read> ElementBuild for BoundsParser<'a, T> {
+impl ElementBuild for BoundsParser {
     type Element = Bounds;
     type BuildError = xml::BuildError;
     fn build(self) -> Result<Self::Element, Self::BuildError> {
@@ -169,7 +169,7 @@ impl ParseVia<Bounds> for conv::Bounds {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Bounds, Positioned<Error>> {
-        BoundsParser::new(parser).parse(name, attributes)
+        BoundsParser::new().parse(name, attributes, parser)
     }
 }
 
@@ -177,7 +177,7 @@ impl ParseVia<Metadata> for conv::Metadata {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Metadata, Positioned<Error>> {
-        MetadataParser::new(parser).parse(name, attributes)
+        MetadataParser::new().parse(name, attributes, parser)
     }
 }
 
@@ -185,7 +185,7 @@ impl ParseVia<Route> for conv::Rte {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Route, Positioned<Error>> {
-        RteParser::new(parser).parse(name, attributes)
+        RteParser::new().parse(name, attributes, parser)
     }
 }
 
@@ -193,7 +193,7 @@ impl ParseVia<Track> for conv::Trk {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Track, Positioned<Error>> {
-        TrkParser::new(parser).parse(name, attributes)
+        TrkParser::new().parse(name, attributes, parser)
     }
 }
 
@@ -201,7 +201,7 @@ impl ParseVia<TrackSegment> for conv::Trkseg {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<TrackSegment, Positioned<Error>> {
-        TrackSegmentParser::new(parser).parse(name, attributes)
+        TrackSegmentParser::new().parse(name, attributes, parser)
     }
 }
 
@@ -209,7 +209,7 @@ impl ParseVia<Link> for conv::Link {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>, 
                               name: &OwnedName, attributes: &[OwnedAttribute])
             -> Result<Link, Positioned<Error>> {
-        LinkParser::new(parser).parse(name, attributes)
+        LinkParser::new().parse(name, attributes, parser)
     }
 }
 
@@ -226,7 +226,7 @@ impl ParseViaChar<Fix> for conv::Fix {
     }
 }
 
-impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
+impl ElementBuild for MetadataParser {
     type Element = Metadata;
     type BuildError = xml::BuildError;
     fn build(self) -> Result<Self::Element, Self::BuildError> {
@@ -243,7 +243,7 @@ impl<'a, T: Read> ElementBuild for MetadataParser<'a, T> {
 }
 
 /// Waypoints need custom building because of the "location" field being composed of attributes and an element.
-impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
+impl ElementBuild for WaypointParser {
     type Element = Waypoint;
     type BuildError = xml::BuildError;
     fn build(self) -> Result<Self::Element, Self::BuildError> {
@@ -271,7 +271,7 @@ impl<'a, T: Read> ElementBuild for WaypointParser<'a, T> {
     }
 }
 
-impl<'a, T: Read> ElementBuild for EmailParser<'a, T> {
+impl ElementBuild for EmailParser {
     type Element = String;
     type BuildError = xml::BuildError;
     fn build(self) -> Result<Self::Element, Self::BuildError> {
@@ -332,7 +332,7 @@ impl DocumentParserData for ParserData {
             return Err(Positioned::with_position(Error::DuplicateGpx,
                                                  reader.position()));
         }
-        self.0 = Some(try!(GpxElemParser::new(&mut reader).parse(name, attributes)));
+        self.0 = Some(try!(GpxElemParser::new().parse(name, attributes, &mut reader)));
         Ok(())
     }
     fn build(self) -> Result<Gpx, Self::Error> {
