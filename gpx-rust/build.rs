@@ -158,7 +158,7 @@ fn process() -> Result<(), Error> {
                      type_name: "personType".into(),
                      tags: HashMap::new() },
     ];
-    let builder_impls = ["RteParser", "TrkParser", "LinkParser", "GpxElemParser", "TrackSegmentParser", "CopyrightParser", "PersonParser"]
+    let builder_impls = ["RteParser", "TrkParser", "LinkParser", "GpxElemParser", "TrackSegmentParser", "CopyrightParser", "PersonParser", "MetadataParser"]
                         .iter().map(|name: &&'static str| {
         let type_ = parsers.iter()
                                 .find(|pinfo| pinfo.name.as_str() == *name)
@@ -182,6 +182,7 @@ fn process() -> Result<(), Error> {
         ("PersonParser", attr_convs.get("personType").expect("personerr")),
         ("EmailParser", attr_convs.get("emailType").expect("emailerr")),
         ("WaypointParser", attr_convs.get("wptType").expect("wpterr")),
+        ("MetadataParser", attr_convs.get("metadataType").expect("metaerr"))
     ];
     try!(write_file(&out_dir.join("gpx_auto.rs"), |f| {
         for item in &structs {

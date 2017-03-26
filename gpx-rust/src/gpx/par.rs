@@ -173,14 +173,6 @@ impl ParseVia<Bounds> for conv::Bounds {
     }
 }
 
-impl ParseVia<Metadata> for conv::Metadata {
-    fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
-                              name: &OwnedName, attributes: &[OwnedAttribute])
-            -> Result<Metadata, Positioned<Error>> {
-        MetadataParser::new().parse(name, attributes, parser)
-    }
-}
-
 impl ParseVia<Route> for conv::Rte {
     fn parse_via<R: io::Read>(parser: &mut EventReader<R>,
                               name: &OwnedName, attributes: &[OwnedAttribute])
@@ -223,22 +215,6 @@ impl ParseViaChar<Fix> for conv::Fix {
             "pps" => Fix::PPS,
             _ => return Err(Error::UnknownFix(s.into())),
         })
-    }
-}
-
-impl ElementBuild for MetadataParser {
-    type Element = Metadata;
-    type BuildError = xml::BuildError;
-    fn build(self) -> Result<Self::Element, Self::BuildError> {
-        Ok(Metadata { name: self.name,
-                      description: self.desc,
-                      author: self.author,
-                      copyright: self.copyright,
-                      links: self.link,
-                      time: self.time,
-                      keywords: self.keywords,
-                      bounds: self.bounds,
-                      extensions: self.extensions })
     }
 }
 
