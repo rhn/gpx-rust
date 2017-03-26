@@ -145,17 +145,17 @@ pub trait ElementParse<E>
     fn new() -> Self;
     
     /// Parses the element and its subelements, returning ElementBuild::Element instance.
-    fn parse<'a, R: Read>(mut self, name: &OwnedName, attributes: &[OwnedAttribute],
+    fn parse<'a, R: Read>(mut self, elem_name: &OwnedName, attributes: &[OwnedAttribute],
                           mut reader: &'a mut EventReader<R>)
             -> Result<Self::Element, Positioned<E>> {
-        try!(self.parse_start(name, attributes).map_err(|e| _with_pos(reader, e)));
+        try!(self.parse_start(attributes).map_err(|e| _with_pos(reader, e)));
         loop {
             match try!(reader.next().map_err(|e| _with_pos(reader, e))) {
                 XmlEvent::StartElement { name, attributes, namespace: _ } => {
                     try!(self.parse_element(&mut reader, &name, attributes.as_slice()));
                 }
                 XmlEvent::EndElement { name } => {
-                    if &name == self.get_name() {
+                    if &name == elem_name {
                         break;
                     }
                     return Err(_with_pos(reader, xml::ElementError::UnexpectedEnd));
@@ -172,9 +172,9 @@ pub trait ElementParse<E>
         self.build().map_err(|e| _with_pos(reader, e))
     }
     /// Parses the start event and attributes within it. Should be implemented, bu default ignores attributes.
-    fn parse_start(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+    fn parse_start(&mut self, attributes: &[OwnedAttribute])
             -> Result<(), ::par::AttributeError<E>> {
-        let _ = (name, attributes);
+        let _ = attributes;
         Ok(())
     }
     /// Parses sub-element.
@@ -192,8 +192,6 @@ pub trait ElementParse<E>
         let _ = space;
         Ok(())
     }
-    /// Return the name of this element.
-    fn get_name(&self) -> &OwnedName;
 }
 
 pub trait ElementBuild {

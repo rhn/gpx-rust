@@ -298,12 +298,11 @@ impl ParseVia<{{{ data }}}> for {{{ conv }}} {
 impl ElementParse<::gpx::par::Error> for {{{ parser_type }}} {
     fn new() -> Self {
         {{{ parser_type }}} {
-            elem_name: None,
             {{# attribute }} {{{ field }}}: None, {{/ attribute }}
             {{# element }} {{{ field }}}: {{{ parser_type }}}::default(), {{/ element }}
         }
     }
-    fn parse_start(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+    fn parse_start(&mut self, attributes: &[OwnedAttribute])
             -> Result<(), ::par::AttributeError<::gpx::par::Error>> {
         for attr in attributes {
             let name = &attr.name;
@@ -332,7 +331,6 @@ impl ElementParse<::gpx::par::Error> for {{{ parser_type }}} {
                 }
             }
         }
-        self.elem_name = Some(name.clone());
         Ok(())
     }
     fn parse_element<'a, R: Read>(&mut self, reader: &'a mut EventReader<R>,
@@ -380,12 +378,6 @@ impl ElementParse<::gpx::par::Error> for {{{ parser_type }}} {
             reader.position())
         )
 {{/ has_element }}
-    }
-    fn get_name(&self) -> &OwnedName {
-        match &self.elem_name {
-            &Some(ref i) => i,
-            &None => panic!("Name was not set while parsing"),
-        }
     }
 }"#,
 };
@@ -485,7 +477,6 @@ struct {{{ name }}} {
         });
         quote!(
             struct #cls_name {
-                elem_name: Option<OwnedName>,
                 #( #attrs, )*
                 #( #elems, )*
             }

@@ -25,7 +25,7 @@ pub enum BuildError {
 }
 
 pub struct ElementParser {
-    name: Option<OwnedName>, // Using reference intentionally - this code does not need to interact with Name
+    //name: Option<OwnedName>, // Using reference intentionally - this code does not need to interact with Name
     attributes: Vec<OwnedAttribute>,
     nodes: Vec<Node>,
 }
@@ -44,13 +44,11 @@ impl ElementBuild for ElementParser {
 
 impl ElementParse<::gpx::par::Error> for ElementParser {
     fn new() -> ElementParser {
-        ElementParser { name: None,
-                        attributes: Vec::new(),
+        ElementParser { attributes: Vec::new(),
                         nodes: Vec::new() }
     }
-    fn parse_start(&mut self, name: &OwnedName, attributes: &[OwnedAttribute])
+    fn parse_start(&mut self, attributes: &[OwnedAttribute])
             -> Result<(), ::par::AttributeError<::gpx::par::Error>> {
-        self.name = Some(name.clone());
         let _ = attributes; // FIXME: break if attributes present
         Ok(())
     }
@@ -64,12 +62,6 @@ impl ElementParse<::gpx::par::Error> for ElementParser {
     fn parse_characters(&mut self, data: String) -> Result<(), ::gpx::par::Error> {
         self.nodes.push(Node::Text(data));
         Ok(())
-    }
-    fn get_name(&self) -> &OwnedName {
-        match &self.name {
-            &Some(ref i) => i,
-            &None => unreachable!(),
-        }
     }
 }
 
