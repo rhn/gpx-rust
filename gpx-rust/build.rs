@@ -197,7 +197,7 @@ fn process() -> Result<(), Error> {
     try!(write_file(&out_dir.join("gpx_par_auto.rs"), |f| {
         for item in &parsers {
             try!(f.write(
-                gpx::Generator::parser_cls(&item.name, item.type_, &attr_convs).as_bytes()
+                DEFAULT_GENERATOR.parser_type(&item.name, item.type_, &attr_convs).as_bytes()
             ).map_err(Error::Io));
             try!(f.write(
                 DEFAULT_GENERATOR.parser_impl(&item.name, item.type_, &attr_convs).as_bytes()

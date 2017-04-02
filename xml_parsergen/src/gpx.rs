@@ -255,12 +255,19 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
 
 
 pub struct Generator<'a> {
+    parser_type: &'a str,
     parse_via_char: &'a str,
     parse_via: &'a str,
     element_parse: &'a str,
 }
 
 pub static DEFAULT_GENERATOR: Generator<'static> = Generator {
+    parser_type: r#"
+#[derive(Default)]
+struct {{{ parser_type }}} {
+    {{# attribute }} {{{ field }}}: Option<{{{ type }}}>, {{/ attribute }}
+    {{# element }} {{{ field }}}: {{{ parser_type }}}<{{{ type }}}>, {{/ element }}
+}"#,
     parse_via_char: r#"
 impl ParseViaChar<{{{ type }}}> for {{{ conv }}} {
     #[allow(unused_comparisons)]
@@ -296,12 +303,6 @@ impl ParseVia<{{{ data }}}> for {{{ conv }}} {
 }"#,
     element_parse: r#"
 impl ElementParse<::gpx::par::Error> for {{{ parser_type }}} {
-    fn new() -> Self {
-        {{{ parser_type }}} {
-            {{# attribute }} {{{ field }}}: None, {{/ attribute }}
-            {{# element }} {{{ field }}}: {{{ parser_type }}}::default(), {{/ element }}
-        }
-    }
     fn parse_start(&mut self, attributes: &[OwnedAttribute])
             -> Result<(), ::par::AttributeError<::gpx::par::Error>> {
         for attr in attributes {
@@ -447,40 +448,38 @@ struct {{{ name }}} {
 }"#)
     }
 
-    fn parser_cls(name: &str, data: &ComplexType, convs: &ConvMap) -> String {
-        let cls_name = quote::Ident::new(name);
-        let attrs = data.attributes.iter().map(|attr| {
-            let &(ref attr_type, _) = convs.get(&attr.type_)
-                                           .expect(format!("Missing type for {}", &attr.type_).as_str());
-            quote::Ident::new(format!("{}: Option<{}>",
-                                      ident_safe(&attr.name),
-                                      attr_type.as_user_type()))
+    fn parser_type(&self, name: &str, data: &ComplexType, convs: &ConvMap) -> String {
+        let attributes_owned = data.attributes.iter().map(|attr| {
+            let &(ref type_, _) = convs.get(&attr.type_)
+                                           .expect(format!("No type for {}", &attr.type_).as_str());
+            (String::from(ident_safe(&attr.name)), type_)
+        }).collect::<Vec<_>>();
+        let attributes = attributes_owned.iter().map(|&(ref field, type_)| {
+            vec![field.as_str(), type_.as_user_type()]
         });
-        let elems = data.sequence.iter().map(|elem| {
-            let fallback = UserType("xml::Element".into());
-            let elem_type = match convs.get(&elem.type_) {
-                Some(&(ref cls, _)) => cls,
-                None => {
-                     println!("cargo:warning=\"Missing type for elem {}\"", &elem.type_);
-                     &fallback
+        let elements_owned = data.sequence.iter().map(|elem| {
+            let field = ident_safe(&elem.name);
+            let stor_type = match elem.max_occurs {
+                ElementMaxOccurs::Some(0) => {
+                    panic!("Element has 0 occurrences, can't derive data type")
                 }
-            };
-            let wrap_type = match elem.max_occurs {
-                ElementMaxOccurs::Some(0) => panic!("Element has 0 occurrences, can't derive data type"),
                 ElementMaxOccurs::Some(1) => "Option",
                 _ => "Vec",
             };
-            quote::Ident::new(format!("{}: {}<{}>",
-                                      ident_safe(&elem.name),
-                                      wrap_type,
-                                      elem_type.as_user_type()))
+            let &(ref type_, _) = convs.get(&elem.type_)
+                                       .expect(format!("Missing type for {}", &elem.type_).as_str());
+            (String::from(field), String::from(stor_type), type_)
+        }).collect::<Vec<_>>(); // this data must be kept until processing
+        // but only references can be processed
+        let elements = elements_owned.iter().map(|&(ref field, ref stor_type, type_)| {
+            vec![field.as_str(), stor_type.as_str(), type_.as_user_type()]
         });
-        quote!(
-            struct #cls_name {
-                #( #attrs, )*
-                #( #elems, )*
-            }
-        ).to_string()
+        render_string(HashBuilder::new().insert("parser_type", name)
+                                        .insert_array("attribute", &["field", "type"],
+                                                      attributes)
+                                        .insert_array("element", &["field", "parser_type", "type"],
+                                                      elements),
+                      self.parser_type)
     }
     
     fn parser_impl(&self, name: &str, data: &ComplexType, convs: &ConvMap) -> String {

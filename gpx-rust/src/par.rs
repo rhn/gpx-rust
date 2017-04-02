@@ -138,11 +138,12 @@ pub trait FromAttributeVia<Data> {
 }
 
 pub trait ElementParse<E>
-    where Self: Sized + ElementBuild,
+    where Self: Sized + ElementBuild + Default,
           E: From<xml::ElementError> + From<Self::BuildError> + From<::par::AttributeError<E>>
              + From<_xml::reader::Error> + ::par::FormatError {
-    // public iface
-    fn new() -> Self;
+    fn new() -> Self {
+        Self::default()
+    }
     
     /// Parses the element and its subelements, returning ElementBuild::Element instance.
     fn parse<'a, R: Read>(mut self, elem_name: &OwnedName, attributes: &[OwnedAttribute],

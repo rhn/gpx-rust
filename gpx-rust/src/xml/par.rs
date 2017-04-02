@@ -24,6 +24,7 @@ pub enum BuildError {
     Custom(Box<ErrorTrait>)
 }
 
+#[derive(Default)]
 pub struct ElementParser {
     //name: Option<OwnedName>, // Using reference intentionally - this code does not need to interact with Name
     attributes: Vec<OwnedAttribute>,
@@ -43,10 +44,6 @@ impl ElementBuild for ElementParser {
 }
 
 impl ElementParse<::gpx::par::Error> for ElementParser {
-    fn new() -> ElementParser {
-        ElementParser { attributes: Vec::new(),
-                        nodes: Vec::new() }
-    }
     fn parse_start(&mut self, attributes: &[OwnedAttribute])
             -> Result<(), ::par::AttributeError<::gpx::par::Error>> {
         let _ = attributes; // FIXME: break if attributes present
