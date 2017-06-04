@@ -30,6 +30,7 @@ pub use self::par::parse;
 /// ```
 pub type Document = xml::Document<Gpx>;
 
+/// `gpxType` contents
 #[derive(XmlDebug)]
 pub struct Gpx {
     pub version: Version,
@@ -49,6 +50,7 @@ pub enum Version {
     V1_1,
 }
 
+/// `metadataType` contents
 #[derive(XmlDebug)]
 pub struct Metadata {
     pub name: Option<String>,
@@ -62,6 +64,7 @@ pub struct Metadata {
     pub extensions: Option<xml::Element>,
 }
 
+/// `personType` contents
 #[derive(XmlDebug)]
 pub struct Person {
     pub name: Option<String>,
@@ -69,6 +72,7 @@ pub struct Person {
     pub link: Option<Link>,
 }
 
+/// `copyrightType` contents
 #[derive(XmlDebug)]
 pub struct Copyright {
     pub author: String,
@@ -76,6 +80,7 @@ pub struct Copyright {
     pub license: Option<xsd::Uri>,
 }
 
+/// `linkType` contents
 #[derive(XmlDebug)]
 pub struct Link {
     pub href: xsd::Uri,
@@ -83,6 +88,7 @@ pub struct Link {
     pub type_: Option<String>,
 }
 
+/// `boundsType` contents
 pub type Bounds = Bbox<f64>;
 
 /// `<wpt>`, `<rtept>`, `<trkpt>` elements and `wptType`
@@ -162,4 +168,5 @@ pub struct Route {
     pub waypoints: Vec<Waypoint>,
 }
 
+/// direction on the circle
 pub type Degrees = f32;

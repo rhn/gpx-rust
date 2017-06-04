@@ -20,7 +20,7 @@ use gpx::par::Error;
 
 /// Describes the position in the input stream for some data.
 ///
-/// Used most extendively for errors.
+/// Used most extensively for errors.
 #[derive(Debug)]
 pub struct Positioned<Data> {
     pub data: Data,
@@ -137,6 +137,7 @@ pub trait FromAttributeVia<Data> {
     fn from_attribute(&str) -> Result<Data, Self::Error>;
 }
 
+/// Accepts an event stream and parses it into an Element
 pub trait ElementParse<E>
     where Self: Sized + ElementBuild + Default,
           E: From<xml::ElementError> + From<Self::BuildError> + From<::par::AttributeError<E>>
@@ -195,6 +196,7 @@ pub trait ElementParse<E>
     }
 }
 
+/// Turns into a finished element
 pub trait ElementBuild {
     type Element;
     type BuildError;
