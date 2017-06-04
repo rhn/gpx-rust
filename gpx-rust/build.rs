@@ -187,9 +187,9 @@ fn process() -> Result<(), Error> {
     try!(write_file(&out_dir.join("gpx_auto.rs"), |f| {
         for item in &structs {
             try!(f.write(
-                gpx::Generator::struct_def(&item.name, &item.tags,
-                                           get_complex(&types, item.type_name.as_str()),
-                                           &attr_convs).as_bytes()
+                DEFAULT_GENERATOR.data_struct_type(&item.name, &item.tags,
+                                                   get_complex(&types, item.type_name.as_str()),
+                                                   &attr_convs).as_bytes()
             ).map_err(Error::Io));
         }
         Ok(())

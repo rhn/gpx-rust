@@ -255,6 +255,7 @@ pub fn get_types<'a>() -> HashMap<&'a str, Type> {
 
 
 pub struct Generator<'a> {
+    data_struct_type: &'a str,
     parser_type: &'a str,
     parse_via_char: &'a str,
     parse_via: &'a str,
@@ -262,6 +263,11 @@ pub struct Generator<'a> {
 }
 
 pub static DEFAULT_GENERATOR: Generator<'static> = Generator {
+    data_struct_type: r#"
+#[derive(Debug)]
+struct {{{ data_struct_type }}} {
+{{# field }} {{{ field }}}: {{{ type }}}, {{/ field }}
+}"#,
     parser_type: r#"
 #[derive(Default)]
 struct {{{ parser_type }}} {
@@ -398,7 +404,7 @@ impl<'a, K: std::cmp::Eq + std::hash::Hash, V: Clone> GetOrElse<K, V> for HashMa
 
 
 impl<'a> ParserGen for Generator<'a> {
-    fn struct_def(name: &str, tags: &TagMap, data: &ComplexType, type_convs: &ConvMap) -> String {
+    fn data_struct_type(&self, name: &str, tags: &TagMap, data: &ComplexType, convs: &ConvMap) -> String {
         let get_elem_field_name = |elem: &Element| {
             match tags.get(elem.name.as_str()) {
                 Some(i) => String::from(*i),
@@ -410,42 +416,47 @@ impl<'a> ParserGen for Generator<'a> {
                 }
             }
         };
-        let fields = data.attributes.iter().map(|attr| {
-            let data_type = match type_convs.get(attr.type_.as_str()) {
-                Some(&(ref type_, _)) => type_,
-                None => panic!("No type found for attr {} ({}) on {}", attr.name, attr.type_, name)
+        
+        let attributes_owned = data.attributes.iter().map(|attr| {
+            let &(ref type_, _) = convs.get(&attr.type_)
+                                      .expect(format!("No parser for {}", &attr.type_).as_str());
+            let wrap_type = match attr.required {
+                true => None,
+                false => Some("Option"),
             };
-            (attr.name.clone(), match attr.required {
-                true => data_type.as_user_type().into(),
-                false => format!("Option<{}>", data_type.as_user_type())
-            })
-        }).chain(
-            data.sequence.iter().map(|elem| {
-                let data_type = match type_convs.get(elem.type_.as_str()) {
-                    Some(&(ref type_, _)) => type_,
-                    None => panic!("No converter found for field {} ({}) on {}", elem.name, elem.type_, name)
-                };
-                let field_type = match elem.max_occurs {
-                    ElementMaxOccurs::Some(0) => {
-                        println!("cargo:warning=\"Element {} can repeat 0 times, skipping\"",
-                                 elem.name);
-                        String::new()
-                    }
-                    ElementMaxOccurs::Some(1) => format!("Option<{}>", data_type.as_user_type()),
-                    _ => format!("Vec<{}>", data_type.as_user_type()),
-                };
-                (get_elem_field_name(elem), field_type)
-            })
-        ).map(|(field_name, field_type)| {
-            format!("    {}: {},\n", ident_safe(&field_name), field_type)
-        }).collect::<String>();
-        render_string(HashBuilder::new().insert("name", name)
-                                        .insert("fields", fields),
-                      r#"
-#[derive(Debug)]
-struct {{{ name }}} {
-{{{ fields }}}
-}"#)
+            (String::from(ident_safe(&attr.name)), wrap_type, type_)
+        });//.collect::<Vec<_>>();
+
+        let elements_owned = data.sequence.iter().map(|elem| {
+            let field = String::from(ident_safe(get_elem_field_name(elem).as_str()));
+            // TODO: add Required bound
+            let wrap_type = match elem.max_occurs {
+                ElementMaxOccurs::Some(0) => {
+                    panic!("Element has 0 occurrences, can't derive data type")
+                }
+                ElementMaxOccurs::Some(1) => "Option",
+                _ => "Vec",
+            };
+            let &(ref type_, _) = convs.get(&elem.type_)
+                                       .expect(format!("Missing type for {}", &elem.type_).as_str());
+            (field, Some(wrap_type), type_)
+        });//.collect::<Vec<_>>(); // this data must be kept until processing
+        // but only references can be processed
+
+        let fields_owned = attributes_owned
+                                     .chain(elements_owned)
+                                     .map(|(field, wrap_type, field_type)| {
+            let type_ = match wrap_type {
+                Some(t) => format!("{}<{}>", t, field_type.as_user_type()),
+                None => String::from(field_type.as_user_type()),
+            };
+            (field, type_)
+        }).collect::<Vec<_>>();
+        let fields = fields_owned.iter().map(|&(ref f, ref t)| vec![f.as_str(), t.as_str()]);
+        render_string(HashBuilder::new().insert("struct_type", name)
+                                        .insert_array("field", &["field", "type"],
+                                        fields),
+                      self.data_struct_type)
     }
 
     fn parser_type(&self, name: &str, data: &ComplexType, convs: &ConvMap) -> String {
