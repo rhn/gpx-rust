@@ -3,6 +3,7 @@ name = "gpx_rust"
 version = "0.0.1"
 authors = [ "rhn <gihu.rhn@porcupinefactory.org>" ]
 build = "build.rs"
+license = "GPL-3.0+/EPL-1.0"
 
 [dependencies]
 xml-rs = "^0.4"
